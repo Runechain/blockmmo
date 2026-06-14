@@ -3,8 +3,8 @@
 A tiny **pixel Soulslike MMO** set in **Gracefall Parish**: a ruined, cozy-gothic
 top-down RPG space with a real on-chain economy. Monsters drop RUNE, your own browser
 mines it into a genuine SHA-256 proof-of-work chain, and you spend it (recorded as
-on-chain transactions) to level up at a Site of Grace. Bosses mint unique **Great
-Runes** as one-of-a-kind on-chain assets.
+on-chain transactions) to level up at **Hearthlight**. Bosses mint deterministic
+**Boss Sigils** as one-of-a-kind on-chain assets.
 
 It's a single HTML file for the client and one zero-dependency Node file for the
 realm server. No build step, no framework, no `npm install`.
@@ -33,12 +33,13 @@ browser shares one world and one ledger.
 | Mouse | Aim |
 | `Shift` | Dash with brief i-frames |
 | `Q` | Target the nearest foe |
+| `E` | Interact with story objects |
 | Click / `Space` / `L` | Attack (costs stamina) |
-| `G` | Rest at Site of Grace / level up / forge RUNE relics |
+| `G` | Rest at Hearthlight / level up / forge RUNE relics |
 | `B` | Open the **Wardrobe** (buy/equip cosmetic skins with **Gold**) |
 | `M` | Toggle wallet |
 
-**Combat feel:** the demo opens in a safe Grace zone, with one weak Hollow outside the
+**Combat feel:** the demo opens in safe Hearthlight, with one weak Hollow outside the
 light. Enemies escalate through story gates instead of dogpiling the spawn. Movement is
 faster now, dashing grants brief invulnerability, attacks spend stamina, and target lock
 turns your swings toward the selected foe.
@@ -48,7 +49,7 @@ turns your swings toward the selected foe.
 Two currencies, and the line between them is the whole design:
 
 - **RUNE** — the grind currency. Drops from kills, mined into the proof-of-work chain.
-  **Power is bought only with RUNE** (leveling and soulbound relics at the Site of Grace).
+  **Power is bought only with RUNE** (leveling and soulbound relics at Hearthlight).
   It is *never* for sale.
 - **Gold** — the spend currency for **cosmetics only** (skins in the Wardrobe). No power,
   ever. Skins are **soulbound** (non-transferable), bought by **direct purchase** — no loot
@@ -76,25 +77,27 @@ lives in the `ECON`, `SKINS`, and `RELICS` tables in [`index.html`](index.html).
 
 - **Gracefall Parish art direction** — a higher top-down pixel view with old parish road
   tiles, mossy grass, shrine rubble, grave clusters, candles, brambles, cursed soil, and
-  warm Grace light against colder outer-road corruption.
+  warm Hearthlight against colder outer-road corruption.
 - **Pixelorama-ready tile and sprite sheets** — deterministic PNG assets in
-  `assets/pixel/`, including the terrain atlas plus player, Hollow, Hound, Knight,
-  Sorcerer, Sentinel, and Phantom strips.
-- **Monster roster** — Hollow, Red Hound, Fallen Knight, ranged Hollow Sorcerer, and
-  the Erdtree Sentinel boss, with nameplates, health bars, and wind-up tells.
+  `assets/pixel/`, including the terrain atlas, generated monster strips, and a
+  PixelLab-imported eight-direction `player-directions.png` sheet.
+- **Monster roster** — Hollow Debtors, Gate Sexton Marrow, the Mempool Warden, and
+  Mother Tallow in the first playable story slice, with nameplates, health bars, and
+  wind-up tells.
 - **Soulslike combat** — dash i-frames, stamina-gated attacks, target lock, visible
-  attack arcs, safe Grace start, and limited simultaneous attackers.
+  attack arcs, safe Hearthlight start, and limited simultaneous attackers.
 - **Souls-style levelling and relics** — spend confirmed RUNE on Vigor / Endurance /
   Strength or forge soulbound relics (power is grind-only).
-- **Data-driven Act 1 story seam** — the `STORY` block chains quests from Gracefall
-  Parish, to the Chainwell Ledger, to the Sentinel Road. Paste a richer storyline into
-  `window.RUNECHAIN_STORY` later without changing the game loop.
+- **Data-driven Act 1 story seam** — the `STORY` block now plays q01-q05:
+  Hearthlight Chapel, Parish Road Receipts, Chainwell Ledger, the Mempool Yard, and
+  Tallow House. Paste a richer storyline into `window.RUNECHAIN_STORY` later without
+  changing the game loop.
 - **Cosmetic economy** — a Gold-funded Wardrobe of soulbound skins (no power, no loot boxes),
   with two one-way on-ramps (RUNE→Gold, or wrapped-SOL split 50% prize / 35% burn / 15% fee).
-  Equipped skins sync over the network, so other Tarnished see what you're wearing.
+  Equipped skins sync over the network, so other Recorded players see what you're wearing.
 - **A real blockchain economy** — from-scratch SHA-256 proof-of-work chain (verified
   against Node's `crypto`), credits from kills, on-chain debits when levelling,
-  unique Great Rune assets, and pending-debit anti-double-spend accounting. Blocks
+  unique Boss Sigil assets, and pending-debit anti-double-spend accounting. Blocks
   gossip across the network so the realm converges on one ledger.
 - **MMO server** — `server.js` is an authoritative relay implementing WebSocket and
   static serving by hand, with **zero dependencies**.
@@ -102,10 +105,12 @@ lives in the `ECON`, `SKINS`, and `RELICS` tables in [`index.html`](index.html).
 ## Edit the pixel art
 
 Open the PNGs in `assets/pixel/` with Pixelorama or any pixel editor. `tiles.png` is a
-16px terrain atlas; character sheets have four frames in one row: idle, walk,
-attack/cast, and hurt/death. Re-run `node scripts/generate_pixel_assets.js` only when
-you want to regenerate the deterministic starter assets; hand-edited art should be kept
-as the source of truth once approved.
+16px terrain atlas; generated monster sheets have four frames in one row: idle, walk,
+attack/cast, and hurt/death. `player-directions.png` is imported from the PixelLab
+eight-direction character export with `node scripts/import_pixellab_character.js`.
+Re-run `node scripts/generate_pixel_assets.js` only when you want to regenerate the
+deterministic starter monster/terrain assets; hand-edited art should be kept as the
+source of truth once approved.
 
 ## Deploy
 

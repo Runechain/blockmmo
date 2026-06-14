@@ -128,7 +128,7 @@
 <canvas id="c" width="640" height="360"></canvas>
 
 <div id="vitals" class="hud">
-  <div class="lab"><span id="charname">Tarnished</span> - Level <b id="lvl">1</b></div>
+  <div class="lab"><span id="charname">Recorded</span> - Level <b id="lvl">1</b></div>
   <div id="hp" class="bar"><i></i></div>
   <div class="lab">Stamina</div>
   <div id="sta" class="bar"><i></i></div>
@@ -164,7 +164,7 @@
 <div id="prompt" class="hud"></div>
 <div id="log" class="hud"></div>
 <div id="bossbar" class="hud">
-  <span id="bossname">Erdtree Sentinel</span>
+  <span id="bossname">Boss</span>
   <div class="bar"><i id="bossfill"></i></div>
 </div>
 <div id="lootflash" class="hud"></div>
@@ -172,7 +172,7 @@
 
 <div id="levelup">
   <div class="panel">
-    <h2>Site of Grace</h2>
+    <h2>Hearthlight</h2>
     <div class="gsub">Rest safely. Spend confirmed RUNE on power or forge soulbound relics.</div>
     <div class="lvrow"><span>Level</span><b id="lvLevel">1</b></div>
     <div class="lvrow"><span>Spendable RUNE</span><b id="lvBal">0.00</b></div>
@@ -181,7 +181,7 @@
     <button class="statbtn" data-stat="endurance"><span>Endurance <small>+ max stamina</small></span><span class="cost" id="cEnd"></span></button>
     <button class="statbtn" data-stat="strength"><span>Strength <small>+ attack damage</small></span><span class="cost" id="cStr"></span></button>
     <div class="itemlist" id="itemlist"></div>
-    <button id="lvclose">Leave Grace (G)</button>
+    <button id="lvclose">Leave Hearthlight (G)</button>
   </div>
 </div>
 
@@ -203,20 +203,20 @@
 
 <div id="death">
   <h1>YOU DIED</h1>
-  <button id="respawn">Return to Grace</button>
+  <button id="respawn">Return to Hearthlight</button>
 </div>
 
 <div id="start">
   <h1>RUNECHAIN</h1>
   <div class="sub">GRACEFALL PARISH - PIXEL MMO PROTOTYPE</div>
-  <p>Top-down pixel combat in a ruined parish: safe Grace light, readable monsters, RUNE drops, proof-of-work blocks, relic forging, cosmetics, and same-origin MMO sync.</p>
+  <p>Top-down pixel combat in a ruined parish: safe Hearthlight, readable monsters, RUNE drops, proof-of-work blocks, relic forging, cosmetics, and same-origin MMO sync.</p>
   <div class="keys">
     <b>WASD</b> move / <b>Mouse</b> aim / <b>Click</b>, <b>Space</b>, or <b>L</b> attack / <b>Shift</b> dash /
-    <b>Q</b> target nearest / <b>G</b> Grace / <b>B</b> wardrobe / <b>M</b> wallet
+    <b>Q</b> target nearest / <b>E</b> interact / <b>G</b> Hearthlight / <b>B</b> wardrobe / <b>M</b> wallet
   </div>
-  <input id="name" maxlength="14" placeholder="name your Tarnished" />
+  <input id="name" maxlength="14" placeholder="name the Recorded" />
   <button id="go">Enter Gracefall</button>
-  <div class="mini">This opens safe. One weak Hollow waits outside Grace. The road, graveyard, and boss gate unlock as the story moves.</div>
+  <div class="mini">This opens safe. One weak Hollow waits outside Hearthlight. The road, graveyard, and boss gates unlock as the ledger records you.</div>
 </div>
 
 <script>
@@ -289,10 +289,10 @@ const Chain = (function () {
   }
   genesis();
   function credit(to, amt, note, cur){ mempool.push({to,amt:+(+amt).toFixed(4),note,cur:cur||'RUNE',id:rid()}); }
-  function debit(from, amt, note, cur, to){ mempool.push({from,to:to||'ERDTREE_SINK',amt:+(+amt).toFixed(4),note,cur:cur||'RUNE',id:rid()}); }
+  function debit(from, amt, note, cur, to){ mempool.push({from,to:to||'POWER_SINK',amt:+(+amt).toFixed(4),note,cur:cur||'RUNE',id:rid()}); }
   function reward(to, amt, note){ credit(to, amt, note, 'RUNE'); }
-  function spend(from, amt, note){ debit(from, amt, note, 'RUNE', 'ERDTREE_SINK'); }
-  function mintGreatRune(to, rune){ mempool.push({to,amt:0,greatRune:rune,note:'Great Rune: '+rune.name,cur:'RUNE',id:rid()}); }
+  function spend(from, amt, note){ debit(from, amt, note, 'RUNE', 'POWER_SINK'); }
+  function mintGreatRune(to, rune){ mempool.push({to,amt:0,greatRune:rune,note:'Boss Sigil: '+rune.name,cur:'RUNE',id:rid()}); }
   function mintCosmetic(to, id){ mempool.push({to,amt:0,cosmetic:id,note:'skin '+id,cur:'GOLD',id:rid()}); }
   function mintItem(to, id){ mempool.push({to,amt:0,item:id,note:'relic '+id,cur:'RUNE',id:rid()}); }
   function startBlock(){
@@ -393,38 +393,62 @@ const Econ = {
 
 const STORY = window.RUNECHAIN_STORY || {
   version:1,
-  startQuest:'gracefall-wake',
+  startQuest:'q01',
   quests:[{
-    id:'gracefall-wake',
-    title:'Gracefall Parish',
-    onStart:['You wake inside Gracefall Parish. The Grace is warm. The road is not.'],
+    id:'q01',
+    title:'Hearthlight Chapel',
+    onStart:['You wake beneath a warm ledger-lamp. The chapel floor has already recorded your name.'],
     steps:[
-      {id:'first-debt', text:'Step beyond Grace and cut down the first Hollow Debtor.', done:{event:'kill', monster:'hollow', count:1}}
+      {id:'registry', text:'Touch the Hearthlight registry stone.', done:{event:'interact', target:'hearth-registry', count:1}},
+      {id:'first-debt', text:'Step beyond Hearthlight and cut down the first Hollow Debtor.', done:{event:'kill', monster:'hollow', count:1}}
     ],
     onComplete:['The Hollow collapses into ledger ash. Something below the parish records the debt.'],
     rewards:{rune:8},
-    next:'ledger-under-parish'
+    next:'q02'
   },{
-    id:'ledger-under-parish',
-    title:'The Chainwell Ledger',
-    onStart:['A dead ledger turns under the chapel stones. It wants proof, not prayer.'],
+    id:'q02',
+    title:'Parish Road Receipts',
+    onStart:['The road east is paved with unpaid vows and walking receipts. Two bells decide what counts.'],
     steps:[
-      {id:'debtors', text:'Clear 2 more Hollow debtors from the parish road.', done:{event:'kill', monster:'hollow', count:2}},
-      {id:'first-relic', text:'Forge your first RUNE relic at Grace.', done:{event:'forge', any:true}}
+      {id:'bells', text:'Ring 2 verification bells beside the parish road.', done:{event:'interact', target:'verification-bell', count:2}},
+      {id:'debtors', text:'Clear 2 more Hollow Debtors from the road receipts.', done:{event:'kill', monster:'hollow', count:2}},
+      {id:'sexton', text:'Defeat Gate Sexton Marrow before he stamps your name shut.', done:{event:'kill', monster:'sexton', count:1}}
     ],
-    onComplete:['The relic bites into your hand and the Chainwell opens the east road.'],
+    onComplete:['The bells agree. The Chainwell below the chapel accepts your first proof.'],
     rewards:{rune:18},
-    next:'sentinel-road'
+    next:'q03'
   },{
-    id:'sentinel-road',
-    title:'The Sentinel Road',
-    onStart:['The parish gate groans open. Beyond it, a golden rider keeps the realm sealed.'],
+    id:'q03',
+    title:'Chainwell Ledger',
+    onStart:['A dead ledger turns below the chapel stones. It wants proof, not prayer.'],
     steps:[
-      {id:'hound', text:'Break the Red Hound loose on the east road.', done:{event:'kill', monster:'hound', count:1}},
-      {id:'sentinel', text:'Defeat the Erdtree Sentinel and mint a Great Rune.', done:{event:'greatRune', any:true}}
+      {id:'first-relic', text:'Forge your first RUNE relic at Hearthlight.', done:{event:'forge', any:true}}
     ],
-    onComplete:['Gracefall has a road again. Other Tarnished will follow the mark you cut.'],
-    rewards:{rune:25}
+    onComplete:['The relic bites into your hand. The Chainwell writes you as the Recorded, not the chosen.'],
+    rewards:{rune:12},
+    next:'q04'
+  },{
+    id:'q04',
+    title:'The Mempool Yard',
+    onStart:['Petitioners circle the yard, each waiting to be confirmed into a worse shape.'],
+    steps:[
+      {id:'yard-debtors', text:'Clear 2 pending Hollow Debtors from the Mempool Yard.', done:{event:'kill', monster:'hollow', count:2}},
+      {id:'tablets', text:'Stamp 3 pending tablets in ledger order.', done:{event:'interact', target:'pending-tablet', count:3}},
+      {id:'warden', text:'Defeat the Mempool Warden before the queue overflows.', done:{event:'kill', monster:'mempool', count:1}}
+    ],
+    onComplete:['The pending dead finally settle. Something waxen wakes inside Tallow House.'],
+    rewards:{rune:24},
+    next:'q05'
+  },{
+    id:'q05',
+    title:'Tallow House',
+    onStart:['Candles burn with names instead of wax. Some names are still screaming.'],
+    steps:[
+      {id:'candles', text:'Extinguish 3 duplicate Tallow candles and leave the canonical flame lit.', done:{event:'interact', target:'tallow-candle', count:3}},
+      {id:'mother-tallow', text:'Defeat Mother Tallow and claim the first Boss Sigil.', done:{event:'kill', monster:'tallow', count:1}}
+    ],
+    onComplete:['Mother Tallow melts into a sealed sigil. Gracefall has its first hard proof.'],
+    rewards:{rune:40}
   }]
 };
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -447,6 +471,7 @@ const Story=(function(){
     if(!done||done.event!==type)return false;
     if(done.any)return true;
     if(done.monster && payload.key!==done.monster)return false;
+    if(done.target && payload.target!==done.target)return false;
     if(done.stat && payload.stat!==done.stat)return false;
     return true;
   }
@@ -475,7 +500,19 @@ const Story=(function(){
     else completeStep();
     updateHud();
   }
-  return {state,event,updateHud};
+  function currentQuest(){ return quest(); }
+  function currentStep(){ return step(); }
+  function questReached(id){
+    const quests=STORY.quests||[];
+    const activeIndex=quests.findIndex(q=>q.id===state.activeQuestId);
+    const targetIndex=quests.findIndex(q=>q.id===id);
+    return state.completed.includes(id) || (targetIndex>=0 && activeIndex>=targetIndex);
+  }
+  function stepMatchesMonster(key){
+    const st=step();
+    return !!(st && st.done && st.done.event==='kill' && st.done.monster===key);
+  }
+  return {state,event,updateHud,currentQuest,currentStep,questReached,stepMatchesMonster};
 })();
 
 const RELICS = [
@@ -483,13 +520,13 @@ const RELICS = [
   {id:'warden-sigil', name:'Warden Sigil', price:28, desc:'+18 max health. Survive a mistake.', hp:18},
   {id:'green-knot', name:'Green Knot', price:34, desc:'+16 max stamina. Dash and swing longer.', sta:16},
   {id:'rune-lens', name:'Rune Lens', price:48, desc:'+20% RUNE bounty from kills.', runeMult:0.2},
-  {id:'sentinel-brand', name:'Sentinel Brand', price:90, desc:'+18 attack and +25 health.', dmg:18, hp:25}
+  {id:'tallow-brand', name:'Tallow Brand', price:90, desc:'+18 attack and +25 health.', dmg:18, hp:25}
 ];
 const SKINS = [
-  { id:'tarnished', name:'Tarnished', price:0, body:'#334052', trim:'#8ca0b8', skin:'#cfa982' },
+  { id:'tarnished', name:'Recorded', price:0, body:'#334052', trim:'#8ca0b8', skin:'#cfa982' },
   { id:'crimson', name:'Crimson Lord', price:120, body:'#6b2020', trim:'#e24a4a', skin:'#cfa982' },
   { id:'verdant', name:'Verdant Knight', price:180, body:'#1f472f', trim:'#57c77a', skin:'#cfa982' },
-  { id:'azure', name:'Azure Sentinel', price:240, body:'#233d73', trim:'#7aa7ff', skin:'#cfa982' },
+  { id:'azure', name:'Azure Witness', price:240, body:'#233d73', trim:'#7aa7ff', skin:'#cfa982' },
   { id:'gilded', name:'Gilded Champion', price:500, body:'#4d3c17', trim:'#f1c75b', skin:'#d5c596' },
   { id:'void', name:'Voidwalker', price:800, body:'#17141f', trim:'#9b74ff', skin:'#77718f' }
 ];
@@ -515,6 +552,7 @@ const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,gr
 const GRACE={x:0,y:0};
 const ASSETS={
   tiles:{src:'assets/pixel/tiles.png',w:16,h:16,img:null},
+  playerDir:{src:'assets/pixel/player-directions.png',w:56,h:56,img:null},
   player:{src:'assets/pixel/player.png',w:24,h:24,img:null},
   hollow:{src:'assets/pixel/hollow.png',w:24,h:24,img:null},
   hound:{src:'assets/pixel/hound.png',w:24,h:24,img:null},
@@ -544,14 +582,14 @@ function maybeShake(){
 
 /* ------------------------------ Player ---------------------------------- */
 let player={
-  name:'Tarnished', x:0, y:0, vx:0, vy:0, dirX:1, dirY:0, moving:false, radius:7,
+  name:'Recorded', x:0, y:0, vx:0, vy:0, dirX:1, dirY:0, moving:false, radius:7,
   level:1, vigor:10, endurance:10, strength:10, runeBuff:0,
   hp:120, maxHp:120, sta:100, maxSta:100, dmg:34,
   attack:null, attackCd:0, invuln:0, dash:0, hurt:0, dead:false, lock:null,
   skinId:'tarnished', pal:skinPal('tarnished')
 };
 const enemies=[], particles=[], projectiles=[], remotes={};
-const progress={hollows:0, forged:false};
+const progress={hollows:0, forged:false, interactions:new Set()};
 
 function recalcStats(fullHeal){
   const b=itemBonuses();
@@ -599,7 +637,7 @@ function hurtPlayer(amount){
   if(player.hp<=0){
     player.dead=true;
     document.getElementById('death').style.display='flex';
-    log('You died. Grace will reset your body, not the chain.');
+    log('You died. Hearthlight will reset your body, not the chain.');
   }
 }
 
@@ -609,24 +647,30 @@ const TYPES={
   hound:{key:'hound',name:'Red Hound',hp:32,dmg:10,speed:55,reward:16,aggro:98,reach:16,color:'#f26b2f'},
   knight:{key:'knight',name:'Fallen Knight',hp:82,dmg:15,speed:25,reward:26,aggro:105,reach:18,color:'#b9c2cf'},
   sorcerer:{key:'sorcerer',name:'Hollow Sorcerer',hp:54,dmg:12,speed:20,reward:30,aggro:125,reach:85,ranged:true,color:'#9b74ff'},
-  sentinel:{key:'sentinel',name:'Erdtree Sentinel',hp:240,dmg:22,speed:23,reward:90,aggro:132,reach:26,boss:true,color:'#f1c75b'}
+  sexton:{key:'sexton',asset:'knight',name:'Gate Sexton Marrow',short:'SEXTON',hp:96,dmg:14,speed:27,reward:34,aggro:108,reach:19,color:'#d8b36b'},
+  mempool:{key:'mempool',asset:'sorcerer',name:'Mempool Warden',short:'WARDEN',hp:92,dmg:13,speed:22,reward:42,aggro:125,reach:88,ranged:true,color:'#b88cff'},
+  tallow:{key:'tallow',asset:'sentinel',name:'Mother Tallow',short:'MOTHER TALLOW',hp:260,dmg:22,speed:20,reward:100,aggro:134,reach:28,boss:true,color:'#f1c75b',sigilName:'Tallow Sigil',sigilBuff:14}
 };
-function spawnEnemy(key,x,y,gate=0){
+function spawnEnemy(key,x,y,gate=0,opts={}){
   const t=TYPES[key];
   enemies.push({type:t,key:t.key,x,y,homeX:x,homeY:y,vx:0,vy:0,radius:t.boss?18:key==='hound'?9:10,
-    hp:t.hp,maxHp:t.hp,dead:false,aggroed:false,windup:0,atkCd:.6,castCd:1.5,hitFlash:0,hurt:0,roam:Math.random()*6.28,gate});
+    hp:t.hp,maxHp:t.hp,dead:false,aggroed:false,windup:0,atkCd:.6,castCd:1.5,hitFlash:0,hurt:0,roam:Math.random()*6.28,
+    gate,unlockQuest:opts.unlockQuest||t.unlockQuest||null});
 }
 function initWorld(){
   enemies.length=0;
   spawnEnemy('hollow',156,0,0);
-  spawnEnemy('hollow',390,-64,1);
-  spawnEnemy('hollow',470,58,2);
-  spawnEnemy('hound',590,-38);
-  spawnEnemy('knight',690,52);
-  spawnEnemy('sorcerer',790,-72);
-  spawnEnemy('sentinel',900,0);
+  spawnEnemy('hollow',332,-50,1,{unlockQuest:'q02'});
+  spawnEnemy('hollow',390,48,1,{unlockQuest:'q02'});
+  spawnEnemy('sexton',456,0,0,{unlockQuest:'q02'});
+  spawnEnemy('hollow',544,-62,0,{unlockQuest:'q04'});
+  spawnEnemy('hollow',592,56,0,{unlockQuest:'q04'});
+  spawnEnemy('mempool',656,-10,0,{unlockQuest:'q04'});
+  spawnEnemy('tallow',812,0,0,{unlockQuest:'q05'});
 }
 function enemyUnlocked(e){
+  if(e.unlockQuest && !Story.questReached(e.unlockQuest))return false;
+  if(e.key==='sexton'||e.key==='mempool'||e.key==='tallow')return Story.stepMatchesMonster(e.key);
   if(e.key==='hollow')return progress.hollows>=e.gate;
   if(e.key==='sentinel')return progress.forged;
   return progress.hollows>=3;
@@ -646,10 +690,10 @@ function killEnemy(e){
   Story.event('kill',{key:e.key});
   log('<b>'+esc(e.type.name)+'</b> slain. +'+reward.toFixed(2)+' RUNE pending.');
   if(e.type.boss){
-    const rune={id:'sentinel-'+Date.now(),name:"Sentinel's Great Rune",buff:12};
+    const rune={id:e.key+'-'+Date.now(),name:e.type.sigilName||e.type.name+' Sigil',buff:e.type.sigilBuff||12};
     Chain.mintGreatRune(player.name,rune);
     Story.event('greatRune',{rune:rune.id});
-    lootFlash('Great Rune minted<br><small>'+esc(rune.name)+'</small>');
+    lootFlash('Boss Sigil sealed<br><small>'+esc(rune.name)+'</small>');
   }
 }
 function updateEnemies(dt){
@@ -766,6 +810,7 @@ addEventListener('keydown',e=>{
   if((e.code==='Space'||e.code==='KeyL'||e.code==='KeyJ')&&!e.repeat){ e.preventDefault(); doAttack(); }
   if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&!e.repeat)doDash();
   if(e.code==='KeyQ'&&!e.repeat)targetNearest();
+  if(e.code==='KeyE'&&!e.repeat)doInteract();
   if(e.code==='KeyG'&&!e.repeat){ state.graceOpen?closeGrace():openGrace(); }
   if(e.code==='KeyB'&&!e.repeat){ state.wardrobeOpen?closeWardrobe():openWardrobe(); }
   if(e.code==='KeyM'&&!e.repeat)toggleWallet();
@@ -791,7 +836,7 @@ function nearGrace(){ return dist(player,GRACE)<SAFE_RADIUS; }
 function openGrace(){
   if(!state.started||player.dead||!nearGrace())return;
   state.graceOpen=true; player.hp=player.maxHp; player.sta=player.maxSta;
-  Story.event('visit',{site:'grace'});
+  Story.event('visit',{site:'hearthlight'});
   document.getElementById('levelup').style.display='flex';
   refreshGrace();
 }
@@ -894,7 +939,7 @@ const Net=(function(){
         const m=JSON.parse(ev.data);
         if(m.t==='state'&&m.id!==id){
           let r=remotes[m.id];
-          if(!r){ r={id:m.id,name:m.name||'Tarnished',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false}; remotes[m.id]=r; updatePeers(); }
+          if(!r){ r={id:m.id,name:m.name||'Recorded',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false}; remotes[m.id]=r; updatePeers(); }
           r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0;
         }
         if(m.t==='leave'){ delete remotes[m.id]; updatePeers(); }
@@ -1000,9 +1045,9 @@ function mapTile(tx,ty){
   if(x>170 && x<374 && y<-82 && y>-172)return h>.34?TILE_ID.graveDirt:TILE_ID.grassDark;
   if(x>430 && (h>.56 || y<-80 || y>82))return h>.78?TILE_ID.bramble:TILE_ID.cursed;
   if((x>-210&&x<-112&&y>48&&y<142)||(x>102&&x<188&&y>70&&y<150))return h>.55?TILE_ID.fenceGround:TILE_ID.grassFlower;
-  if(h>.94)return TILE_ID.grassFlower;
-  if(h<.18)return TILE_ID.shadowGrass;
-  return h<.52?TILE_ID.grass:TILE_ID.grassDark;
+  if(h>.965)return TILE_ID.grassFlower;
+  if(h<.08)return TILE_ID.shadowGrass;
+  return h<.86?TILE_ID.grass:TILE_ID.grassDark;
 }
 function drawAtlasTile(id,sx,sy){
   const img=ASSETS.tiles&&ASSETS.tiles.img;
@@ -1036,6 +1081,7 @@ function drawDecor(){
   for(const b of BRAMBLES)drawBramble(b);
   for(const t of TREES)drawTree(t);
   for(const c of CANDLES)drawCandle(c);
+  drawInteractables();
   const g=worldToScreen(GRACE.x,GRACE.y);
   ctx.globalAlpha=.14; ctx.fillStyle='#f1c75b'; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS*1.25,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
   ctx.strokeStyle='rgba(241,199,91,.55)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS,0,Math.PI*2); ctx.stroke();
@@ -1140,6 +1186,59 @@ const BRAMBLES=[
 const FENCES=[
   {x:-178,y:58,len:82,dir:'h'},{x:-216,y:98,len:76,dir:'v'},{x:120,y:92,len:92,dir:'h'},{x:158,y:130,len:54,dir:'v'}
 ];
+const INTERACTABLES=[
+  {id:'hearth-registry',target:'hearth-registry',quest:'q01',x:-20,y:10,label:'REGISTRY',kind:'stone'},
+  {id:'bell-west',target:'verification-bell',quest:'q02',x:310,y:-48,label:'BELL',kind:'bell'},
+  {id:'bell-east',target:'verification-bell',quest:'q02',x:414,y:40,label:'BELL',kind:'bell'},
+  {id:'tablet-a',target:'pending-tablet',quest:'q04',x:502,y:-42,label:'PENDING',kind:'tablet'},
+  {id:'tablet-b',target:'pending-tablet',quest:'q04',x:560,y:30,label:'PENDING',kind:'tablet'},
+  {id:'tablet-c',target:'pending-tablet',quest:'q04',x:620,y:-52,label:'PENDING',kind:'tablet'},
+  {id:'candle-a',target:'tallow-candle',quest:'q05',x:724,y:-34,label:'WAX NAME',kind:'tallow'},
+  {id:'candle-b',target:'tallow-candle',quest:'q05',x:766,y:42,label:'WAX NAME',kind:'tallow'},
+  {id:'candle-c',target:'tallow-candle',quest:'q05',x:842,y:-48,label:'WAX NAME',kind:'tallow'}
+];
+function interactionKey(i){ return Story.state.activeQuestId+':'+i.id; }
+function interactableActive(i){
+  const st=Story.currentStep();
+  return !!(st && st.done && st.done.event==='interact' && st.done.target===i.target && Story.questReached(i.quest) && !progress.interactions.has(interactionKey(i)));
+}
+function nearestInteractable(){
+  let best=null, bestD=999;
+  for(const i of INTERACTABLES){
+    if(!interactableActive(i))continue;
+    const d=Math.hypot(player.x-i.x,player.y-i.y);
+    if(d<bestD){ best=i; bestD=d; }
+  }
+  return bestD<36?best:null;
+}
+function doInteract(){
+  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen)return;
+  const i=nearestInteractable();
+  if(!i)return;
+  progress.interactions.add(interactionKey(i));
+  Story.event('interact',{target:i.target,id:i.id});
+  log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
+}
+function drawInteractables(){
+  for(const i of INTERACTABLES){
+    if(!Story.questReached(i.quest))continue;
+    const s=worldToScreen(i.x,i.y), active=interactableActive(i);
+    const done=progress.interactions.has(interactionKey(i));
+    if(i.kind==='bell'){
+      rect(s.x-6,s.y-20,12,4,'#7a5532'); rect(s.x-4,s.y-17,8,12,done?'#5d5848':'#c99a43'); rect(s.x-1,s.y-5,2,5,'#d8d0bd');
+    } else if(i.kind==='tablet'){
+      rect(s.x-8,s.y-10,16,13,done?'#343a37':'#5c6258'); rect(s.x-6,s.y-8,12,2,active?'#f1c75b':'#8d9386'); rect(s.x-5,s.y-3,10,1,'#222');
+    } else if(i.kind==='tallow'){
+      rect(s.x-3,s.y-15,6,15,done?'#4b3f31':'#e8dcc2'); rect(s.x-5,s.y-20,10,6,active?'#ffd36a':'#7a3325');
+    } else {
+      rect(s.x-9,s.y-8,18,12,done?'#4c5152':'#6b725f'); rect(s.x-5,s.y-15,10,7,active?'#f1c75b':'#8f967d');
+    }
+    if(active){
+      ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#f1c75b';
+      ctx.fillText('E',s.x,s.y-24);
+    }
+  }
+}
 function drawShadow(x,y,w,h){
   const s=worldToScreen(x,y); ctx.fillStyle='rgba(0,0,0,.34)'; ctx.fillRect(s.x-w/2,s.y-h/2,w,h);
 }
@@ -1148,6 +1247,27 @@ function drawSheet(key,x,y,frame,scale=1){
   if(!img)return false;
   const s=worldToScreen(x,y);
   ctx.drawImage(img,frame*a.w,0,a.w,a.h,Math.round(s.x-a.w*scale/2),Math.round(s.y-a.h*scale+8),a.w*scale,a.h*scale);
+  return true;
+}
+const DIR_NAMES=['east','south-east','south','south-west','west','north-west','north','north-east'];
+const PLAYER_DIR_ORDER=['south','south-east','east','north-east','north','north-west','west','south-west'];
+function directionName(dx,dy){
+  const angle=(Math.atan2(dy,dx)+Math.PI*2)%(Math.PI*2);
+  return DIR_NAMES[Math.round(angle/(Math.PI/4))%8];
+}
+function drawDirectionalPlayer(p){
+  const a=ASSETS.playerDir, img=a&&a.img;
+  if(!img)return false;
+  const dir=directionName(p.dirX||1,p.dirY||0);
+  const frame=Math.max(0,PLAYER_DIR_ORDER.indexOf(dir));
+  const s=worldToScreen(p.x,p.y);
+  const bob=p.moving?Math.sin(state.time*14)*1:0;
+  ctx.drawImage(img,frame*a.w,0,a.w,a.h,Math.round(s.x-a.w/2),Math.round(s.y-a.h+10+bob),a.w,a.h);
+  if(p.hurt>0){
+    ctx.globalAlpha=.34;
+    rect(s.x-a.w/2,s.y-a.h+10+bob,a.w,a.h,'#ffffff');
+    ctx.globalAlpha=1;
+  }
   return true;
 }
 function drawEntityFallback(e,key,frame){
@@ -1159,9 +1279,11 @@ function drawEntityFallback(e,key,frame){
 }
 function drawPlayerSprite(p,remote=false){
   const frame=p.attack?2:(p.hurt>0?3:(p.moving?1:0));
-  drawShadow(p.x,p.y,24,8);
+  drawShadow(p.x,p.y,remote?24:32,remote?8:10);
   const s=worldToScreen(p.x,p.y);
-  if(!drawSheet(remote?'phantom':'player',p.x,p.y,frame,ENTITY_SCALE)){
+  const drewDirectional=!remote&&drawDirectionalPlayer(p);
+  const drew=remote?drawSheet('phantom',p.x,p.y,frame,ENTITY_SCALE):drewDirectional;
+  if(!drew&&!drawSheet('player',p.x,p.y,frame,ENTITY_SCALE)){
     const pal=skinPal(p.skinId||'tarnished'), bob=p.moving?Math.sin(state.time*14)*1:0;
     rect(s.x-9,s.y-28+bob,18,22,pal.body);
     rect(s.x-7,s.y-39+bob,14,11,pal.skin);
@@ -1170,7 +1292,7 @@ function drawPlayerSprite(p,remote=false){
     rect(s.x-5,s.y-6,4,7,'#151617');
     rect(s.x+1,s.y-6,4,7,'#151617');
   }
-  if(!remote){
+  if(!remote&&!drewDirectional){
     const sx=s.x+p.dirX*15, sy=s.y-23+p.dirY*9;
     if(p.attack)rect(sx,sy,18,4,'#f1e6c8'); else rect(s.x+13,s.y-30,4,21,'#dce8ef');
   }
@@ -1181,7 +1303,8 @@ function drawEnemy(e){
   const scale=e.type.boss?1.36:ENTITY_SCALE;
   const spriteH=(e.type.boss?48:24)*scale;
   drawShadow(e.x,e.y,e.type.boss?48:25,e.type.boss?13:8);
-  if(!drawSheet(e.key,e.x,e.y,frame,scale))drawEntityFallback(e,e.key,frame);
+  const spriteKey=e.type.asset||e.key;
+  if(!drawSheet(spriteKey,e.x,e.y,frame,scale))drawEntityFallback(e,spriteKey,frame);
   const s=worldToScreen(e.x,e.y);
   if(e.hitFlash>0){ ctx.globalAlpha=.55; rect(s.x-(e.type.boss?32:18),s.y-spriteH-2,e.type.boss?64:36,spriteH,'#ffffff'); ctx.globalAlpha=1; }
   if(e.windup>0){ ctx.strokeStyle=e.type.boss?'#f1c75b':'#e24a4a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y-12,e.type.reach+4,0,Math.PI*2); ctx.stroke(); rect(s.x-2,s.y-spriteH-10,4,7,'#ffffff'); }
@@ -1190,7 +1313,7 @@ function drawEnemy(e){
     const w=e.type.boss?68:48, y=s.y-spriteH-12;
     rect(s.x-w/2,y,w,4,'#090b0f'); rect(s.x-w/2+1,y+1,(w-2)*(e.hp/e.maxHp),2,e.type.color);
     ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle=e.type.color;
-    ctx.fillText(e.type.boss?'SENTINEL':e.type.name.replace('Hollow ','').replace('Fallen ',''),s.x,y-3);
+    ctx.fillText(e.type.short||e.type.name.replace('Hollow ','').replace('Fallen ',''),s.x,y-3);
   }
 }
 function drawProjectiles(){
@@ -1250,17 +1373,20 @@ function updateHud(){
   document.getElementById('sStr').textContent=player.strength;
   document.getElementById('sDmg').textContent=player.dmg;
   const grs=Chain.greatRunesOf(player.name);
-  document.getElementById('runes').textContent=grs.length?'Great Rune: '+grs.map(g=>g.name.split("'")[0]).join(', '):'';
+  document.getElementById('runes').textContent=grs.length?'Boss Sigil: '+grs.map(g=>g.name).join(', '):'';
   Story.updateHud();
   updateWallet();
   const prompt=document.getElementById('prompt');
-  if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Grace Zone - press <b>G</b> to rest, level, forge'; }
+  const near=nearestInteractable();
+  if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
+  else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
   else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }
   else prompt.style.display='none';
   const boss=enemies.find(e=>e.type.boss&&!e.dead);
   const box=document.getElementById('bossbar');
   if(boss&&(boss.hp<boss.maxHp||dist(boss,player)<130||player.lock===boss)){
     box.style.display='block';
+    document.getElementById('bossname').textContent=boss.type.name;
     document.getElementById('bossfill').style.width=(boss.hp/boss.maxHp*100)+'%';
   } else box.style.display='none';
 }
@@ -1281,13 +1407,13 @@ function updateWallet(){
 }
 function startGame(){
   if(state.started)return;
-  player.name=(document.getElementById('name').value.trim()||'Tarnished').slice(0,14);
+  player.name=(document.getElementById('name').value.trim()||'Recorded').slice(0,14);
   document.getElementById('charname').textContent=player.name;
   document.getElementById('start').style.display='none';
   document.body.classList.add('playing');
   state.started=true; state.introMercy=4; recalcStats(true);
   Story.event('start'); Net.connect(); Net.updatePeers();
-  log('Grace is safe. Move east when ready. One Hollow first, then escalation.');
+  log('Hearthlight is safe. Let the registry record you, then move east.');
 }
 document.getElementById('go').onclick=startGame;
 document.getElementById('name').addEventListener('keydown',e=>{ if(e.code==='Enter')startGame(); });

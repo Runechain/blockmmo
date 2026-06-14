@@ -1,0 +1,119 @@
+{
+  "source": "/Users/angusdurrie/Downloads/A_tarnished_warrior_standing_in (1)/A_tarnished_warrior_standing_in/rotations",
+  "frameSize": 56,
+  "directions": {
+    "south": {
+      "bounds": {
+        "x": 83,
+        "y": 63,
+        "w": 106,
+        "h": 130
+      },
+      "scaled": {
+        "w": 41,
+        "h": 50,
+        "x": 7,
+        "y": 3
+      }
+    },
+    "south-east": {
+      "bounds": {
+        "x": 85,
+        "y": 64,
+        "w": 112,
+        "h": 124
+      },
+      "scaled": {
+        "w": 45,
+        "h": 50,
+        "x": 5,
+        "y": 3
+      }
+    },
+    "east": {
+      "bounds": {
+        "x": 75,
+        "y": 64,
+        "w": 120,
+        "h": 129
+      },
+      "scaled": {
+        "w": 47,
+        "h": 50,
+        "x": 4,
+        "y": 3
+      }
+    },
+    "north-east": {
+      "bounds": {
+        "x": 67,
+        "y": 63,
+        "w": 109,
+        "h": 130
+      },
+      "scaled": {
+        "w": 42,
+        "h": 50,
+        "x": 7,
+        "y": 3
+      }
+    },
+    "north": {
+      "bounds": {
+        "x": 75,
+        "y": 64,
+        "w": 84,
+        "h": 126
+      },
+      "scaled": {
+        "w": 33,
+        "h": 50,
+        "x": 11,
+        "y": 3
+      }
+    },
+    "north-west": {
+      "bounds": {
+        "x": 63,
+        "y": 65,
+        "w": 102,
+        "h": 122
+      },
+      "scaled": {
+        "w": 42,
+        "h": 50,
+        "x": 7,
+        "y": 3
+      }
+    },
+    "west": {
+      "bounds": {
+        "x": 59,
+        "y": 64,
+        "w": 115,
+        "h": 126
+      },
+      "scaled": {
+        "w": 46,
+        "h": 50,
+        "x": 5,
+        "y": 3
+      }
+    },
+    "south-west": {
+      "bounds": {
+        "x": 78,
+        "y": 63,
+        "w": 97,
+        "h": 129
+      },
+      "scaled": {
+        "w": 38,
+        "h": 50,
+        "x": 9,
+        "y": 3
+      }
+    }
+  },
+  "generatedAt": "2026-06-14T15:03:35.248Z"
+}

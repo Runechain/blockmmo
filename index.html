@@ -707,11 +707,18 @@ const CLIP_WANT = {
 // model fetches, so external URLs 404 here — keep these local). robot.glb (RobotExpressive)
 // carries the full Idle/Walking/Running/Jump/Punch/Death set the combat hooks expect.
 // Drop bespoke per-creature GLBs (e.g. Meshy-generated) at these paths to override.
-// Characters are built from a procedural FRAME + a mix-and-match part loadout (see PARTS /
-// LOADOUTS below), so model URLs here are only a fallback. sentinel keeps its one-off Meshy
-// boss mesh; everyone else uses the rigged frame so gear animates and can be swapped/upgraded.
+// Per-role models. CC0 animated Quaternius creatures (Poly Pizza) for the cast +
+// a textured Meshy boss. The loader fuzzy-maps each pack's clip names onto our
+// states and tints to palette. Anything missing falls back to the rigged frame
+// (buildBiped + LOADOUTS), which is also where attachable gear/upgrades live.
 const MODELS = {
-  sentinel: { url:'models/sentinel.glb' },  // Meshy-generated boss (static one-off)
+  default:  { url:'models/player.glb'   },  // Adventurer
+  player:   { url:'models/player.glb'   },
+  hollow:   { url:'models/hollow.glb'   },  // Skeleton
+  hound:    { url:'models/hound.glb'    },  // Slime swarmer
+  knight:   { url:'models/knight.glb'   },  // Demon
+  sorcerer: { url:'models/sorcerer.glb' },  // Wizard
+  sentinel: { url:'models/sentinel.glb' },  // textured Meshy boss
 };
 const ASSETS = { ready:false, models:{} };   // role -> {scene, animations, norm}
 

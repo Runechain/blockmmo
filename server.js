@@ -78,8 +78,8 @@ function handleMessage(client, raw) {
     case 'join':
       client.id = m.id; client.name = (m.name || 'Tarnished').slice(0, 14);
       console.log(`✦ ${client.name} entered the realm  (${clients.size} online)`);
-      // send the newcomer the current chain so ledgers converge
-      if (chain.length > masterChain.length) masterChain = chain;
+      // adopt the newcomer's ledger if it's longer (longest-chain convergence), then sync them
+      if (Array.isArray(m.chain) && m.chain.length > masterChain.length) { masterChain = m.chain; saveLedger(); }
       send(client, { t: 'chain', chain: masterChain });
       break;
     case 'state':
@@ -93,14 +93,35 @@ function handleMessage(client, raw) {
   }
 }
 
-/* ---- shared ledger (longest-valid-chain authority) -------------------- */
-let masterChain = [];
-let chain = [];
+/* ---- shared ledger (longest-valid-chain authority) + disk persistence -- */
+const LEDGER_FILE = path.join(__dirname, 'ledger.json');
+let masterChain = loadLedger();
+let saveTimer = null;
+
+function loadLedger() {
+  try {
+    const data = JSON.parse(fs.readFileSync(LEDGER_FILE, 'utf8'));
+    if (Array.isArray(data)) { console.log(`⛓ ledger restored from disk — ${data.length} block(s)`); return data; }
+  } catch (_) { /* no ledger yet — start a fresh realm */ }
+  return [];
+}
+// debounced write: a burst of gossiped blocks collapses into one disk write
+function saveLedger() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    fs.writeFile(LEDGER_FILE, JSON.stringify(masterChain), (err) => {
+      if (err) console.error('⚠ ledger save failed:', err.message);
+    });
+  }, 800);
+}
+
 function acceptBlock(block) {
   // trust client validation for this demo; keep the heaviest chain we've seen
   if (block && typeof block.index === 'number' && block.index >= masterChain.length) {
     masterChain[block.index] = block;
     console.log(`⛓ block #${block.index} gossiped — ${block.txs ? block.txs.length : 0} tx`);
+    saveLedger();
   }
 }
 

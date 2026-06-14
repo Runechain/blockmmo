@@ -573,20 +573,14 @@ function buildBiped(palette){
   // head
   const head=new THREE.Group(); head.position.y=1.32; hips.add(head);
   head.add(part(0.34,0.36,0.34,palette.skin,0));
-  const helm=part(0.4,0.22,0.42,palette.trim,0.16); head.add(helm);
-  // shoulders/arms
+  // shoulders/arms — gear is no longer baked in; it attaches at sockets below
   function arm(side){
     const s=new THREE.Group(); s.position.set(side*0.46,1.12,0); hips.add(s);
     const upper=part(0.2,0.5,0.2,palette.trim,-0.25); s.add(upper);
     const fore=new THREE.Group(); fore.position.y=-0.5; s.add(fore);
     fore.add(part(0.18,0.5,0.18,palette.skin,-0.25));
-    if(side<0){ // weapon in left/main hand
-      const sword=new THREE.Mesh(new THREE.BoxGeometry(0.08,1.5,0.16),
-        new THREE.MeshStandardMaterial({color:0xd9dde2,metalness:.8,roughness:.3}));
-      sword.position.y=-0.95; sword.castShadow=true; fore.add(sword);
-      const guard=part(0.34,0.08,0.1,0x8a6a32,-0.5); fore.add(guard);
-    }
-    return {s,fore};
+    const hand=new THREE.Group(); hand.position.y=-0.5; fore.add(hand);  // weapon/shield socket
+    return {s,fore,hand};
   }
   const armL=arm(-1), armR=arm(1);
   // legs
@@ -599,7 +593,13 @@ function buildBiped(palette){
     return {s,shin};
   }
   const legL=leg(-1), legR=leg(1);
-  g.userData={hips,head,armL,armR,legL,legR,phase:0};
+  // mix-and-match attachment sockets — gear parented here rides the animation
+  const chestS=new THREE.Group(); chestS.position.set(0,0.95,0.16); hips.add(chestS);
+  const back  =new THREE.Group(); back.position.set(0,0.95,-0.2);   hips.add(back);
+  const waist =new THREE.Group(); waist.position.set(0,0.5,0);      hips.add(waist);
+  const sockets={ head, shoulderL:armL.s, shoulderR:armR.s,
+                  handL:armL.hand, handR:armR.hand, chest:chestS, back, waist };
+  g.userData={hips,head,armL,armR,legL,legR,phase:0,sockets};
   return g;
 }
 function animateBiped(b,speed,dt,opts={}){
@@ -626,6 +626,56 @@ function animateBiped(b,speed,dt,opts={}){
   if(opts.air){ u.legL.s.rotation.x=0.5; u.legR.s.rotation.x=-0.3; }
   // bob the whole body while walking
   u.hips.position.y = 1.05 + Math.abs(sw2)*amp*0.08;
+}
+
+/* ------------------- (4a) mix-and-match gear + loadouts ------------------- */
+/* A character = the animated FRAME above + a LOADOUT of parts snapped onto its
+   named sockets (head / hands / shoulders / chest / back / waist). Parts are
+   palette-aware primitive builders for now; a GLB-loaded mesh (e.g. Meshy gear)
+   attaches the exact same way. Swapping loadout entries IS skins/upgrades.     */
+const _gmat=(c,e)=>new THREE.MeshStandardMaterial({color:c,roughness:.65,metalness:.25,emissive:e||0x000000,emissiveIntensity:e?0.6:0});
+function gbox(w,h,d,c,y,z,x){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),_gmat(c)); m.castShadow=true; m.position.set(x||0,y||0,z||0); return m; }
+function gcyl(rt,rb,h,c,y){ const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,8),_gmat(c)); m.castShadow=true; m.position.y=y||0; return m; }
+function gcone(r,h,c,y){ const m=new THREE.Mesh(new THREE.ConeGeometry(r,h,6),_gmat(c)); m.castShadow=true; m.position.y=y||0; return m; }
+
+const GEAR = {
+  // ---- heads (attach to 'head') ----
+  helmKnight:p=>{ const g=new THREE.Group(); g.add(gbox(0.44,0.28,0.46,p.trim,0.15)); g.add(gbox(0.16,0.05,0.04,0x16181c,0.06,0.23)); return g; },
+  helmHorned:p=>{ const g=GEAR.helmKnight(p); for(const s of[-1,1]){ const h=gcone(0.08,0.44,0xe7e0cf,0); h.position.set(s*0.25,0.34,0); h.rotation.z=-s*0.5; g.add(h);} return g; },
+  hood:p=>{ const g=new THREE.Group(); const h=new THREE.Mesh(new THREE.ConeGeometry(0.37,0.68,6),_gmat(p.trim)); h.castShadow=true; h.position.y=0.16; g.add(h); g.add(gbox(0.3,0.22,0.05,0x0b0a10,0.02,0.2)); return g; },
+  // ---- weapons (handL = main, handR = off-hand) ----
+  sword:p=>{ const g=new THREE.Group(); g.add(gbox(0.09,1.4,0.17,0xd9dde2,-0.7)); g.add(gbox(0.36,0.09,0.11,0x8a6a32,-0.02)); g.add(gbox(0.07,0.24,0.07,0x4a3a22,0.14)); return g; },
+  greatsword:p=>{ const g=new THREE.Group(); g.add(gbox(0.13,2.05,0.21,0xc8ccd2,-1.05)); g.add(gbox(0.52,0.12,0.14,0x6a5a32,-0.05)); g.add(gbox(0.08,0.36,0.08,0x3a2e1a,0.2)); return g; },
+  staff:p=>{ const g=new THREE.Group(); g.add(gcyl(0.045,0.05,1.8,0x5a4a32,-0.7)); const orb=new THREE.Mesh(new THREE.IcosahedronGeometry(0.15,0),_gmat(0x9b7bff,0x6a4fd0)); orb.castShadow=true; orb.position.y=0.28; g.add(orb); return g; },
+  claw:p=>{ const g=new THREE.Group(); for(const o of[-0.1,0,0.1]){ const c=gbox(0.04,0.36,0.06,0xe9e4d4,-0.34,0.12); c.position.x=o; c.rotation.x=-0.3; g.add(c);} return g; },
+  // ---- shoulders / back ----
+  pauldron:p=>gbox(0.36,0.22,0.4,p.trim,0.02),
+  spikePauldron:p=>{ const g=new THREE.Group(); g.add(gbox(0.36,0.22,0.4,p.trim,0.02)); g.add(gcone(0.1,0.34,0xcfc7af,0.22)); return g; },
+  cape:p=>gbox(0.66,1.1,0.05,p.body,-0.45,-0.22),
+  cloak:p=>{ const c=new THREE.Mesh(new THREE.ConeGeometry(0.54,1.5,6,1,true),_gmat(p.body)); c.castShadow=true; c.position.set(0,-0.5,-0.05); return c; },
+};
+
+// per-role part loadouts — THIS is the mix-and-match table (swap entries for skins/upgrades)
+const LOADOUTS = {
+  player:   p=>({ head:GEAR.helmKnight(p), handL:GEAR.sword(p),      shoulderL:GEAR.pauldron(p),      shoulderR:GEAR.pauldron(p),      back:GEAR.cape(p) }),
+  knight:   p=>({ head:GEAR.helmHorned(p), handL:GEAR.greatsword(p), shoulderL:GEAR.spikePauldron(p), shoulderR:GEAR.spikePauldron(p) }),
+  hollow:   p=>({ head:GEAR.hood(p),       handL:GEAR.sword(p) }),
+  sorcerer: p=>({ head:GEAR.hood(p),       handR:GEAR.staff(p),      back:GEAR.cloak(p) }),
+  hound:    p=>({ handL:GEAR.claw(p),      handR:GEAR.claw(p) }),
+  phantom:  p=>({ head:GEAR.helmKnight(p), handL:GEAR.sword(p) }),
+  default:  p=>({ head:GEAR.helmKnight(p), handL:GEAR.sword(p) }),
+};
+function equipLoadout(frame, loadout){
+  const s=frame.userData.sockets;
+  for(const k in loadout){ if(s[k] && loadout[k]) s[k].add(loadout[k]); }
+}
+function riggedAvatar(role, palette, scale){
+  const frame=buildBiped(palette);
+  equipLoadout(frame, (LOADOUTS[role]||LOADOUTS.default)(palette));
+  if(scale)frame.scale.setScalar(scale);
+  return { obj:frame, kind:'rigged',
+    drive(speed,dt,o){ animateBiped(frame,speed,dt,o||{}); },
+    setDead(){ frame.rotation.z=Math.PI/2.2; } };
 }
 
 /* ---------------------- (4b) glTF characters + mixer --------------------- */
@@ -657,14 +707,11 @@ const CLIP_WANT = {
 // model fetches, so external URLs 404 here — keep these local). robot.glb (RobotExpressive)
 // carries the full Idle/Walking/Running/Jump/Punch/Death set the combat hooks expect.
 // Drop bespoke per-creature GLBs (e.g. Meshy-generated) at these paths to override.
+// Characters are built from a procedural FRAME + a mix-and-match part loadout (see PARTS /
+// LOADOUTS below), so model URLs here are only a fallback. sentinel keeps its one-off Meshy
+// boss mesh; everyone else uses the rigged frame so gear animates and can be swapped/upgraded.
 const MODELS = {
-  default:  { url:'models/robot.glb'   },
-  player:   { url:'models/robot.glb'   },
-  hollow:   { url:'models/robot.glb'   },
-  hound:    { url:'models/robot.glb'   },
-  knight:   { url:'models/robot.glb'   },
-  sorcerer: { url:'models/robot.glb'   },
-  sentinel: { url:'models/soldier.glb' },   // distinct, imposing silhouette for the boss
+  sentinel: { url:'models/sentinel.glb' },  // Meshy-generated boss (static one-off)
 };
 const ASSETS = { ready:false, models:{} };   // role -> {scene, animations, norm}
 
@@ -743,7 +790,7 @@ function proceduralAvatar(palette,scale){
     setDead(){ obj.rotation.z=Math.PI/2.2; } };
 }
 function makeAvatar(role,palette,scale){
-  return modelFor(role) ? gltfAvatar(role,palette,scale) : proceduralAvatar(palette,scale);
+  return modelFor(role) ? gltfAvatar(role,palette,scale) : riggedAvatar(role,palette,scale);
 }
 // measure a character's real size so hitboxes match whatever rig/scale is live
 function measure(obj){

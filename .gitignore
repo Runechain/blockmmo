@@ -8,6 +8,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+.superpowers/
+.playwright-cli/
+output/playwright/
 
 # env / secrets — never commit keys (esp. once Solana/treasury keys exist)
 .env

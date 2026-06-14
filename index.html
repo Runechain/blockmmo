@@ -3,234 +3,230 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RUNECHAIN — a tiny Soulslike MMO with a real blockchain</title>
+<title>RUNECHAIN - Pixel MMO Demo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23090b0f'/%3E%3Crect x='24' y='8' width='16' height='48' fill='%23f1c75b'/%3E%3Crect x='12' y='24' width='40' height='16' fill='%23f1c75b'/%3E%3Crect x='28' y='12' width='8' height='40' fill='%2314151a'/%3E%3C/svg%3E" />
 <style>
   :root{
-    --gold:#c8a24a; --gold2:#e7cf86; --bg:#0b0c0e; --panel:rgba(14,15,18,.82);
-    --ok:#5fd38a; --bad:#e0594b; --txt:#e9e4d4; --dim:#9a937f;
+    --ink:#090b0f;
+    --panel:rgba(13,15,18,.9);
+    --panel2:#171b1e;
+    --line:#30343a;
+    --gold:#f1c75b;
+    --rune:#a7e36f;
+    --blood:#e24a4a;
+    --sta:#57c77a;
+    --mana:#7aa7ff;
+    --txt:#f1ead8;
+    --muted:#a9a08c;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);
-    font-family:"Trebuchet MS",Segoe UI,system-ui,sans-serif;}
-  #c{display:block;width:100vw;height:100vh}
-  .hud{position:fixed;pointer-events:none;user-select:none;text-shadow:0 2px 6px #000}
-  /* top-left vitals */
-  #vitals{top:14px;left:14px;width:320px}
-  .bar{height:16px;border:1px solid #000;border-radius:3px;background:#1c1a16;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);margin:5px 0;overflow:hidden}
-  .bar > i{display:block;height:100%;width:100%;transition:width .12s linear}
-  #hp > i{background:linear-gradient(#b6443a,#7d2a22)}
-  #sta > i{background:linear-gradient(#6fae54,#3f6e32)}
-  .lab{font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
-  /* wallet / chain */
-  #wallet{top:14px;right:14px;width:330px;background:var(--panel);border:1px solid #2a2620;
-    border-radius:8px;padding:12px 14px;pointer-events:auto}
-  #wallet h3{margin:0 0 6px;font-size:12px;letter-spacing:.18em;color:var(--gold2);
-    text-transform:uppercase;border-bottom:1px solid #2a2620;padding-bottom:6px}
-  .row{display:flex;justify-content:space-between;font-size:12px;margin:3px 0;color:var(--txt)}
-  .row b{color:var(--gold2);font-variant-numeric:tabular-nums}
-  #chain{margin-top:8px;max-height:150px;overflow:auto;font-family:ui-monospace,Menlo,monospace;
-    font-size:10px;line-height:1.45;color:#8f8a78}
-  #chain .blk{padding:3px 5px;border-left:2px solid var(--gold);margin:3px 0;background:rgba(255,255,255,.02)}
-  #chain .blk.mining{border-color:#e0a94b;color:#e7cf86}
-  #chain .h{color:#5fd38a}
-  /* peers */
-  #peers{bottom:14px;right:14px;width:230px;background:var(--panel);border:1px solid #2a2620;
-    border-radius:8px;padding:10px 12px;font-size:12px}
-  #peers h3{margin:0 0 6px;font-size:11px;letter-spacing:.16em;color:var(--gold2);text-transform:uppercase}
-  .peerline{display:flex;align-items:center;gap:6px;margin:2px 0}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 6px var(--ok)}
-  .dot.local{background:#888;box-shadow:none}
-  /* combat log / hints */
-  #log{bottom:14px;left:14px;width:360px;font-size:12px;color:#cfc7af}
-  #log div{opacity:.0;animation:fade 5s forwards}
-  @keyframes fade{0%{opacity:0;transform:translateY(6px)}8%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
-  #center{top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-  .cross{width:6px;height:6px;border:2px solid rgba(255,255,255,.6);border-radius:50%;
-    margin:0 auto;box-shadow:0 0 4px #000}
-  /* lock-on reticle */
-  #lockon{display:none;color:#e0594b;font-size:26px;line-height:1;transform:translate(-50%,-50%);
-    text-shadow:0 0 8px #000,0 0 14px #e0594b;z-index:6;animation:lockpulse 1.6s infinite ease-in-out}
-  @keyframes lockpulse{0%,100%{opacity:.65;transform:translate(-50%,-50%) scale(1)}
-    50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}}
-  /* stamina too low to act */
-  .bar.flash{animation:staflash .35s}
-  @keyframes staflash{0%,100%{box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
-    50%{box-shadow:inset 0 0 0 2px #e0594b,0 0 10px rgba(224,89,75,.7)}}
-  /* start overlay */
-  #start{position:fixed;inset:0;background:radial-gradient(60% 60% at 50% 35%,#16130c,#000);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;
-    text-align:center;padding:24px}
-  #start h1{font-size:46px;margin:0;letter-spacing:.16em;color:var(--gold2);
-    text-shadow:0 0 30px rgba(200,162,74,.5)}
-  #start .sub{color:var(--gold);letter-spacing:.34em;font-size:13px;margin:6px 0 26px}
-  #start p{max-width:560px;color:#b8b09a;font-size:14px;line-height:1.7}
-  #start .keys{margin:18px 0;color:#9a937f;font-size:13px}
-  #start .keys b{color:var(--gold2)}
-  #go{pointer-events:auto;margin-top:14px;padding:14px 40px;background:linear-gradient(#c8a24a,#9a7a2e);
-    color:#1a1407;border:none;border-radius:6px;font-size:16px;letter-spacing:.18em;cursor:pointer;
-    font-weight:bold;text-transform:uppercase;box-shadow:0 6px 24px rgba(200,162,74,.35)}
-  #go:hover{filter:brightness(1.1)}
-  #name{pointer-events:auto;margin-top:14px;background:#111;border:1px solid #3a342a;color:#e7cf86;
-    padding:10px 14px;border-radius:6px;text-align:center;letter-spacing:.1em;font-size:14px;width:240px}
-  .mini{color:#6c6656;font-size:11px;margin-top:26px;max-width:560px;line-height:1.6}
-  #death{position:fixed;inset:0;background:rgba(20,0,0,.55);display:none;align-items:center;
-    justify-content:center;z-index:40;flex-direction:column}
-  #death h1{color:#c0392b;letter-spacing:.3em;font-size:54px;text-shadow:0 0 30px #000}
-  #death button{pointer-events:auto;margin-top:20px;padding:12px 30px;background:#2a1a14;color:#e7cf86;
-    border:1px solid #6b4a2e;border-radius:6px;cursor:pointer;letter-spacing:.16em}
-  /* stats + levelling */
-  .statline{font-size:11px;color:#9a937f;margin-top:6px;letter-spacing:.04em}
-  .statline b{color:#e7cf86;font-variant-numeric:tabular-nums}
-  #runes{margin-top:3px;color:#c8a24a;font-size:11px}
-  #graceprompt{bottom:92px;left:50%;transform:translateX(-50%);text-align:center;color:#e7cf86;
-    font-size:14px;letter-spacing:.08em;display:none;background:rgba(14,15,18,.72);
-    padding:8px 16px;border:1px solid #3a342a;border-radius:8px}
-  #graceprompt b{color:#fff}
-  #levelup,#wardrobe{position:fixed;inset:0;background:rgba(8,7,5,.74);display:none;align-items:center;
-    justify-content:center;z-index:45}
-  #levelup .panel,#wardrobe .panel{width:440px;max-height:86vh;overflow:auto;
-    background:linear-gradient(#15130d,#0c0b08);border:1px solid #6b542e;
-    border-radius:12px;padding:24px 26px;box-shadow:0 20px 80px rgba(0,0,0,.7)}
-  #levelup h2,#wardrobe h2{margin:0 0 4px;color:#e7cf86;letter-spacing:.2em;font-size:20px;text-transform:uppercase}
-  #levelup .gsub,#wardrobe .gsub{color:#9a8a5a;font-size:12px;letter-spacing:.14em;margin-bottom:16px}
-  #levelup .lvrow,#wardrobe .lvrow{display:flex;justify-content:space-between;color:#cfc7af;font-size:13px;margin:6px 0}
-  #levelup .lvrow b,#wardrobe .lvrow b{color:#e7cf86}
-  /* wallet split rows */
-  .row.split{margin-top:6px;border-top:1px solid #2a2620;padding-top:6px}
-  /* wardrobe economy controls + skin list */
-  .econrow{display:flex;gap:8px;margin:12px 0 6px}
-  .econbtn{pointer-events:auto;flex:1;padding:9px 10px;background:#1d1a12;border:1px solid #3a342a;
-    border-radius:8px;color:#e9e4d4;cursor:pointer;font-size:12px;letter-spacing:.02em}
-  .econbtn:hover:not(:disabled){border-color:#c8a24a;background:#26210f}
-  .econbtn:disabled{opacity:.4;cursor:not-allowed}
-  .econbtn.pay{border-color:#6b542e;color:#e7cf86}
-  .econnote{color:#6c6656;font-size:10.5px;line-height:1.55;margin:10px 0 6px}
-  .econnote b{color:#9a8a5a}
-  .wlist{margin-top:4px}
-  .skin{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #221f18}
-  .skin.equipped{background:rgba(200,162,74,.08)}
-  .sw{width:22px;height:22px;border-radius:5px;flex:none}
-  .sn{flex:1;font-size:13px;color:#e9e4d4}
-  .skinbtn{pointer-events:auto;min-width:78px;padding:7px 10px;background:#1d1a12;border:1px solid #3a342a;
-    border-radius:7px;color:#e7cf86;cursor:pointer;font-size:12px;font-variant-numeric:tabular-nums}
-  .skinbtn:hover:not(:disabled){border-color:#c8a24a}
-  .skinbtn:disabled{opacity:.5;cursor:default}
-  .statbtn{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;width:100%;
-    margin:8px 0;padding:12px 14px;background:#1d1a12;border:1px solid #3a342a;border-radius:8px;
-    color:#e9e4d4;cursor:pointer;font-size:14px;text-align:left}
-  .statbtn:hover{border-color:#c8a24a;background:#26210f}
-  .statbtn:disabled{opacity:.4;cursor:not-allowed}
-  .statbtn small{color:#9a937f;display:block;font-size:11px}
-  .statbtn .cost{color:#e7cf86;font-variant-numeric:tabular-nums;font-size:13px}
-  #lvclose,#wclose{pointer-events:auto;margin-top:14px;width:100%;padding:10px;background:#2a1a14;color:#e7cf86;
-    border:1px solid #6b4a2e;border-radius:8px;cursor:pointer;letter-spacing:.14em}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--txt);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  #c{display:block;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges;background:#0b1012}
+  .hud{position:fixed;pointer-events:none;user-select:none;text-shadow:0 2px 0 #000,0 0 8px #000}
+  body:not(.playing) .hud{display:none!important}
+  #vitals{top:12px;left:12px;width:310px}
+  .lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .bar{height:14px;border:2px solid #050607;background:#191b1d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);margin:4px 0 7px}
+  .bar>i{display:block;height:100%;width:100%;transition:width .08s linear}
+  #hp>i{background:linear-gradient(90deg,#7c1d22,#e24a4a)}
+  #sta>i{background:linear-gradient(90deg,#236a44,#57c77a)}
+  .statline{font-size:11px;color:var(--muted);line-height:1.45}
+  .statline b{color:var(--gold)}
+  #quest{top:104px;left:12px;width:min(390px,calc(100vw - 24px));padding:9px 10px;background:var(--panel);
+    border:2px solid rgba(241,199,91,.5);box-shadow:0 0 0 2px #050607}
+  #quest .qk{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rune)}
+  #quest .qt{font-size:13px;color:var(--gold);margin-top:2px}
+  #quest .qo{font-size:12px;color:#d3cab5;margin-top:4px;line-height:1.35}
+  #wallet{display:none;top:12px;right:12px;width:335px;padding:11px 12px;background:var(--panel);
+    border:2px solid var(--line);box-shadow:0 0 0 2px #050607;pointer-events:auto}
+  #wallet h3,#peers h3{margin:0 0 7px;font-size:12px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase}
+  .row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#d9d1be;margin:4px 0}
+  .row b{color:var(--gold);font-variant-numeric:tabular-nums}
+  .row.split{border-top:1px solid var(--line);padding-top:7px;margin-top:8px}
+  #chain{margin-top:8px;max-height:135px;overflow:auto;font-size:10px;line-height:1.4;color:#9f9a8c}
+  #chain .blk{margin:3px 0;padding:3px 5px;border-left:3px solid var(--gold);background:rgba(255,255,255,.04)}
+  #chain .mining{border-color:var(--rune);color:#c7f6a0}
+  #peers{right:12px;bottom:12px;width:225px;padding:10px;background:rgba(13,15,18,.78);border:2px solid var(--line);
+    box-shadow:0 0 0 2px #050607;font-size:12px}
+  .peerline{display:flex;align-items:center;gap:6px;margin:3px 0;color:#d9d1be}
+  .dot{width:8px;height:8px;background:var(--sta);box-shadow:0 0 7px var(--sta)}
+  .dot.local{background:#7a7f86;box-shadow:none}
+  #log{top:12px;right:12px;width:min(360px,calc(100vw - 24px));font-size:11px;color:#d8d0bd;text-align:right}
+  #log div{display:inline-block;max-width:100%;margin:0 0 5px;padding:5px 7px;background:rgba(7,8,10,.64);
+    border:1px solid rgba(241,199,91,.25);opacity:0;animation:logfade 4.6s forwards}
+  @keyframes logfade{0%{opacity:0;transform:translateY(-5px)}8%{opacity:1;transform:none}82%{opacity:1}100%{opacity:0}}
+  #prompt{bottom:78px;left:50%;transform:translateX(-50%);display:none;background:var(--panel);border:2px solid var(--gold);
+    box-shadow:0 0 0 2px #050607;padding:7px 12px;font-size:12px;color:var(--gold);text-align:center}
+  #bossbar{display:none;left:50%;top:16px;transform:translateX(-50%);width:min(520px,58vw);text-align:center;
+    color:var(--gold);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+  #bossbar .bar{height:12px;margin-top:5px;background:#170909;border-color:#050607}
+  #bossbar .bar>i{background:linear-gradient(90deg,#8f1f1f,#f2a541)}
+  #lootflash{display:none;left:50%;top:42%;transform:translate(-50%,-50%);z-index:8;color:var(--gold);
+    text-align:center;font-size:22px;text-transform:uppercase;letter-spacing:.08em}
+  #lootflash.show{display:block;animation:lootpop 1.4s forwards}
+  @keyframes lootpop{0%{opacity:0;transform:translate(-50%,-38%) scale(.92)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    82%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(1.04)}}
+  #damagevignette{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .12s;
+    background:radial-gradient(circle,rgba(226,74,74,0) 48%,rgba(226,74,74,.38) 100%)}
+  #damagevignette.on{opacity:1}
+  #start,#death,#levelup,#wardrobe{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:40;
+    background:rgba(5,6,8,.82)}
+  #start{flex-direction:column;text-align:center;padding:22px;background:
+    radial-gradient(circle at 50% 35%,rgba(58,67,53,.75),rgba(5,6,8,.96) 64%),#050608}
+  #start h1{margin:0;color:var(--gold);font-size:44px;letter-spacing:.12em;text-shadow:0 0 24px rgba(241,199,91,.35)}
+  #start .sub{margin:8px 0 20px;color:var(--rune);font-size:12px;letter-spacing:.18em}
+  #start p{max-width:650px;margin:0 auto 15px;color:#cfc6b2;font-size:14px;line-height:1.65}
+  #start .keys{max-width:720px;color:#a9a08c;font-size:12px;line-height:1.8}
+  #start .keys b{color:var(--gold)}
+  #name{pointer-events:auto;margin-top:18px;width:250px;padding:11px 12px;background:#090b0f;border:2px solid #3c4147;
+    color:var(--gold);text-align:center;font:inherit;text-transform:uppercase}
+  #go,#respawn,#lvclose,#wclose{pointer-events:auto;margin-top:14px;padding:12px 24px;background:#2a2414;color:var(--gold);
+    border:2px solid var(--gold);box-shadow:0 0 0 2px #050607;cursor:pointer;font:inherit;text-transform:uppercase}
+  #go:hover,#respawn:hover,#lvclose:hover,#wclose:hover{background:#3b321a}
+  #start .mini{max-width:640px;margin-top:18px;color:#797365;font-size:11px;line-height:1.55}
+  #death{display:none;flex-direction:column;background:rgba(20,0,0,.72)}
+  #death h1{margin:0;color:#e24a4a;font-size:46px;letter-spacing:.18em;text-shadow:0 0 24px #000}
+  #levelup,#wardrobe{display:none;z-index:45}
+  .panel{width:min(470px,calc(100vw - 26px));max-height:88vh;overflow:auto;background:#111417;border:2px solid #615235;
+    box-shadow:0 0 0 2px #050607,0 16px 80px rgba(0,0,0,.7);padding:22px}
+  .panel h2{margin:0;color:var(--gold);font-size:19px;letter-spacing:.12em;text-transform:uppercase}
+  .gsub{margin:5px 0 14px;color:#9f967f;font-size:12px;line-height:1.45}
+  .lvrow{display:flex;justify-content:space-between;gap:12px;margin:7px 0;color:#d8d0bd;font-size:13px}
+  .lvrow b{color:var(--gold)}
+  .statbtn,.econbtn,.skinbtn,.itemrow button{pointer-events:auto;background:#191d20;color:#eadfc8;border:2px solid #363b42;
+    cursor:pointer;font:inherit}
+  .statbtn{display:flex;justify-content:space-between;width:100%;margin:8px 0;padding:10px 11px;text-align:left}
+  .statbtn small{display:block;color:#9f967f;font-size:11px;margin-top:2px}
+  .statbtn .cost{color:var(--gold)}
+  button:hover:not(:disabled){border-color:var(--gold);background:#222820}
+  button:disabled{opacity:.42;cursor:default}
+  .itemlist{margin-top:13px;border-top:1px solid #34302a;padding-top:10px}
+  .itemrow{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid #272b2f}
+  .itemrow b{display:block;color:var(--gold);font-size:13px}
+  .itemrow small{display:block;color:#9f967f;font-size:11px;line-height:1.35;margin-top:2px}
+  .itemrow button{min-width:86px;padding:7px 9px;color:var(--gold)}
+  .econrow{display:flex;gap:8px;margin:11px 0}
+  .econbtn{flex:1;padding:9px;color:#eadfc8}
+  .econbtn.pay{color:var(--gold);border-color:#756137}
+  .econnote{color:#807866;font-size:10.5px;line-height:1.45;margin-top:10px}
+  .skin{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #272b2f}
+  .skin.equipped{background:rgba(241,199,91,.08)}
+  .sw{width:22px;height:22px;display:inline-block;box-shadow:0 0 0 2px #050607}
+  .sn{flex:1;font-size:13px}
+  .skinbtn{min-width:82px;padding:7px;color:var(--gold)}
+  @media (max-width:720px){
+    #vitals{width:260px}
+    #wallet,#peers{right:8px;width:min(310px,calc(100vw - 16px))}
+    #peers{display:none}
+    #quest{top:96px}
+    #start h1{font-size:34px}
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-
-<div id="center" class="hud"><div class="cross"></div></div>
-<div id="lockon" class="hud">◎</div>
+<canvas id="c" width="640" height="360"></canvas>
 
 <div id="vitals" class="hud">
-  <div class="lab"><span id="charname">Tarnished</span> — Level <b id="lvl" style="color:#e7cf86">1</b></div>
+  <div class="lab"><span id="charname">Tarnished</span> - Level <b id="lvl">1</b></div>
   <div id="hp" class="bar"><i></i></div>
   <div class="lab">Stamina</div>
   <div id="sta" class="bar"><i></i></div>
-  <div class="statline">VGR <b id="sVgr">10</b> &nbsp;·&nbsp; END <b id="sEnd">10</b> &nbsp;·&nbsp; STR <b id="sStr">10</b> &nbsp;·&nbsp; DMG <b id="sDmg">50</b></div>
+  <div class="statline">VGR <b id="sVgr">10</b> / END <b id="sEnd">10</b> / STR <b id="sStr">10</b> / DMG <b id="sDmg">34</b></div>
   <div id="runes" class="statline"></div>
 </div>
 
+<div id="quest" class="hud">
+  <div class="qk">Current thread</div>
+  <div id="qtitle" class="qt">Chainwell Ambush</div>
+  <div id="qobj" class="qo">Enter the realm to wake the chain.</div>
+</div>
+
 <div id="wallet" class="hud">
-  <h3>⛓ Runechain Wallet</h3>
+  <h3>Runechain Wallet</h3>
   <div class="row"><span>Confirmed RUNE</span><b id="bal">0.00</b></div>
-  <div class="row"><span>Pending (mempool)</span><b id="pend">0.00</b></div>
-  <div class="row"><span>Gold (spendable)</span><b id="gold" style="color:#e7cf86">0.00</b></div>
+  <div class="row"><span>Pending mempool</span><b id="pend">0.00</b></div>
+  <div class="row"><span>Gold spendable</span><b id="gold">0.00</b></div>
   <div class="row"><span>Block height</span><b id="height">0</b></div>
   <div class="row"><span>Difficulty</span><b id="diff">3 nibbles</b></div>
   <div class="row"><span>Hashrate</span><b id="hr">0 H/s</b></div>
-  <div class="row split"><span>🔥 Burned (wSOL)</span><b id="burned">0.0000</b></div>
-  <div class="row"><span>🏆 Prize pool</span><b id="prizepool">0.0000</b></div>
-  <div class="row"><span>⚙ Fees</span><b id="feepool">0.0000</b></div>
+  <div class="row split"><span>Burned wSOL</span><b id="burned">0.0000</b></div>
+  <div class="row"><span>Prize pool</span><b id="prizepool">0.0000</b></div>
+  <div class="row"><span>Fees</span><b id="feepool">0.0000</b></div>
   <div id="chain"></div>
 </div>
 
 <div id="peers" class="hud">
-  <h3>◢ Connected Realm</h3>
+  <h3>Connected Realm</h3>
   <div id="peerlist"></div>
 </div>
 
+<div id="prompt" class="hud"></div>
 <div id="log" class="hud"></div>
-
-<div id="graceprompt" class="hud">Site of Grace — press <b>G</b> to rest &amp; level up</div>
+<div id="bossbar" class="hud">
+  <span id="bossname">Erdtree Sentinel</span>
+  <div class="bar"><i id="bossfill"></i></div>
+</div>
+<div id="lootflash" class="hud"></div>
+<div id="damagevignette"></div>
 
 <div id="levelup">
   <div class="panel">
     <h2>Site of Grace</h2>
-    <div class="gsub">Spend confirmed RUNE from the chain to grow stronger</div>
+    <div class="gsub">Rest safely. Spend confirmed RUNE on power or forge soulbound relics.</div>
     <div class="lvrow"><span>Level</span><b id="lvLevel">1</b></div>
     <div class="lvrow"><span>Spendable RUNE</span><b id="lvBal">0.00</b></div>
     <div class="lvrow"><span>Next level costs</span><b id="lvCost">30</b></div>
     <button class="statbtn" data-stat="vigor"><span>Vigor <small>+ max health</small></span><span class="cost" id="cVigor"></span></button>
     <button class="statbtn" data-stat="endurance"><span>Endurance <small>+ max stamina</small></span><span class="cost" id="cEnd"></span></button>
     <button class="statbtn" data-stat="strength"><span>Strength <small>+ attack damage</small></span><span class="cost" id="cStr"></span></button>
-    <button id="lvclose">Leave Grace  (G)</button>
+    <div class="itemlist" id="itemlist"></div>
+    <button id="lvclose">Leave Grace (G)</button>
   </div>
 </div>
 
 <div id="wardrobe">
   <div class="panel">
     <h2>Wardrobe</h2>
-    <div class="gsub">Cosmetics only — looks, never power. Soulbound &amp; recorded on-chain.</div>
+    <div class="gsub">Cosmetics only. Looks, never power. Soulbound and recorded on-chain.</div>
     <div class="lvrow"><span>Gold <small id="wGoldPend" style="color:#9a8a5a"></small></span><b id="wGold">0.00</b></div>
-    <div class="lvrow"><span>RUNE (grind)</span><b id="wRune">0.00</b></div>
+    <div class="lvrow"><span>RUNE grind</span><b id="wRune">0.00</b></div>
     <div class="econrow">
-      <button id="wConv" class="econbtn">⚖ Convert RUNE → Gold</button>
-      <button id="wBuy" class="econbtn pay">💎 Buy Gold · 1 wSOL</button>
+      <button id="wConv" class="econbtn">Convert RUNE to Gold</button>
+      <button id="wBuy" class="econbtn pay">Buy Gold - 1 wSOL</button>
     </div>
     <div id="wlist" class="wlist"></div>
-    <div class="econnote">Direct purchase, no loot boxes. Each wSOL splits <b>50%</b> prize pool · <b>35%</b> burn · <b>15%</b> fee. Devnet mock — no real funds.</div>
-    <button id="wclose">Close  (B)</button>
+    <div class="econnote">Direct purchase, no loot boxes. Each wSOL split is 50% prize pool, 35% burn, 15% fee. Devnet mock only.</div>
+    <button id="wclose">Close (B)</button>
   </div>
 </div>
 
 <div id="death">
   <h1>YOU DIED</h1>
-  <button id="respawn">Return to the Site of Grace</button>
+  <button id="respawn">Return to Grace</button>
 </div>
 
 <div id="start">
   <h1>RUNECHAIN</h1>
-  <div class="sub">A SOULSLIKE MMO ON A REAL BLOCKCHAIN</div>
-  <p>A mechanically-real 3D world. Bipedal warriors. Hollowed foes that drop <b style="color:#e7cf86">RUNE</b> —
-  a token settled by a genuine SHA‑256 <i>proof-of-work</i> chain your own browser mines. Other Tarnished
-  you meet are real players synced over the network (or phantoms, if you roam alone).</p>
+  <div class="sub">GRACEFALL PARISH - PIXEL MMO PROTOTYPE</div>
+  <p>Top-down pixel combat in a ruined parish: safe Grace light, readable monsters, RUNE drops, proof-of-work blocks, relic forging, cosmetics, and same-origin MMO sync.</p>
   <div class="keys">
-    <b>WASD</b> move &nbsp;·&nbsp; <b>Mouse</b> look &nbsp;·&nbsp; <b>Shift</b> hold-sprint / tap-roll &nbsp;·&nbsp;
-    <b>Q</b> lock-on &nbsp;·&nbsp; <b>Space</b> jump &nbsp;·&nbsp; <b>Click</b>/<b>L</b> attack &nbsp;·&nbsp; <b>G</b> rest &amp; level &nbsp;·&nbsp; <b>B</b> wardrobe &nbsp;·&nbsp; <b>M</b> wallet
+    <b>WASD</b> move / <b>Mouse</b> aim / <b>Click</b>, <b>Space</b>, or <b>L</b> attack / <b>Shift</b> dash /
+    <b>Q</b> target nearest / <b>G</b> Grace / <b>B</b> wardrobe / <b>M</b> wallet
   </div>
   <input id="name" maxlength="14" placeholder="name your Tarnished" />
-  <button id="go">Enter the Lands Between</button>
-  <div class="mini">Single player works instantly. For true MMO, run <code>node server.js</code> and reload —
-  every browser that connects shares one world and one ledger. Pure JS proof-of-work; no wallet, no real money.</div>
-  <div id="rigstatus" class="mini" style="color:#c8a24a;margin-top:10px">◌ Loading character rig…</div>
+  <button id="go">Enter Gracefall</button>
+  <div class="mini">This opens safe. One weak Hollow waits outside Grace. The road, graveyard, and boss gate unlock as the story moves.</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script>
 /* ============================================================================
-   RUNECHAIN — single-file Soulslike MMO demo
-   Sections:  (1) sha256  (2) blockchain  (3) world  (4) bipedal rig
-              (5) player  (6) enemies  (7) networking  (8) loop/HUD
+   RUNECHAIN PIXEL - single-file browser MMO demo
+   Keeps the economy, proof-of-work chain, story, relics, and WebSocket relay.
+   Replaces the old 3D layer with a readable top-down pixel action runtime.
    ========================================================================== */
 
-/* ----------------------------- (1) SHA-256 ------------------------------- */
-/* Compact, dependency-free, synchronous SHA-256 so we can hash fast enough
-   to actually mine proof-of-work in the render loop. Verified against
-   Node's crypto for the standard "abc" test vector.                         */
+/* ----------------------------- SHA-256 ---------------------------------- */
 const SHA256 = (function () {
   const K = new Uint32Array([
     0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
@@ -243,10 +239,13 @@ const SHA256 = (function () {
     0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
   function rotr(x,n){return (x>>>n)|(x<<(32-n));}
   return function sha256(ascii){
-    const bytes=[]; for(let i=0;i<ascii.length;i++){let c=ascii.charCodeAt(i);
+    const bytes=[];
+    for(let i=0;i<ascii.length;i++){
+      const c=ascii.charCodeAt(i);
       if(c<128)bytes.push(c);
-      else if(c<2048){bytes.push(192|(c>>6),128|(c&63));}
-      else{bytes.push(224|(c>>12),128|((c>>6)&63),128|(c&63));}}
+      else if(c<2048)bytes.push(192|(c>>6),128|(c&63));
+      else bytes.push(224|(c>>12),128|((c>>6)&63),128|(c&63));
+    }
     const l=bytes.length; bytes.push(0x80);
     while(bytes.length%64!==56)bytes.push(0);
     const bl=l*8;
@@ -255,8 +254,7 @@ const SHA256 = (function () {
         h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
     const w=new Uint32Array(64);
     for(let i=0;i<bytes.length;i+=64){
-      for(let t=0;t<16;t++)
-        w[t]=(bytes[i+t*4]<<24)|(bytes[i+t*4+1]<<16)|(bytes[i+t*4+2]<<8)|(bytes[i+t*4+3]);
+      for(let t=0;t<16;t++)w[t]=(bytes[i+t*4]<<24)|(bytes[i+t*4+1]<<16)|(bytes[i+t*4+2]<<8)|(bytes[i+t*4+3]);
       for(let t=16;t<64;t++){
         const s0=rotr(w[t-15],7)^rotr(w[t-15],18)^(w[t-15]>>>3);
         const s1=rotr(w[t-2],17)^rotr(w[t-2],19)^(w[t-2]>>>10);
@@ -264,1291 +262,1046 @@ const SHA256 = (function () {
       }
       let a=h0,b=h1,c=h2,d=h3,e=h4,f=h5,g=h6,h=h7;
       for(let t=0;t<64;t++){
-        const S1=rotr(e,6)^rotr(e,11)^rotr(e,25);
-        const ch=(e&f)^(~e&g);
+        const S1=rotr(e,6)^rotr(e,11)^rotr(e,25), ch=(e&f)^(~e&g);
         const t1=(h+S1+ch+K[t]+w[t])|0;
-        const S0=rotr(a,2)^rotr(a,13)^rotr(a,22);
-        const maj=(a&b)^(a&c)^(b&c);
+        const S0=rotr(a,2)^rotr(a,13)^rotr(a,22), maj=(a&b)^(a&c)^(b&c);
         const t2=(S0+maj)|0;
-        h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0;
+        h=g; g=f; f=e; e=(d+t1)|0; d=c; c=b; b=a; a=(t1+t2)|0;
       }
-      h0=(h0+a)|0;h1=(h1+b)|0;h2=(h2+c)|0;h3=(h3+d)|0;
-      h4=(h4+e)|0;h5=(h5+f)|0;h6=(h6+g)|0;h7=(h7+h)|0;
+      h0=(h0+a)|0; h1=(h1+b)|0; h2=(h2+c)|0; h3=(h3+d)|0;
+      h4=(h4+e)|0; h5=(h5+f)|0; h6=(h6+g)|0; h7=(h7+h)|0;
     }
-    const toHex=x=>('00000000'+(x>>>0).toString(16)).slice(-8);
-    return toHex(h0)+toHex(h1)+toHex(h2)+toHex(h3)+toHex(h4)+toHex(h5)+toHex(h6)+toHex(h7);
+    const hx=x=>('00000000'+(x>>>0).toString(16)).slice(-8);
+    return hx(h0)+hx(h1)+hx(h2)+hx(h3)+hx(h4)+hx(h5)+hx(h6)+hx(h7);
   };
 })();
 
-/* --------------------------- (2) Blockchain ------------------------------ */
-/* A genuine proof-of-work chain. Kills create reward transactions in the
-   mempool; the miner grinds nonces until SHA256(block) has `difficulty`
-   leading zero nibbles. Confirmed blocks credit the wallet. Blocks gossip
-   over the network so the whole realm shares one ledger (longest valid
-   chain wins).                                                              */
+/* ----------------------------- Chain ------------------------------------ */
 const Chain = (function () {
-  const DIFFICULTY = 3;                 // leading zero hex chars (~4096 hashes)
-  let chain = [];
-  let mempool = [];
-  let miner = null;                     // in-progress block being ground
-  let hashes = 0, hrTimer = 0, hashrate = 0;
-
-  function hashBlock(b){
-    return SHA256(b.index+'|'+b.prev+'|'+b.time+'|'+JSON.stringify(b.txs)+'|'+b.nonce);
-  }
-  function valid(b){ return b.hash===hashBlock(b) && b.hash.startsWith('0'.repeat(DIFFICULTY)); }
-
+  const DIFFICULTY = 3;
+  let chain=[], mempool=[], miner=null, hashes=0, hrTimer=0, hashrate=0;
+  const rid=()=>Math.random().toString(36).slice(2,8);
+  function hashBlock(b){ return SHA256(b.index+'|'+b.prev+'|'+b.time+'|'+JSON.stringify(b.txs)+'|'+b.nonce); }
+  function valid(b){ return b && b.hash===hashBlock(b) && b.hash.startsWith('0'.repeat(DIFFICULTY)); }
   function genesis(){
-    const g={index:0,prev:'0'.repeat(64),time:0,txs:[{to:'GENESIS',amt:0,note:'Erdtree spark'}],nonce:0};
+    const g={index:0,prev:'0'.repeat(64),time:0,txs:[{to:'GENESIS',amt:0,note:'Chainwell spark'}],nonce:0};
     g.hash=hashBlock(g); chain=[g];
   }
   genesis();
-
-  const rid=()=>Math.random().toString(36).slice(2,8);
-  // generic currency-tagged entries ('RUNE' grind | 'GOLD' spend | 'SOL' paid).
-  // Untagged legacy txs are treated as RUNE so old blocks still balance.
   function credit(to, amt, note, cur){ mempool.push({to,amt:+(+amt).toFixed(4),note,cur:cur||'RUNE',id:rid()}); }
   function debit(from, amt, note, cur, to){ mempool.push({from,to:to||'ERDTREE_SINK',amt:+(+amt).toFixed(4),note,cur:cur||'RUNE',id:rid()}); }
-  // back-compat wrappers (the RUNE grind faucet/sink)
   function reward(to, amt, note){ credit(to, amt, note, 'RUNE'); }
   function spend(from, amt, note){ debit(from, amt, note, 'RUNE', 'ERDTREE_SINK'); }
-  // mint a unique on-chain asset (a Great Rune) to a player
   function mintGreatRune(to, rune){ mempool.push({to,amt:0,greatRune:rune,note:'Great Rune: '+rune.name,cur:'RUNE',id:rid()}); }
-  // record a soulbound cosmetic unlock on-chain (no power, non-transferable)
-  function mintCosmetic(to, id){ mempool.push({to,amt:0,cosmetic:id,note:'unlocked skin '+id,cur:'GOLD',id:rid()}); }
-
+  function mintCosmetic(to, id){ mempool.push({to,amt:0,cosmetic:id,note:'skin '+id,cur:'GOLD',id:rid()}); }
+  function mintItem(to, id){ mempool.push({to,amt:0,item:id,note:'relic '+id,cur:'RUNE',id:rid()}); }
   function startBlock(){
-    if(miner||mempool.length===0)return;
+    if(miner||!mempool.length)return;
     const prev=chain[chain.length-1];
-    miner={index:prev.index+1, prev:prev.hash, time:Date.now(),
-           txs:mempool.slice(0,6), nonce:0};
+    miner={index:prev.index+1,prev:prev.hash,time:Date.now(),txs:mempool.slice(0,6),nonce:0};
   }
-
-  // grind a budget of hashes per frame; returns true when a block lands
   function tick(budget){
     if(!miner)startBlock();
-    if(!miner)return false;
+    if(!miner)return null;
     for(let i=0;i<budget;i++){
       const h=hashBlock(miner); hashes++;
       if(h.startsWith('0'.repeat(DIFFICULTY))){
         miner.hash=h; chain.push(miner);
-        const mined=miner.txs;
-        mempool=mempool.slice(mined.length);
-        const justMined=miner; miner=null;
-        Net.gossipBlock(chain[chain.length-1]);
-        return justMined;
+        const landed=miner; mempool=mempool.slice(landed.txs.length); miner=null;
+        Net.gossipBlock(landed);
+        return landed;
       }
       miner.nonce++;
     }
-    return false;
+    return null;
   }
-
   function updateHashrate(dt){
     hrTimer+=dt;
     if(hrTimer>=0.5){ hashrate=Math.round(hashes/hrTimer); hashes=0; hrTimer=0; }
   }
-
-  // accept a block mined elsewhere (network gossip)
   function acceptRemote(b){
     const tip=chain[chain.length-1];
-    if(b.index===tip.index+1 && b.prev===tip.hash && valid(b)){
+    if(b && b.index===tip.index+1 && b.prev===tip.hash && valid(b)){
       chain.push(b);
-      // drop any of its txs from our mempool
-      const ids=new Set(b.txs.map(t=>t.id));
+      const ids=new Set((b.txs||[]).map(t=>t.id));
       mempool=mempool.filter(t=>!ids.has(t.id));
       if(miner && miner.index<=b.index)miner=null;
       return true;
     }
     return false;
   }
-
-  function balanceOf(name, cur){ cur=cur||'RUNE';   // confirmed credits − confirmed debits, per currency
+  function pool(){ return miner?mempool.concat(miner.txs):mempool; }
+  function balanceOf(name, cur='RUNE'){
     let bal=0;
-    for(const blk of chain) for(const t of blk.txs){
+    for(const b of chain)for(const t of b.txs||[]){
       if((t.cur||'RUNE')!==cur)continue;
-      if(t.to===name)bal+=t.amt;
-      if(t.from===name)bal-=t.amt;
+      if(t.to===name)bal+=t.amt||0;
+      if(t.from===name)bal-=t.amt||0;
     }
     return bal;
   }
-  function pool(){ return miner?mempool.concat(miner.txs):mempool; }
-  function pendingCredit(name, cur){ cur=cur||'RUNE'; let p=0; for(const t of pool()) if((t.cur||'RUNE')===cur && t.to===name)p+=t.amt; return p; }
-  function pendingDebit(name, cur){  cur=cur||'RUNE'; let p=0; for(const t of pool()) if((t.cur||'RUNE')===cur && t.from===name)p+=t.amt; return p; }
-  // spendable = confirmed balance minus spends already queued (prevents double-spend)
-  function spendable(name, cur){ return balanceOf(name,cur)-pendingDebit(name,cur); }
-  // running total credited to an address (confirmed + pending) — for burn/prize/fee pools
-  function tallyTo(addr, cur){ cur=cur||'RUNE'; let v=0;
-    for(const blk of chain) for(const t of blk.txs) if(t.to===addr && (t.cur||'RUNE')===cur)v+=t.amt;
-    for(const t of pool()) if(t.to===addr && (t.cur||'RUNE')===cur)v+=t.amt;
-    return v; }
-  function greatRunesOf(name){ const out=[];
-    for(const blk of chain) for(const t of blk.txs) if(t.to===name && t.greatRune)out.push(t.greatRune);
-    return out; }
-  // soulbound cosmetics owned (confirmed + pending so equips feel instant)
-  function cosmeticsOf(name){ const out=[];
-    for(const blk of chain) for(const t of blk.txs) if(t.to===name && t.cosmetic)out.push(t.cosmetic);
-    for(const t of pool()) if(t.to===name && t.cosmetic)out.push(t.cosmetic);
-    return out; }
-
+  function pendingCredit(name, cur='RUNE'){ let p=0; for(const t of pool())if((t.cur||'RUNE')===cur && t.to===name)p+=t.amt||0; return p; }
+  function pendingDebit(name, cur='RUNE'){ let p=0; for(const t of pool())if((t.cur||'RUNE')===cur && t.from===name)p+=t.amt||0; return p; }
+  function spendable(name, cur='RUNE'){ return balanceOf(name,cur)-pendingDebit(name,cur); }
+  function tallyTo(addr, cur='RUNE'){
+    let v=0;
+    for(const b of chain)for(const t of b.txs||[])if(t.to===addr && (t.cur||'RUNE')===cur)v+=t.amt||0;
+    for(const t of pool())if(t.to===addr && (t.cur||'RUNE')===cur)v+=t.amt||0;
+    return v;
+  }
+  function greatRunesOf(name){ const out=[]; for(const b of chain)for(const t of b.txs||[])if(t.to===name&&t.greatRune)out.push(t.greatRune); for(const t of pool())if(t.to===name&&t.greatRune)out.push(t.greatRune); return out; }
+  function cosmeticsOf(name){ const out=[]; for(const b of chain)for(const t of b.txs||[])if(t.to===name&&t.cosmetic)out.push(t.cosmetic); for(const t of pool())if(t.to===name&&t.cosmetic)out.push(t.cosmetic); return out; }
+  function itemsOf(name){ const out=[]; for(const b of chain)for(const t of b.txs||[])if(t.to===name&&t.item)out.push(t.item); for(const t of pool())if(t.to===name&&t.item)out.push(t.item); return out; }
   return {
-    DIFFICULTY, reward, spend, credit, debit, mintGreatRune, mintCosmetic, tick, updateHashrate, acceptRemote,
-    balanceOf, pendingCredit, pendingDebit, spendable, tallyTo, greatRunesOf, cosmeticsOf,
-    get chain(){return chain;}, get hashrate(){return hashrate;},
-    get mining(){return miner;}, replaceIfLonger(remote){
-      if(remote.length>chain.length && remote.every((b,i)=>i===0||valid(b))){ chain=remote; return true;}
-      return false; }
+    DIFFICULTY,reward,spend,credit,debit,mintGreatRune,mintCosmetic,mintItem,tick,updateHashrate,acceptRemote,
+    balanceOf,pendingCredit,pendingDebit,spendable,tallyTo,greatRunesOf,cosmeticsOf,itemsOf,
+    get chain(){return chain;}, get mining(){return miner;}, get hashrate(){return hashrate;},
+    replaceIfLonger(remote){ if(Array.isArray(remote)&&remote.length>chain.length&&remote.every((b,i)=>i===0||valid(b))){chain=remote;return true;} return false; }
   };
 })();
 
-/* ----------------------- (2b) Real-money economy ------------------------- */
-/* Gold is the one in-game spend currency. Two ONE-WAY on-ramps fill it — no
-   cash-out, ever:
-     • grind RUNE, then convert at a FLAT rate (the free path)
-     • buy with wrapped SOL — each purchase splits 50% burn / 35% skill-prize
-       pool / 15% fee, routed on-chain
-   Costs rise on a gentle curve so grinding stays viable-but-slow (reachable,
-   just far slower than paying). Every lever lives here — tune and re-balance
-   in one place. The SOL purchase is a DEVNET MOCK; swap buyGoldWithSol() for a
-   real SPL token transfer to go live.                                        */
+/* -------------------------- Economy/story/items ------------------------- */
 const ECON = {
-  GOLD_PER_RUNE : 1,                          // RUNE → gold (the flat grind rate)
-  GOLD_PER_SOL  : 1000,                        // wrapped-SOL → gold (the pay rate)
-  SPLIT         : { prize:0.50, burn:0.35, fee:0.15 },   // half back to players, 15% platform fee, rest burned
-  BURN_ADDR:'🔥 BURN', PRIZE_ADDR:'🏆 PRIZE POOL', FEE_ADDR:'⚙ FEE', EXCHANGE_ADDR:'⚖ EXCHANGE',
+  GOLD_PER_RUNE:1,
+  GOLD_PER_SOL:1000,
+  SPLIT:{prize:0.50,burn:0.35,fee:0.15},
+  BURN_ADDR:'BURN', PRIZE_ADDR:'PRIZE_POOL', FEE_ADDR:'FEE', EXCHANGE_ADDR:'EXCHANGE'
 };
-(function(){ const s=ECON.SPLIT.burn+ECON.SPLIT.prize+ECON.SPLIT.fee;
-  if(Math.abs(s-1)>1e-9)console.warn('[econ] SPLIT does not sum to 1 — got',s); })();
-
 const Econ = {
   goldSpendable(name){ return Chain.spendable(name,'GOLD'); },
   goldPending(name){ return Chain.pendingCredit(name,'GOLD'); },
   solTally(addr){ return Chain.tallyTo(addr,'SOL'); },
-
-  // GRIND PATH: burn confirmed RUNE, mint gold at the flat rate (both on-chain)
   convertRuneToGold(name, runeAmt){
-    runeAmt=Math.min(runeAmt, Chain.spendable(name,'RUNE'));
+    runeAmt=Math.min(runeAmt,Chain.spendable(name,'RUNE'));
     if(runeAmt<=0.0001)return 0;
     const gold=+(runeAmt*ECON.GOLD_PER_RUNE).toFixed(2);
-    Chain.debit(name, runeAmt, 'convert → gold', 'RUNE', ECON.EXCHANGE_ADDR);
-    Chain.credit(name, gold, 'gold from RUNE', 'GOLD');
+    Chain.debit(name,runeAmt,'convert to gold','RUNE',ECON.EXCHANGE_ADDR);
+    Chain.credit(name,gold,'gold from RUNE','GOLD');
     return gold;
   },
-
-  // PAY PATH (DEVNET MOCK): mint gold to the buyer, route the SOL split on-chain.
-  // Replace the body with a real wrapped-SOL SPL transfer (50/35/15 to three
-  // wallets) to take this to mainnet — the call sites don't change.
   buyGoldWithSol(name, sol){
     if(sol<=0)return 0;
     const gold=+(sol*ECON.GOLD_PER_SOL).toFixed(2);
-    Chain.credit(name, gold, `bought with ${sol} wSOL`, 'GOLD');
-    Chain.credit(ECON.BURN_ADDR,  sol*ECON.SPLIT.burn,  'burned',     'SOL');
-    Chain.credit(ECON.PRIZE_ADDR, sol*ECON.SPLIT.prize, 'prize pool', 'SOL');
-    Chain.credit(ECON.FEE_ADDR,   sol*ECON.SPLIT.fee,   'fee',        'SOL');
+    Chain.credit(name,gold,`bought with ${sol} wSOL`,'GOLD');
+    Chain.credit(ECON.BURN_ADDR,sol*ECON.SPLIT.burn,'burned','SOL');
+    Chain.credit(ECON.PRIZE_ADDR,sol*ECON.SPLIT.prize,'prize pool','SOL');
+    Chain.credit(ECON.FEE_ADDR,sol*ECON.SPLIT.fee,'fee','SOL');
     return gold;
   },
-
-  // gold is the universal sink: leveling, items, everything
-  spendGold(name, amt, note){ Chain.debit(name, amt, note, 'GOLD', 'GOLD_SINK'); },
+  spendGold(name, amt, note){ Chain.debit(name,amt,note,'GOLD','GOLD_SINK'); }
 };
 
-/* ------------------------------- (3) World ------------------------------- */
-const canvas=document.getElementById('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.outputEncoding=THREE.sRGBEncoding;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;   // cinematic contrast/colour
-renderer.toneMappingExposure=1.05;
-
-const scene=new THREE.Scene();
-// painted gradient sky: deep teal zenith → warm golden Erdtree horizon
-function gradientSky(top,bot){
-  const cv=document.createElement('canvas'); cv.width=4; cv.height=512;
-  const ctx=cv.getContext('2d'); const g=ctx.createLinearGradient(0,0,0,512);
-  g.addColorStop(0,top); g.addColorStop(0.62,bot); g.addColorStop(1,'#e6cd9a');
-  ctx.fillStyle=g; ctx.fillRect(0,0,4,512);
-  const tex=new THREE.CanvasTexture(cv); tex.encoding=THREE.sRGBEncoding; return tex;
-}
-scene.background=gradientSky('#1d3147','#caa86e');
-scene.fog=new THREE.FogExp2(0xc9ad84,0.0042);       // warm haze that hides the world edge
-
-const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,900);
-
-// lighting — strong low golden "Erdtree" sun + cool sky fill + warm bounce
-const sun=new THREE.DirectionalLight(0xffdd9c,2.0);
-sun.position.set(70,80,30); sun.castShadow=true;
-sun.shadow.mapSize.set(2048,2048);
-sun.shadow.camera.near=1; sun.shadow.camera.far=320;
-sun.shadow.camera.left=-130; sun.shadow.camera.right=130;
-sun.shadow.camera.top=130; sun.shadow.camera.bottom=-130;
-sun.shadow.bias=-0.0004; sun.shadow.radius=2.5;
-scene.add(sun);
-scene.add(new THREE.HemisphereLight(0xbcd0e6,0x6b5a3a,0.85));
-// faint cool rim light from behind to separate silhouettes from the haze
-const rim=new THREE.DirectionalLight(0x9fb8d8,0.5); rim.position.set(-50,30,-60); scene.add(rim);
-scene.add(new THREE.AmbientLight(0x3a3a44,0.35));
-
-// deterministic terrain heightfield
-function getHeight(x,z){
-  return  6.0*Math.sin(x*0.018)*Math.cos(z*0.020)
-        + 3.2*Math.sin(x*0.05 +z*0.03)
-        + 1.6*Math.cos(x*0.11 -z*0.07)
-        - 0.6;
-}
-const TERR=420, SEG=160;
-const tGeo=new THREE.PlaneGeometry(TERR,TERR,SEG,SEG);
-tGeo.rotateX(-Math.PI/2);
-const pos=tGeo.attributes.position;
-for(let i=0;i<pos.count;i++){
-  const x=pos.getX(i), z=pos.getZ(i);
-  pos.setY(i,getHeight(x,z));
-}
-tGeo.computeVertexNormals();
-// vertex colours: grass / stone by height
-const colors=[];
-for(let i=0;i<pos.count;i++){
-  const y=pos.getY(i);
-  const c=new THREE.Color();
-  if(y>5) c.setHSL(0.10,0.10,0.62);          // pale stone peaks
-  else if(y>1.5) c.setHSL(0.09,0.22,0.42);   // dry earth
-  else c.setHSL(0.26,0.32,0.30+Math.random()*0.05); // grass
-  colors.push(c.r,c.g,c.b);
-}
-tGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
-const terrain=new THREE.Mesh(tGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0}));
-terrain.receiveShadow=true; scene.add(terrain);
-
-// scatter trees & rocks & a "site of grace" beacon
-function placeProp(builder,count,scaleMin,scaleMax){
-  for(let i=0;i<count;i++){
-    const x=(Math.random()-0.5)*TERR*0.92, z=(Math.random()-0.5)*TERR*0.92;
-    const m=builder(); const s=scaleMin+Math.random()*(scaleMax-scaleMin);
-    m.scale.setScalar(s);
-    m.position.set(x,getHeight(x,z),z);
-    m.rotation.y=Math.random()*6.28;
-    scene.add(m);
-  }
-}
-function tree(){
-  const g=new THREE.Group();
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.5,4.2,6),
-    new THREE.MeshStandardMaterial({color:0x4b3826,roughness:1}));
-  trunk.position.y=2.1; trunk.castShadow=true; g.add(trunk);
-  for(let k=0;k<3;k++){
-    const leaf=new THREE.Mesh(new THREE.ConeGeometry(2.4-k*0.5,2.6,7),
-      new THREE.MeshStandardMaterial({color:0x36502c,roughness:1}));
-    leaf.position.y=4+ k*1.4; leaf.castShadow=true; g.add(leaf);
-  }
-  return g;
-}
-function rock(){
-  const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),
-    new THREE.MeshStandardMaterial({color:0x6b6b6b,roughness:1,flatShading:true}));
-  m.castShadow=true; m.receiveShadow=true; return m;
-}
-placeProp(tree,90,0.7,1.7);
-placeProp(rock,60,0.6,2.4);
-
-// site of grace (spawn beacon)
-const grace=new THREE.Group();
-const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,30,8),
-  new THREE.MeshBasicMaterial({color:0xf2d68a,transparent:true,opacity:0.35}));
-beam.position.y=15; grace.add(beam);
-const SPAWN=new THREE.Vector3(0,getHeight(0,0),0);
-grace.position.copy(SPAWN); scene.add(grace);
-
-/* ---------------------------- (4) Bipedal rig ---------------------------- */
-/* Procedurally-animated humanoid built from primitives. Returns a group with
-   limb references; animate() drives a believable walk/run/jump/attack from a
-   single phase + speed input — no external animation assets needed.         */
-function buildBiped(palette){
-  const g=new THREE.Group();
-  const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.7,metalness:.15});
-  const part=(w,h,d,c,y)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));
-    m.castShadow=true;m.position.y=y;return m;};
-
-  const hips=new THREE.Group(); hips.position.y=1.05; g.add(hips);
-  const torso=part(0.62,0.85,0.34,palette.body,0.45); hips.add(torso);
-  const chest=part(0.7,0.4,0.4,palette.body,0.95); hips.add(chest);
-  // head
-  const head=new THREE.Group(); head.position.y=1.32; hips.add(head);
-  head.add(part(0.34,0.36,0.34,palette.skin,0));
-  // shoulders/arms — gear is no longer baked in; it attaches at sockets below
-  function arm(side){
-    const s=new THREE.Group(); s.position.set(side*0.46,1.12,0); hips.add(s);
-    const upper=part(0.2,0.5,0.2,palette.trim,-0.25); s.add(upper);
-    const fore=new THREE.Group(); fore.position.y=-0.5; s.add(fore);
-    fore.add(part(0.18,0.5,0.18,palette.skin,-0.25));
-    const hand=new THREE.Group(); hand.position.y=-0.5; fore.add(hand);  // weapon/shield socket
-    return {s,fore,hand};
-  }
-  const armL=arm(-1), armR=arm(1);
-  // legs
-  function leg(side){
-    const s=new THREE.Group(); s.position.set(side*0.2,0,0); hips.add(s);
-    const thigh=part(0.24,0.55,0.24,palette.body,-0.3); s.add(thigh);
-    const shin=new THREE.Group(); shin.position.y=-0.58; s.add(shin);
-    shin.add(part(0.2,0.55,0.2,palette.trim,-0.3));
-    const foot=part(0.24,0.12,0.4,palette.trim,-0.6); foot.position.z=0.06; shin.add(foot);
-    return {s,shin};
-  }
-  const legL=leg(-1), legR=leg(1);
-  // mix-and-match attachment sockets — gear parented here rides the animation
-  const chestS=new THREE.Group(); chestS.position.set(0,0.95,0.16); hips.add(chestS);
-  const back  =new THREE.Group(); back.position.set(0,0.95,-0.2);   hips.add(back);
-  const waist =new THREE.Group(); waist.position.set(0,0.5,0);      hips.add(waist);
-  const sockets={ head, shoulderL:armL.s, shoulderR:armR.s,
-                  handL:armL.hand, handR:armR.hand, chest:chestS, back, waist };
-  g.userData={hips,head,armL,armR,legL,legR,phase:0,sockets};
-  return g;
-}
-function animateBiped(b,speed,dt,opts={}){
-  const u=b.userData;
-  u.phase += dt*(4+speed*1.6);
-  const sw=Math.sin(u.phase), sw2=Math.cos(u.phase);
-  const amp=Math.min(1,speed/5)*0.9 + (opts.idle?0:0);
-  // legs swing
-  u.legL.s.rotation.x = sw*amp;
-  u.legR.s.rotation.x = -sw*amp;
-  u.legL.shin.rotation.x = Math.max(0,-sw)*amp*1.2;
-  u.legR.shin.rotation.x = Math.max(0, sw)*amp*1.2;
-  // arms counter-swing
-  u.armR.s.rotation.x = sw*amp*0.8;
-  u.armL.s.rotation.x = (opts.attack? -2.3 : -sw*amp*0.8);
-  // attack: snap main hand down
-  if(opts.attack!=null){
-    const a=opts.attack; // 0..1 progress
-    u.armL.s.rotation.x = THREE.MathUtils.lerp(-2.3,0.9,a);
-    u.hips.rotation.y = Math.sin(a*Math.PI)*0.4;
-  } else { u.hips.rotation.y *= 0.8; }
-  // gentle idle breathing + airborne tuck
-  u.head.rotation.z = Math.sin(u.phase*0.5)*0.04;
-  if(opts.air){ u.legL.s.rotation.x=0.5; u.legR.s.rotation.x=-0.3; }
-  // bob the whole body while walking
-  u.hips.position.y = 1.05 + Math.abs(sw2)*amp*0.08;
-}
-
-/* ------------------- (4a) mix-and-match gear + loadouts ------------------- */
-/* A character = the animated FRAME above + a LOADOUT of parts snapped onto its
-   named sockets (head / hands / shoulders / chest / back / waist). Parts are
-   palette-aware primitive builders for now; a GLB-loaded mesh (e.g. Meshy gear)
-   attaches the exact same way. Swapping loadout entries IS skins/upgrades.     */
-const _gmat=(c,e)=>new THREE.MeshStandardMaterial({color:c,roughness:.65,metalness:.25,emissive:e||0x000000,emissiveIntensity:e?0.6:0});
-function gbox(w,h,d,c,y,z,x){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),_gmat(c)); m.castShadow=true; m.position.set(x||0,y||0,z||0); return m; }
-function gcyl(rt,rb,h,c,y){ const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,8),_gmat(c)); m.castShadow=true; m.position.y=y||0; return m; }
-function gcone(r,h,c,y){ const m=new THREE.Mesh(new THREE.ConeGeometry(r,h,6),_gmat(c)); m.castShadow=true; m.position.y=y||0; return m; }
-
-const GEAR = {
-  // ---- heads (attach to 'head') ----
-  helmKnight:p=>{ const g=new THREE.Group(); g.add(gbox(0.44,0.28,0.46,p.trim,0.15)); g.add(gbox(0.16,0.05,0.04,0x16181c,0.06,0.23)); return g; },
-  helmHorned:p=>{ const g=GEAR.helmKnight(p); for(const s of[-1,1]){ const h=gcone(0.08,0.44,0xe7e0cf,0); h.position.set(s*0.25,0.34,0); h.rotation.z=-s*0.5; g.add(h);} return g; },
-  hood:p=>{ const g=new THREE.Group(); const h=new THREE.Mesh(new THREE.ConeGeometry(0.37,0.68,6),_gmat(p.trim)); h.castShadow=true; h.position.y=0.16; g.add(h); g.add(gbox(0.3,0.22,0.05,0x0b0a10,0.02,0.2)); return g; },
-  // ---- weapons (handL = main, handR = off-hand) ----
-  sword:p=>{ const g=new THREE.Group(); g.add(gbox(0.09,1.4,0.17,0xd9dde2,-0.7)); g.add(gbox(0.36,0.09,0.11,0x8a6a32,-0.02)); g.add(gbox(0.07,0.24,0.07,0x4a3a22,0.14)); return g; },
-  greatsword:p=>{ const g=new THREE.Group(); g.add(gbox(0.13,2.05,0.21,0xc8ccd2,-1.05)); g.add(gbox(0.52,0.12,0.14,0x6a5a32,-0.05)); g.add(gbox(0.08,0.36,0.08,0x3a2e1a,0.2)); return g; },
-  staff:p=>{ const g=new THREE.Group(); g.add(gcyl(0.045,0.05,1.8,0x5a4a32,-0.7)); const orb=new THREE.Mesh(new THREE.IcosahedronGeometry(0.15,0),_gmat(0x9b7bff,0x6a4fd0)); orb.castShadow=true; orb.position.y=0.28; g.add(orb); return g; },
-  claw:p=>{ const g=new THREE.Group(); for(const o of[-0.1,0,0.1]){ const c=gbox(0.04,0.36,0.06,0xe9e4d4,-0.34,0.12); c.position.x=o; c.rotation.x=-0.3; g.add(c);} return g; },
-  // ---- shoulders / back ----
-  pauldron:p=>gbox(0.36,0.22,0.4,p.trim,0.02),
-  spikePauldron:p=>{ const g=new THREE.Group(); g.add(gbox(0.36,0.22,0.4,p.trim,0.02)); g.add(gcone(0.1,0.34,0xcfc7af,0.22)); return g; },
-  cape:p=>gbox(0.66,1.1,0.05,p.body,-0.45,-0.22),
-  cloak:p=>{ const c=new THREE.Mesh(new THREE.ConeGeometry(0.54,1.5,6,1,true),_gmat(p.body)); c.castShadow=true; c.position.set(0,-0.5,-0.05); return c; },
+const STORY = window.RUNECHAIN_STORY || {
+  version:1,
+  startQuest:'gracefall-wake',
+  quests:[{
+    id:'gracefall-wake',
+    title:'Gracefall Parish',
+    onStart:['You wake inside Gracefall Parish. The Grace is warm. The road is not.'],
+    steps:[
+      {id:'first-debt', text:'Step beyond Grace and cut down the first Hollow Debtor.', done:{event:'kill', monster:'hollow', count:1}}
+    ],
+    onComplete:['The Hollow collapses into ledger ash. Something below the parish records the debt.'],
+    rewards:{rune:8},
+    next:'ledger-under-parish'
+  },{
+    id:'ledger-under-parish',
+    title:'The Chainwell Ledger',
+    onStart:['A dead ledger turns under the chapel stones. It wants proof, not prayer.'],
+    steps:[
+      {id:'debtors', text:'Clear 2 more Hollow debtors from the parish road.', done:{event:'kill', monster:'hollow', count:2}},
+      {id:'first-relic', text:'Forge your first RUNE relic at Grace.', done:{event:'forge', any:true}}
+    ],
+    onComplete:['The relic bites into your hand and the Chainwell opens the east road.'],
+    rewards:{rune:18},
+    next:'sentinel-road'
+  },{
+    id:'sentinel-road',
+    title:'The Sentinel Road',
+    onStart:['The parish gate groans open. Beyond it, a golden rider keeps the realm sealed.'],
+    steps:[
+      {id:'hound', text:'Break the Red Hound loose on the east road.', done:{event:'kill', monster:'hound', count:1}},
+      {id:'sentinel', text:'Defeat the Erdtree Sentinel and mint a Great Rune.', done:{event:'greatRune', any:true}}
+    ],
+    onComplete:['Gracefall has a road again. Other Tarnished will follow the mark you cut.'],
+    rewards:{rune:25}
+  }]
 };
-
-// per-role part loadouts — THIS is the mix-and-match table (swap entries for skins/upgrades)
-const LOADOUTS = {
-  player:   p=>({ head:GEAR.helmKnight(p), handL:GEAR.sword(p),      shoulderL:GEAR.pauldron(p),      shoulderR:GEAR.pauldron(p),      back:GEAR.cape(p) }),
-  knight:   p=>({ head:GEAR.helmHorned(p), handL:GEAR.greatsword(p), shoulderL:GEAR.spikePauldron(p), shoulderR:GEAR.spikePauldron(p) }),
-  hollow:   p=>({ head:GEAR.hood(p),       handL:GEAR.sword(p) }),
-  sorcerer: p=>({ head:GEAR.hood(p),       handR:GEAR.staff(p),      back:GEAR.cloak(p) }),
-  hound:    p=>({ handL:GEAR.claw(p),      handR:GEAR.claw(p) }),
-  phantom:  p=>({ head:GEAR.helmKnight(p), handL:GEAR.sword(p) }),
-  default:  p=>({ head:GEAR.helmKnight(p), handL:GEAR.sword(p) }),
-};
-function equipLoadout(frame, loadout){
-  const s=frame.userData.sockets;
-  for(const k in loadout){ if(s[k] && loadout[k]) s[k].add(loadout[k]); }
-}
-function riggedAvatar(role, palette, scale){
-  const frame=buildBiped(palette);
-  equipLoadout(frame, (LOADOUTS[role]||LOADOUTS.default)(palette));
-  if(scale)frame.scale.setScalar(scale);
-  return { obj:frame, kind:'rigged',
-    drive(speed,dt,o){ animateBiped(frame,speed,dt,o||{}); },
-    setDead(){ frame.rotation.z=Math.PI/2.2; } };
-}
-
-/* ---------------------- (4b) glTF characters + mixer --------------------- */
-/* MULTI-MODEL "wild mix" loader. Each role (player / each monster) points at
-   its own GLB in the MODELS manifest below. The loader:
-     • loads every GLB in parallel, tolerating any that are missing,
-     • AUTO-NORMALISES size (any pack's native scale → fits our world),
-     • FUZZY-MAPS each pack's animation clip names onto our canonical states
-       (Idle/Walking/Running/Jump/Punch/Death) so different packs "just work",
-     • clones per character via SkeletonUtils with its own AnimationMixer.
-   Anything without a model falls back to the procedural box-rig, so the game
-   always runs and simply gets wilder as you drop more GLBs into ./models/.
-   Grab CC0 animated packs from Poly Pizza (see models/README.md).            */
-const FACE_OFFSET  = Math.PI;     // flip to 0 if avatars walk backwards
-const TARGET_HEIGHT = 1.9;        // every "scale 1" character normalised to ~this tall
-const ONE_SHOT = ['Jump','Punch','Death'];
-// canonical state -> substrings to look for in a pack's clip names (first hit wins)
-const CLIP_WANT = {
-  Idle:    ['idle','breath','static','stand','pose'],
-  Walking: ['walk'],
-  Running: ['run','sprint','jog'],
-  Jump:    ['jump','fly','hover'],
-  Punch:   ['attack','punch','slash','melee','bite','cast','shoot','swing','headbutt'],
-  Death:   ['death','die','dead','defeat','hit'],
-};
-// the wild roster — drop matching GLBs in ./models/ (server.js serves them).
-// `default` is an online fallback so it still renders before you download anything.
-// Local CC0 GLBs served same-origin (the preview sandbox blocks runtime cross-origin
-// model fetches, so external URLs 404 here — keep these local). robot.glb (RobotExpressive)
-// carries the full Idle/Walking/Running/Jump/Punch/Death set the combat hooks expect.
-// Drop bespoke per-creature GLBs (e.g. Meshy-generated) at these paths to override.
-// Per-role models. CC0 animated Quaternius creatures (Poly Pizza) for the cast +
-// a textured Meshy boss. The loader fuzzy-maps each pack's clip names onto our
-// states and tints to palette. Anything missing falls back to the rigged frame
-// (buildBiped + LOADOUTS), which is also where attachable gear/upgrades live.
-const MODELS = {
-  default:  { url:'models/player.glb'   },  // Adventurer
-  player:   { url:'models/player.glb'   },
-  hollow:   { url:'models/hollow.glb'   },  // Skeleton
-  hound:    { url:'models/hound.glb'    },  // Slime swarmer
-  knight:   { url:'models/knight.glb'   },  // Demon
-  sorcerer: { url:'models/sorcerer.glb' },  // Wizard
-  sentinel: { url:'models/sentinel.glb' },  // textured Meshy boss
-};
-const ASSETS = { ready:false, models:{} };   // role -> {scene, animations, norm}
-
-function modelHeight(scene){
-  scene.updateMatrixWorld(true);
-  const b=new THREE.Box3().setFromObject(scene); const s=new THREE.Vector3(); b.getSize(s);
-  return (isFinite(s.y)&&s.y>0)?s.y:1.8;
-}
-function loadAssets(done){
-  const go=document.getElementById('go');
-  if(go){ go.disabled=true; go.textContent='Summoning the rigged dead…'; }
-  if(typeof THREE.GLTFLoader!=='function' || typeof THREE.SkeletonUtils==='undefined'){
-    console.warn('[runechain] GLTF tooling missing — procedural rig'); return done();
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const Story=(function(){
+  const state={activeQuestId:STORY.startQuest,stepIndex:0,stepCount:0,completed:[]};
+  function quest(){ return (STORY.quests||[]).find(q=>q.id===state.activeQuestId); }
+  function step(){ const q=quest(); return q&&q.steps[state.stepIndex]; }
+  function say(lines){ (lines||[]).forEach(t=>log('<b style="color:#f1c75b">Story:</b> '+esc(t))); }
+  function updateHud(){
+    const q=quest(), st=step();
+    const qt=document.getElementById('qtitle'), qo=document.getElementById('qobj');
+    if(!qt||!qo)return;
+    if(!q){ qt.textContent='Free Roam'; qo.textContent='Hunt, mine RUNE, and build the economy.'; return; }
+    qt.textContent=q.title;
+    if(!st){ qo.textContent='Quest complete. Bring the next storyline drop.'; return; }
+    const need=st.done&&st.done.count;
+    qo.textContent=need?`${st.text} (${Math.min(state.stepCount,need)}/${need})`:st.text;
   }
-  const loader=new THREE.GLTFLoader();
-  const entries=Object.entries(MODELS);
-  let pending=entries.length;
-  const finish=()=>{ ASSETS.ready=Object.keys(ASSETS.models).length>0;
-    console.log('[runechain] models loaded:', Object.keys(ASSETS.models)); done(); };
-  if(!pending) return finish();
-  entries.forEach(([role,info])=>{
-    loader.load(info.url,
-      g=>{ ASSETS.models[role]={scene:g.scene, animations:g.animations||[],
-             norm:TARGET_HEIGHT/modelHeight(g.scene)};
-           if(--pending===0)finish(); },
-      undefined,
-      ()=>{ console.warn('[runechain] missing model:',role,info.url); if(--pending===0)finish(); });
-  });
-}
-function modelFor(role){ return ASSETS.models[role] || ASSETS.models.default || null; }
-
-function pickClip(animations, wants){
-  for(const w of wants){ const f=animations.find(c=>c.name.toLowerCase().includes(w)); if(f)return f; }
-  return null;
-}
-function makeChar(role, palette, scale){
-  const model=modelFor(role);
-  const root=THREE.SkeletonUtils.clone(model.scene);
-  root.scale.setScalar(model.norm*(scale||1));
-  root.rotation.y=FACE_OFFSET;
-  const tint=new THREE.Color(palette.body);
-  root.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.frustumCulled=false;
-    if(o.material&&o.material.color){ o.material=o.material.clone(); o.material.color.lerp(tint,0.4); } }});
-  const wrap=new THREE.Group(); wrap.add(root);
-  const mixer=new THREE.AnimationMixer(root);
-  const actions={};
-  for(const [canon,wants] of Object.entries(CLIP_WANT)){
-    let clip=pickClip(model.animations,wants);
-    if(!clip && canon==='Idle')clip=model.animations[0];      // ensure a resting clip
-    if(clip){ const a=mixer.clipAction(clip); actions[canon]=a;
-      if(ONE_SHOT.includes(canon)){ a.setLoop(THREE.LoopOnce); a.clampWhenFinished=true; } }
+  function matches(done,type,payload){
+    if(!done||done.event!==type)return false;
+    if(done.any)return true;
+    if(done.monster && payload.key!==done.monster)return false;
+    if(done.stat && payload.stat!==done.stat)return false;
+    return true;
   }
-  let current=null;
-  function play(name,fade){ const a=actions[name]||actions.Idle; if(!a||a===current)return;
-    if(current)current.fadeOut(fade==null?0.2:fade);
-    a.reset().fadeIn(fade==null?0.2:fade).play(); current=a; }
-  if(actions.Idle){ actions.Idle.play(); current=actions.Idle; }
-  return { wrap, mixer, play };
-}
-function gltfAvatar(role,palette,scale){
-  const c=makeChar(role,palette,scale);
-  return { obj:c.wrap, kind:'gltf',
-    drive(speed,dt,o){ o=o||{}; c.mixer.update(dt);
-      const want = o.dead ? 'Death'
-        : (o.attack!=null) ? 'Punch'
-        : o.air ? 'Jump'
-        : speed>4.5 ? 'Running'
-        : speed>0.4 ? 'Walking' : 'Idle';
-      c.play(want); },
-    setDead(){ c.play('Death'); } };
-}
-function proceduralAvatar(palette,scale){
-  const obj=buildBiped(palette); if(scale)obj.scale.setScalar(scale);
-  return { obj, kind:'proc',
-    drive(speed,dt,o){ animateBiped(obj,speed,dt,o||{}); },
-    setDead(){ obj.rotation.z=Math.PI/2.2; } };
-}
-function makeAvatar(role,palette,scale){
-  return modelFor(role) ? gltfAvatar(role,palette,scale) : riggedAvatar(role,palette,scale);
-}
-// measure a character's real size so hitboxes match whatever rig/scale is live
-function measure(obj){
-  obj.updateMatrixWorld(true);
-  const box=new THREE.Box3().setFromObject(obj);
-  const s=new THREE.Vector3(); box.getSize(s);
-  const h=(isFinite(s.y)&&s.y>0)?s.y:2;
-  return { height:h, radius:Math.max(0.5, h*0.25) };   // body radius ≈ ¼ of height
+  function completeStep(){
+    const q=quest(), st=step();
+    if(st)log('<b style="color:#f1c75b">Objective complete:</b> '+esc(st.text));
+    state.stepIndex++; state.stepCount=0;
+    if(q && state.stepIndex>=q.steps.length){
+      state.completed.push(q.id);
+      say(q.onComplete);
+      if(q.rewards&&q.rewards.rune)Chain.reward(player.name,q.rewards.rune,'story: '+q.title);
+      if(q.next){
+        state.activeQuestId=q.next;
+        state.stepIndex=0;
+        state.stepCount=0;
+        say(quest()&&quest().onStart);
+      }
+    }
+    updateHud();
+  }
+  function event(type,payload={}){
+    const q=quest(), st=step();
+    if(type==='start'){ say(q&&q.onStart); updateHud(); return; }
+    if(!st||!matches(st.done,type,payload))return;
+    if(st.done.count){ state.stepCount++; if(state.stepCount>=st.done.count)completeStep(); }
+    else completeStep();
+    updateHud();
+  }
+  return {state,event,updateHud};
+})();
+
+const RELICS = [
+  {id:'ember-edge', name:'Ember Edge', price:18, desc:'+8 attack damage. First real upgrade.', dmg:8},
+  {id:'warden-sigil', name:'Warden Sigil', price:28, desc:'+18 max health. Survive a mistake.', hp:18},
+  {id:'green-knot', name:'Green Knot', price:34, desc:'+16 max stamina. Dash and swing longer.', sta:16},
+  {id:'rune-lens', name:'Rune Lens', price:48, desc:'+20% RUNE bounty from kills.', runeMult:0.2},
+  {id:'sentinel-brand', name:'Sentinel Brand', price:90, desc:'+18 attack and +25 health.', dmg:18, hp:25}
+];
+const SKINS = [
+  { id:'tarnished', name:'Tarnished', price:0, body:'#334052', trim:'#8ca0b8', skin:'#cfa982' },
+  { id:'crimson', name:'Crimson Lord', price:120, body:'#6b2020', trim:'#e24a4a', skin:'#cfa982' },
+  { id:'verdant', name:'Verdant Knight', price:180, body:'#1f472f', trim:'#57c77a', skin:'#cfa982' },
+  { id:'azure', name:'Azure Sentinel', price:240, body:'#233d73', trim:'#7aa7ff', skin:'#cfa982' },
+  { id:'gilded', name:'Gilded Champion', price:500, body:'#4d3c17', trim:'#f1c75b', skin:'#d5c596' },
+  { id:'void', name:'Voidwalker', price:800, body:'#17141f', trim:'#9b74ff', skin:'#77718f' }
+];
+function skinPal(id){ return SKINS.find(s=>s.id===id)||SKINS[0]; }
+function ownedSkin(id){ return id==='tarnished' || Chain.cosmeticsOf(player.name).includes(id); }
+function ownedItem(id){ return Chain.itemsOf(player.name).includes(id); }
+function itemBonuses(){
+  const out={hp:0,sta:0,dmg:0,runeMult:0};
+  for(const it of RELICS)if(ownedItem(it.id)){
+    out.hp+=it.hp||0; out.sta+=it.sta||0; out.dmg+=it.dmg||0; out.runeMult+=it.runeMult||0;
+  }
+  return out;
 }
 
-/* ------------------------------ (5) Player ------------------------------- */
-const PLAYER_PAL={body:0x2f3a4a,trim:0x55617a,skin:0xcaa985};
-let player;
-function initPlayer(){
-  player={
-    av:null, obj:null,
-    vel:new THREE.Vector3(),
-    yaw:0, vy:0, onGround:true,
-    level:1, vigor:10, endurance:10, strength:10, runeBuff:0,
-    hp:100, maxHp:100, sta:100, maxSta:100, dmg:50,
-    attack:null, attackCd:0, dead:false, name:'Tarnished',
-    roll:0, iframes:0, rollDir:new THREE.Vector3(), hitstun:0, staDelay:0, lock:null,
-    skinId:'tarnished', pal:Object.assign({},PLAYER_PAL),
-  };
-  player.av=makeAvatar('player',PLAYER_PAL,1); player.obj=player.av.obj;
-  player.obj.position.copy(SPAWN); scene.add(player.obj);
-  const m=measure(player.obj); player.radius=m.radius; player.height=m.height;
-  recalcStats(true);
+/* ------------------------------ Canvas ---------------------------------- */
+const VIEW_W=640, VIEW_H=360, TILE=16, SAFE_RADIUS=72, WORLD_LIMIT=960;
+const PLAYER_SPEED=112, DASH_SPEED=250;
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const keys={}, mouse={x:VIEW_W/2,y:VIEW_H/2,worldX:0,worldY:0,down:false};
+const camera={x:0,y:0};
+const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false};
+const GRACE={x:0,y:0};
+const ASSETS={
+  tiles:{src:'assets/pixel/tiles.png',w:16,h:16,img:null},
+  player:{src:'assets/pixel/player.png',w:24,h:24,img:null},
+  hollow:{src:'assets/pixel/hollow.png',w:24,h:24,img:null},
+  hound:{src:'assets/pixel/hound.png',w:24,h:24,img:null},
+  knight:{src:'assets/pixel/knight.png',w:24,h:24,img:null},
+  sorcerer:{src:'assets/pixel/sorcerer.png',w:24,h:24,img:null},
+  sentinel:{src:'assets/pixel/sentinel.png',w:48,h:48,img:null},
+  phantom:{src:'assets/pixel/phantom.png',w:24,h:24,img:null}
+};
+for(const k in ASSETS){
+  const img=new Image();
+  img.onload=()=>ASSETS[k].img=img;
+  img.src=ASSETS[k].src;
+}
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function len(x,y){ return Math.hypot(x,y); }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function norm(x,y){ const d=Math.hypot(x,y)||1; return {x:x/d,y:y/d}; }
+function dot(ax,ay,bx,by){ return ax*bx+ay*by; }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function worldToScreen(x,y){ return {x:Math.round(x-camera.x+VIEW_W/2),y:Math.round(y-camera.y+VIEW_H/2)}; }
+function inSafeZone(obj=player){ return Math.hypot(obj.x-GRACE.x,obj.y-GRACE.y)<SAFE_RADIUS; }
+function rect(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
+function maybeShake(){
+  if(state.shake<=0)return {x:0,y:0};
+  return {x:(Math.random()-.5)*state.shake,y:(Math.random()-.5)*state.shake};
 }
 
-// derive HP / stamina / damage from stats (+ Great Rune buff)
-function recalcStats(heal){
-  player.maxHp  = 80 + player.vigor*8;
-  player.maxSta = 70 + player.endurance*5;
-  player.dmg    = Math.round((20 + player.strength*3)*(1+player.runeBuff));
-  if(heal){ player.hp=player.maxHp; player.sta=player.maxSta; }
-}
+/* ------------------------------ Player ---------------------------------- */
+let player={
+  name:'Tarnished', x:0, y:0, vx:0, vy:0, dirX:1, dirY:0, moving:false, radius:7,
+  level:1, vigor:10, endurance:10, strength:10, runeBuff:0,
+  hp:120, maxHp:120, sta:100, maxSta:100, dmg:34,
+  attack:null, attackCd:0, invuln:0, dash:0, hurt:0, dead:false, lock:null,
+  skinId:'tarnished', pal:skinPal('tarnished')
+};
+const enemies=[], particles=[], projectiles=[], remotes={};
+const progress={hollows:0, forged:false};
 
-// single funnel for all damage dealt to the player
-function hurtPlayer(amt){
-  if(player.dead||player.iframes>0)return;          // rolled through it
-  player.hp-=amt; player.hitstun=0.28; flash(player.obj,0xff0000);
-  if(player.hp<=0){ player.hp=0; player.dead=true; player.av.setDead();
+function recalcStats(fullHeal){
+  const b=itemBonuses();
+  const grs=Chain.greatRunesOf(player.name);
+  const buff=grs.reduce((m,g)=>Math.max(m,g.buff||0),0);
+  player.runeBuff=buff;
+  const hp=80+player.vigor*6+b.hp+buff*2;
+  const sta=68+player.endurance*5+b.sta;
+  player.dmg=14+player.strength*2+b.dmg+buff;
+  player.maxHp=hp; player.maxSta=sta;
+  if(fullHeal){ player.hp=player.maxHp; player.sta=player.maxSta; }
+  else{ player.hp=Math.min(player.hp,player.maxHp); player.sta=Math.min(player.sta,player.maxSta); }
+}
+function levelCost(){ return 22+player.level*8; }
+function faceToward(x,y){ const n=norm(x-player.x,y-player.y); player.dirX=n.x; player.dirY=n.y; }
+function targetNearest(){
+  const alive=enemies.filter(e=>!e.dead && enemyUnlocked(e) && dist(e,player)<130);
+  alive.sort((a,b)=>dist(a,player)-dist(b,player));
+  player.lock=alive[0]||null;
+  if(player.lock)log('Target locked: <b>'+esc(player.lock.type.name)+'</b>');
+}
+function doAttack(){
+  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen)return;
+  if(player.attackCd>0)return;
+  if(player.sta<14){ flashBar('sta'); return; }
+  player.sta-=14; player.attackCd=.32; player.attack={t:0,hit:false}; state.shake=2.2;
+  if(player.lock&&!player.lock.dead)faceToward(player.lock.x,player.lock.y);
+  else faceToward(mouse.worldX,mouse.worldY);
+  slashFx(player.x,player.y,player.dirX,player.dirY);
+}
+function doDash(){
+  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||player.dash>0)return;
+  if(player.sta<18){ flashBar('sta'); return; }
+  player.sta-=18; player.dash=.26; player.invuln=.32; state.shake=1.4;
+  const mx=(keys.KeyD?1:0)-(keys.KeyA?1:0), my=(keys.KeyS?1:0)-(keys.KeyW?1:0);
+  const n=mx||my?norm(mx,my):norm(player.dirX,player.dirY);
+  player.vx=n.x*DASH_SPEED; player.vy=n.y*DASH_SPEED; player.dirX=n.x; player.dirY=n.y;
+}
+function hurtPlayer(amount){
+  if(player.dead||player.invuln>0||state.introMercy>0||inSafeZone())return;
+  player.hp=Math.max(0,player.hp-amount); player.hurt=.25; player.invuln=.28; state.shake=4;
+  document.getElementById('damagevignette').classList.add('on');
+  setTimeout(()=>document.getElementById('damagevignette').classList.remove('on'),140);
+  floatText(player.x,player.y-18,'-'+amount,'#e24a4a');
+  if(player.hp<=0){
+    player.dead=true;
     document.getElementById('death').style.display='flex';
-    if(pointer)document.exitPointerLock();
-    if(graceOpen)closeGrace();
-    if(wardrobeOpen)closeWardrobe();
+    log('You died. Grace will reset your body, not the chain.');
   }
 }
 
-/* ---- levelling at the Site of Grace (spends real on-chain RUNE) -------- */
-function levelCost(){ return Math.floor(30*Math.pow(1.12, player.level-1)); }   // RUNE — power is earned, never bought
-let graceOpen=false;
-function nearGrace(){ return player.obj.position.distanceTo(SPAWN)<6; }
+/* ------------------------------ Enemies --------------------------------- */
+const TYPES={
+  hollow:{key:'hollow',name:'Hollow Debtor',hp:36,dmg:8,speed:34,reward:14,aggro:88,reach:15,color:'#e24a4a'},
+  hound:{key:'hound',name:'Red Hound',hp:32,dmg:10,speed:55,reward:16,aggro:98,reach:16,color:'#f26b2f'},
+  knight:{key:'knight',name:'Fallen Knight',hp:82,dmg:15,speed:25,reward:26,aggro:105,reach:18,color:'#b9c2cf'},
+  sorcerer:{key:'sorcerer',name:'Hollow Sorcerer',hp:54,dmg:12,speed:20,reward:30,aggro:125,reach:85,ranged:true,color:'#9b74ff'},
+  sentinel:{key:'sentinel',name:'Erdtree Sentinel',hp:240,dmg:22,speed:23,reward:90,aggro:132,reach:26,boss:true,color:'#f1c75b'}
+};
+function spawnEnemy(key,x,y,gate=0){
+  const t=TYPES[key];
+  enemies.push({type:t,key:t.key,x,y,homeX:x,homeY:y,vx:0,vy:0,radius:t.boss?18:key==='hound'?9:10,
+    hp:t.hp,maxHp:t.hp,dead:false,aggroed:false,windup:0,atkCd:.6,castCd:1.5,hitFlash:0,hurt:0,roam:Math.random()*6.28,gate});
+}
+function initWorld(){
+  enemies.length=0;
+  spawnEnemy('hollow',156,0,0);
+  spawnEnemy('hollow',390,-64,1);
+  spawnEnemy('hollow',470,58,2);
+  spawnEnemy('hound',590,-38);
+  spawnEnemy('knight',690,52);
+  spawnEnemy('sorcerer',790,-72);
+  spawnEnemy('sentinel',900,0);
+}
+function enemyUnlocked(e){
+  if(e.key==='hollow')return progress.hollows>=e.gate;
+  if(e.key==='sentinel')return progress.forged;
+  return progress.hollows>=3;
+}
+function hitEnemy(e, amount){
+  if(e.dead)return;
+  e.aggroed=true; e.hp=Math.max(0,e.hp-amount); e.hurt=.16; e.hitFlash=.12;
+  floatText(e.x,e.y-24,'-'+amount,'#f1c75b');
+  if(e.hp<=0)killEnemy(e);
+}
+function killEnemy(e){
+  e.dead=true; e.deathT=1.2; state.shake=e.type.boss?7:3;
+  if(e.key==='hollow')progress.hollows++;
+  const bonus=itemBonuses();
+  const reward=+(e.type.reward*(1+bonus.runeMult)).toFixed(2);
+  Chain.reward(player.name,reward,e.type.name+' slain');
+  Story.event('kill',{key:e.key});
+  log('<b>'+esc(e.type.name)+'</b> slain. +'+reward.toFixed(2)+' RUNE pending.');
+  if(e.type.boss){
+    const rune={id:'sentinel-'+Date.now(),name:"Sentinel's Great Rune",buff:12};
+    Chain.mintGreatRune(player.name,rune);
+    Story.event('greatRune',{rune:rune.id});
+    lootFlash('Great Rune minted<br><small>'+esc(rune.name)+'</small>');
+  }
+}
+function updateEnemies(dt){
+  let attackers=0;
+  for(const e of enemies){
+    if(e.dead){ e.deathT-=dt; continue; }
+    if(e.hurt>0)e.hurt-=dt;
+    if(e.hitFlash>0)e.hitFlash-=dt;
+    e.atkCd-=dt; e.castCd-=dt;
+    if(!enemyUnlocked(e)){
+      e.aggroed=false; e.windup=0;
+      e.roam+=dt;
+      e.x=e.homeX+Math.cos(e.roam*.55)*3;
+      e.y=e.homeY+Math.sin(e.roam*.45)*3;
+      continue;
+    }
+    const d=dist(e,player);
+    const safe=inSafeZone(player);
+    if(d<e.type.aggro && !safe)e.aggroed=true;
+    if(player.lock===e)e.aggroed=true;
+
+    if(!e.aggroed || safe){
+      e.windup=0;
+      const hd=Math.hypot(e.x-e.homeX,e.y-e.homeY);
+      if(hd>3){
+        const n=norm(e.homeX-e.x,e.homeY-e.y);
+        e.x+=n.x*e.type.speed*.45*dt; e.y+=n.y*e.type.speed*.45*dt;
+      } else {
+        e.roam+=dt;
+        e.x=e.homeX+Math.cos(e.roam*.7)*4;
+        e.y=e.homeY+Math.sin(e.roam*.55)*4;
+      }
+      continue;
+    }
+
+    const toP=norm(player.x-e.x,player.y-e.y);
+    if(e.type.ranged){
+      if(d>78){ e.x+=toP.x*e.type.speed*dt; e.y+=toP.y*e.type.speed*dt; }
+      else if(d<44){ e.x-=toP.x*e.type.speed*dt; e.y-=toP.y*e.type.speed*dt; }
+      if(d<e.type.reach && e.castCd<=0){ e.castCd=2.0; spawnProjectile(e,toP); }
+      continue;
+    }
+    const reach=e.type.reach;
+    if(d>reach+3){
+      const crowdHold=attackers>2 && d<42 && !e.type.boss;
+      if(!crowdHold){ e.x+=toP.x*e.type.speed*dt; e.y+=toP.y*e.type.speed*dt; }
+    } else {
+      attackers++;
+      if(e.windup>0){
+        e.windup-=dt;
+        if(e.windup<=0){
+          if(dist(e,player)<reach+7)hurtPlayer(e.type.dmg);
+          e.atkCd=e.type.boss?1.6:1.05;
+        }
+      } else if(e.atkCd<=0){
+        e.windup=e.type.boss?.65:.42;
+      }
+    }
+  }
+}
+function spawnProjectile(e,dir){
+  projectiles.push({x:e.x,y:e.y-8,vx:dir.x*88,vy:dir.y*88,t:2.2,dmg:e.type.dmg,r:4});
+  particles.push({x:e.x,y:e.y-12,t:.3,max:.3,kind:'cast'});
+}
+function updateProjectiles(dt){
+  for(const p of projectiles){
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.t-=dt;
+    if(Math.hypot(p.x-player.x,p.y-player.y)<player.radius+p.r){ p.t=0; hurtPlayer(p.dmg); }
+  }
+  for(let i=projectiles.length-1;i>=0;i--)if(projectiles[i].t<=0)projectiles.splice(i,1);
+}
+function resolveSeparation(){
+  for(const e of enemies){
+    if(e.dead)continue;
+    const d=Math.hypot(e.x-player.x,e.y-player.y), min=e.radius+player.radius-1;
+    if(d>0.01&&d<min){
+      const n=norm(e.x-player.x,e.y-player.y), push=(min-d)*.55;
+      e.x+=n.x*push; e.y+=n.y*push;
+      player.x-=n.x*push*.35; player.y-=n.y*push*.35;
+    }
+  }
+  for(let i=0;i<enemies.length;i++)for(let j=i+1;j<enemies.length;j++){
+    const a=enemies[i],b=enemies[j]; if(a.dead||b.dead)continue;
+    const d=Math.hypot(a.x-b.x,a.y-b.y), min=a.radius+b.radius;
+    if(d>0.01&&d<min){
+      const n=norm(a.x-b.x,a.y-b.y), push=(min-d)*.35;
+      a.x+=n.x*push; a.y+=n.y*push; b.x-=n.x*push; b.y-=n.y*push;
+    }
+  }
+}
+
+/* ----------------------------- Combat fx -------------------------------- */
+function slashFx(x,y,dx,dy){ particles.push({x,y,dx,dy,t:.18,max:.18,kind:'slash'}); }
+function floatText(x,y,text,color){ particles.push({x,y,text,color,t:.9,max:.9,kind:'text'}); }
+function updateParticles(dt){
+  for(const p of particles)p.t-=dt;
+  for(let i=particles.length-1;i>=0;i--)if(particles[i].t<=0)particles.splice(i,1);
+}
+function resolveAttack(){
+  if(!player.attack||player.attack.hit||player.attack.t<.05)return;
+  player.attack.hit=true;
+  for(const e of enemies){
+    if(e.dead)continue;
+    const dx=e.x-player.x, dy=e.y-player.y, d=Math.hypot(dx,dy);
+    const inArc=d<42+(e.type.boss?12:0) && dot(dx/(d||1),dy/(d||1),player.dirX,player.dirY)>.25;
+    if(inArc)hitEnemy(e,player.dmg);
+  }
+}
+
+/* ----------------------------- Input ------------------------------------ */
+addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if((e.code==='Space'||e.code==='KeyL'||e.code==='KeyJ')&&!e.repeat){ e.preventDefault(); doAttack(); }
+  if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&!e.repeat)doDash();
+  if(e.code==='KeyQ'&&!e.repeat)targetNearest();
+  if(e.code==='KeyG'&&!e.repeat){ state.graceOpen?closeGrace():openGrace(); }
+  if(e.code==='KeyB'&&!e.repeat){ state.wardrobeOpen?closeWardrobe():openWardrobe(); }
+  if(e.code==='KeyM'&&!e.repeat)toggleWallet();
+  if(e.code==='Escape'&&!e.repeat){ if(state.graceOpen)closeGrace(); else if(state.wardrobeOpen)closeWardrobe(); else player.lock=null; }
+});
+addEventListener('keyup',e=>{ keys[e.code]=false; });
+function updateMouse(e){
+  const r=canvas.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)*(VIEW_W/r.width);
+  mouse.y=(e.clientY-r.top)*(VIEW_H/r.height);
+  syncMouseWorld();
+}
+function syncMouseWorld(){
+  mouse.worldX=camera.x+(mouse.x-VIEW_W/2);
+  mouse.worldY=camera.y+(mouse.y-VIEW_H/2);
+}
+canvas.addEventListener('mousemove',updateMouse);
+canvas.addEventListener('mousedown',e=>{ updateMouse(e); mouse.down=true; doAttack(); });
+canvas.addEventListener('mouseup',()=>mouse.down=false);
+
+/* ----------------------------- Grace/UI --------------------------------- */
+function nearGrace(){ return dist(player,GRACE)<SAFE_RADIUS; }
 function openGrace(){
-  if(graceOpen||player.dead||!nearGrace())return;
-  graceOpen=true; if(pointer)document.exitPointerLock();
-  document.getElementById('levelup').style.display='flex'; refreshGrace();
+  if(!state.started||player.dead||!nearGrace())return;
+  state.graceOpen=true; player.hp=player.maxHp; player.sta=player.maxSta;
+  Story.event('visit',{site:'grace'});
+  document.getElementById('levelup').style.display='flex';
+  refreshGrace();
 }
-function closeGrace(){
-  if(!graceOpen)return; graceOpen=false;
-  document.getElementById('levelup').style.display='none';
-  if(started&&!player.dead)canvas.requestPointerLock();
-}
+function closeGrace(){ state.graceOpen=false; document.getElementById('levelup').style.display='none'; }
 function refreshGrace(){
   const cost=levelCost(), sp=Chain.spendable(player.name,'RUNE');
   document.getElementById('lvLevel').textContent=player.level;
   document.getElementById('lvBal').textContent=sp.toFixed(2);
   document.getElementById('lvCost').textContent=cost;
   for(const id of ['cVigor','cEnd','cStr'])document.getElementById(id).textContent=cost+' R';
-  document.querySelectorAll('.statbtn').forEach(b=>b.disabled = sp<cost);
+  document.querySelectorAll('.statbtn').forEach(b=>b.disabled=sp<cost);
+  renderRelics(sp);
 }
 function doLevel(stat){
   const cost=levelCost();
-  if(Chain.spendable(player.name,'RUNE')<cost){ log('Not enough confirmed RUNE — slay more and let the chain settle'); return; }
-  Chain.spend(player.name, cost, 'leveled '+stat);   // on-chain RUNE debit — power is grind-only
+  if(Chain.spendable(player.name,'RUNE')<cost){ log('Not enough confirmed RUNE yet. Let the chain settle.'); return; }
+  Chain.spend(player.name,cost,'leveled '+stat);
   player[stat]++; player.level++; recalcStats(true);
-  log(`Leveled <b style="color:#e7cf86">${stat}</b> to ${player[stat]} — −${cost} RUNE spent on-chain (now Level ${player.level})`);
+  Story.event('level',{stat,level:player.level});
+  log('Leveled <b>'+stat+'</b> to '+player[stat]+'.');
   refreshGrace();
 }
 document.querySelectorAll('.statbtn').forEach(b=>b.addEventListener('click',()=>doLevel(b.dataset.stat)));
 document.getElementById('lvclose').onclick=closeGrace;
-
-/* ---- Wardrobe: cosmetics only (Gold). Soulbound, on-chain, no power ------ */
-const SKINS = [
-  { id:'tarnished', name:'Tarnished',        price:0,   body:0x2f3a4a, trim:0x55617a, skin:0xcaa985 },
-  { id:'crimson',   name:'Crimson Lord',     price:120, body:0x6b1f1f, trim:0xc0392b, skin:0xcaa985 },
-  { id:'verdant',   name:'Verdant Knight',   price:180, body:0x1f3a2a, trim:0x3fa66a, skin:0xcaa985 },
-  { id:'azure',     name:'Azure Sentinel',   price:240, body:0x1f2f5a, trim:0x4a78c0, skin:0xcaa985 },
-  { id:'gilded',    name:'Gilded Champion',  price:500, body:0x4a3a14, trim:0xe7cf86, skin:0xd8c79a },
-  { id:'void',      name:'Voidwalker',       price:800, body:0x14121a, trim:0x7a5fc0, skin:0x6a6480 },
-];
-// resolve a skin id -> palette (shared catalog, so peers only need to send the id)
-function skinPal(id){ const s=SKINS.find(x=>x.id===id);
-  return s ? {body:s.body,trim:s.trim,skin:s.skin} : {body:0x394a5a,trim:0x6a7a5a,skin:0xc0a080}; }
-let wardrobeOpen=false;
-function ownedSkin(id){ return id==='tarnished' || Chain.cosmeticsOf(player.name).includes(id); }
-// rebuild the player avatar with a new palette (works for both gltf + procedural rigs)
-function applySkin(pal){
-  const pos=player.obj.position.clone(), yaw=player.yaw, wasDead=player.dead;
-  scene.remove(player.obj);
-  player.av=makeAvatar('player', pal, 1); player.obj=player.av.obj;
-  player.obj.position.copy(pos); player.obj.rotation.y=yaw; scene.add(player.obj);
-  if(wasDead)player.av.setDead();
+function renderRelics(sp){
+  const list=document.getElementById('itemlist');
+  list.innerHTML='<div class="gsub">Forge soulbound RUNE relics</div>';
+  for(const it of RELICS){
+    const own=ownedItem(it.id);
+    const row=document.createElement('div'); row.className='itemrow';
+    row.innerHTML='<span><b>'+esc(it.name)+'</b><small>'+esc(it.desc)+'</small></span><button>'+(own?'Forged':it.price+' R')+'</button>';
+    const btn=row.querySelector('button');
+    btn.disabled=own||sp<it.price; btn.onclick=()=>forgeRelic(it);
+    list.appendChild(row);
+  }
 }
-function equipSkin(s){
-  player.skinId=s.id; player.pal={body:s.body,trim:s.trim,skin:s.skin};
-  applySkin(player.pal);
-  log(`🎽 Equipped <b>${s.name}</b>`); refreshWardrobe();
+function forgeRelic(it){
+  if(ownedItem(it.id)||Chain.spendable(player.name,'RUNE')<it.price)return;
+  Chain.spend(player.name,it.price,'forged relic: '+it.name);
+  Chain.mintItem(player.name,it.id);
+  progress.forged=true;
+  recalcStats(false); Story.event('forge',{item:it.id});
+  lootFlash('Relic forged<br><small>'+esc(it.name)+'</small>');
+  refreshGrace();
 }
-function buySkin(s){
-  if(ownedSkin(s.id)){ equipSkin(s); return; }
-  if(Econ.goldSpendable(player.name)<s.price){ log('Not enough Gold for <b>'+s.name+'</b> — convert RUNE or buy Gold'); return; }
-  Econ.spendGold(player.name, s.price, 'skin: '+s.name);   // on-chain Gold debit (the cosmetic sink)
-  Chain.mintCosmetic(player.name, s.id);                   // soulbound unlock, recorded on-chain
-  log(`🎽 Unlocked <b>${s.name}</b> for ${s.price} Gold — soulbound, on-chain`);
-  equipSkin(s);
+function openWardrobe(){
+  if(!state.started||player.dead)return;
+  state.wardrobeOpen=true; document.getElementById('wardrobe').style.display='flex'; refreshWardrobe();
 }
-function openWardrobe(){ if(wardrobeOpen||player.dead)return; wardrobeOpen=true;
-  if(pointer)document.exitPointerLock();
-  document.getElementById('wardrobe').style.display='flex'; refreshWardrobe(); }
-function closeWardrobe(){ if(!wardrobeOpen)return; wardrobeOpen=false;
-  document.getElementById('wardrobe').style.display='none';
-  if(started&&!player.dead)canvas.requestPointerLock(); }
+function closeWardrobe(){ state.wardrobeOpen=false; document.getElementById('wardrobe').style.display='none'; }
+document.getElementById('wclose').onclick=closeWardrobe;
 function refreshWardrobe(){
   document.getElementById('wGold').textContent=Econ.goldSpendable(player.name).toFixed(2);
   const pend=Econ.goldPending(player.name);
-  document.getElementById('wGoldPend').textContent=pend>0.0001?('+'+pend.toFixed(2)+' settling…'):'';
+  document.getElementById('wGoldPend').textContent=pend>0.0001?'+'+pend.toFixed(2)+' settling':'';
   document.getElementById('wRune').textContent=Chain.spendable(player.name,'RUNE').toFixed(2);
-  const spend=Econ.goldSpendable(player.name);
-  const list=document.getElementById('wlist'); list.innerHTML='';
+  const spend=Econ.goldSpendable(player.name), list=document.getElementById('wlist');
+  list.innerHTML='';
   for(const s of SKINS){
     const own=ownedSkin(s.id), eq=player.skinId===s.id;
     const row=document.createElement('div'); row.className='skin'+(eq?' equipped':'');
-    const hex=n=>'#'+n.toString(16).padStart(6,'0');
-    row.innerHTML=`<span class="sw" style="background:${hex(s.body)};box-shadow:inset 0 0 0 3px ${hex(s.trim)}"></span>`
-      +`<span class="sn">${s.name}</span>`
-      +`<button class="skinbtn">${eq?'Equipped':own?'Equip':(s.price+' G')}</button>`;
-    const btn=row.querySelector('.skinbtn');
-    btn.disabled = eq || (!own && spend<s.price);
+    row.innerHTML='<span class="sw" style="background:'+s.body+';box-shadow:inset 0 0 0 5px '+s.trim+'"></span><span class="sn">'+esc(s.name)+'</span><button class="skinbtn">'+(eq?'Equipped':own?'Equip':s.price+' G')+'</button>';
+    const btn=row.querySelector('button');
+    btn.disabled=eq||(!own&&spend<s.price);
     btn.onclick=()=>buySkin(s);
     list.appendChild(row);
   }
-  document.getElementById('wConv').disabled = Chain.spendable(player.name,'RUNE')<=0.0001;
+  document.getElementById('wConv').disabled=Chain.spendable(player.name,'RUNE')<=0.0001;
 }
-document.getElementById('wclose').onclick=closeWardrobe;
-document.getElementById('wConv').onclick=()=>{
-  const g=Econ.convertRuneToGold(player.name, Chain.spendable(player.name,'RUNE'));
-  if(g>0)log(`⚖ Converting <b style="color:#e7cf86">${g.toFixed(2)} Gold</b> from RUNE — mining to confirm…`);
-  refreshWardrobe();
-};
-document.getElementById('wBuy').onclick=()=>{
-  const sol=1, g=Econ.buyGoldWithSol(player.name, sol);
-  log(`💎 Bought <b style="color:#e7cf86">${g.toFixed(2)} Gold</b> · ${sol} wSOL → `
-     +`${(sol*ECON.SPLIT.burn).toFixed(2)} burned · ${(sol*ECON.SPLIT.prize).toFixed(2)} prize · ${(sol*ECON.SPLIT.fee).toFixed(2)} fee`);
-  refreshWardrobe();
-};
-
-// camera orbit state
-const cam={yaw:0,pitch:0.32,dist:6.4};
-let pointer=false;
-canvas.addEventListener('click',()=>{ if(started&&!pointer)canvas.requestPointerLock(); });
-document.addEventListener('pointerlockchange',()=>pointer=document.pointerLockElement===canvas);
-document.addEventListener('mousemove',e=>{
-  if(!pointer)return;
-  cam.yaw  -= e.movementX*0.0024;
-  cam.pitch -= e.movementY*0.0024;
-  cam.pitch = Math.max(-0.25,Math.min(1.15,cam.pitch));
-});
-canvas.addEventListener('mousedown',e=>{ if(pointer&&e.button===0)doAttack(); });
-
-const keys={};
-addEventListener('keydown',e=>{ keys[e.code]=true;
-  if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&!e.repeat){ shiftPending=true; shiftHoldT=0; shiftIsSprint=false; }
-  if(e.code==='KeyL')doAttack();
-  if(e.code==='KeyQ')toggleLock();
-  if(e.code==='KeyG'){ graceOpen?closeGrace():openGrace(); }
-  if(e.code==='KeyB'){ wardrobeOpen?closeWardrobe():openWardrobe(); }
-  if(e.code==='Escape'){ if(graceOpen)closeGrace(); else if(wardrobeOpen)closeWardrobe(); else if(player&&player.lock)player.lock=null; }
-  if(e.code==='KeyM')document.getElementById('wallet').style.display=
-     (document.getElementById('wallet').style.display==='none'?'block':'none');
-});
-addEventListener('keyup',e=>{ keys[e.code]=false;
-  if(e.code==='ShiftLeft'||e.code==='ShiftRight'){
-    if(shiftPending){ shiftPending=false; tryRoll(); }   // released quickly = tap = roll
-    shiftIsSprint=false; shiftHoldT=0;
+function buySkin(s){
+  if(!ownedSkin(s.id)){
+    if(Econ.goldSpendable(player.name)<s.price)return;
+    Econ.spendGold(player.name,s.price,'skin: '+s.name);
+    Chain.mintCosmetic(player.name,s.id);
   }
-});
+  player.skinId=s.id; player.pal=skinPal(s.id); refreshWardrobe();
+}
+document.getElementById('wConv').onclick=()=>{ const g=Econ.convertRuneToGold(player.name,Chain.spendable(player.name,'RUNE')); if(g>0)log('Converting '+g.toFixed(2)+' Gold from RUNE.'); refreshWardrobe(); };
+document.getElementById('wBuy').onclick=()=>{ const g=Econ.buyGoldWithSol(player.name,1); log('Bought '+g.toFixed(2)+' Gold in the devnet mock.'); refreshWardrobe(); };
+function toggleWallet(){
+  state.wallet=!state.wallet;
+  document.getElementById('wallet').style.display=state.wallet?'block':'none';
+}
+function lootFlash(html){
+  const el=document.getElementById('lootflash');
+  el.innerHTML=html; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+function flashBar(id){ const el=document.getElementById(id); el.style.filter='brightness(1.9)'; setTimeout(()=>el.style.filter='',140); }
 
-/* ---- Soulslike combat: dodge-roll, stamina, lock-on -------------------- */
-const ROLL_DUR=0.5, IFRAME_DUR=0.34, ROLL_COST=25, ROLL_SPEED=11, ROLL_TAP_MAX=0.2, LOCK_RANGE=30;
-let shiftPending=false, shiftHoldT=0, shiftIsSprint=false;
-
-function lerpAngle(a,b,t){ let d=b-a; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; return a+d*t; }
-
-function staFlash(){ const s=document.getElementById('sta'); s.classList.remove('flash'); void s.offsetWidth; s.classList.add('flash'); }
-
-// tap Shift -> dodge-roll (directional, or backstep when standing); i-frames + stamina
-function tryRoll(){
-  if(!started||player.dead||graceOpen||player.roll>0)return;
-  if(player.sta<ROLL_COST){ staFlash(); return; }
-  player.sta-=ROLL_COST; player.staDelay=0.55; player.attack=null; player.hitstun=0;
-  const f=(keys.KeyW?1:0)-(keys.KeyS?1:0), s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
-  const dir=new THREE.Vector3();
-  if(f||s){
-    const ang=cam.yaw;
-    const fwd=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));
-    const right=new THREE.Vector3(Math.cos(ang),0,-Math.sin(ang));
-    dir.addScaledVector(fwd,f).addScaledVector(right,s).normalize();
-    player.yaw=Math.atan2(dir.x,dir.z); player.obj.rotation.y=player.yaw;
-  } else {
-    dir.set(Math.sin(player.yaw),0,Math.cos(player.yaw)).multiplyScalar(-1);  // backstep
-  }
-  player.rollDir.copy(dir); player.roll=ROLL_DUR; player.iframes=IFRAME_DUR;
-}
-
-// Q -> lock onto / release the nearest foe roughly in front of you
-function toggleLock(){
-  if(player.lock){ player.lock=null; return; }
-  const camFwd=new THREE.Vector3(Math.sin(cam.yaw),0,Math.cos(cam.yaw));
-  let best=null,bestScore=Infinity;
-  for(const e of enemies){ if(e.dead)continue;
-    const to=e.obj.position.clone().sub(player.obj.position); to.y=0;
-    const d=to.length(); if(d>LOCK_RANGE)continue;
-    const dot=camFwd.dot(to.clone().normalize()); if(dot<0.1)continue;   // must be in front
-    const score=d*(1.6-dot);                                            // prefer close + centered
-    if(score<bestScore){ bestScore=score; best=e; }
-  }
-  player.lock=best;
-  if(best)log('🎯 Locked on — <b>'+best.type.name+'</b>  (Q to release)');
-}
-
-function updateReticle(){
-  const el=document.getElementById('lockon');
-  if(player.lock && !player.lock.dead){
-    const p=player.lock.obj.position.clone(); p.y+=(player.lock.height||2)*0.6; p.project(camera);
-    if(p.z<1){ el.style.display='block';
-      el.style.left=((p.x*0.5+0.5)*innerWidth)+'px';
-      el.style.top=((-p.y*0.5+0.5)*innerHeight)+'px'; return; }
-  }
-  el.style.display='none';
-}
-
-function doAttack(){
-  if(player.dead||graceOpen||player.roll>0||player.hitstun>0||player.attackCd>0||player.sta<14)return;
-  player.attack=0; player.attackCd=0.55; player.sta-=14; player.staDelay=0.55;
-  // swing toward the locked target, else where you're looking
-  const aim = player.lock && !player.lock.dead
-    ? Math.atan2(player.lock.obj.position.x-player.obj.position.x, player.lock.obj.position.z-player.obj.position.z)
-    : cam.yaw;
-  player.yaw=aim; player.obj.rotation.y=aim;
-  const fwd=new THREE.Vector3(Math.sin(aim),0,Math.cos(aim));
-  // hit detection slightly delayed to match the swing
-  setTimeout(()=>{
-    for(const e of enemies){
-      if(e.dead)continue;
-      const to=e.obj.position.clone().sub(player.obj.position); to.y=0;
-      const d=to.length();
-      const reach=(player.radius||0.6)+(e.radius||0.6)+1.4;   // weapon + both bodies
-      if(d<reach && fwd.dot(to.clone().normalize())>0.25) damageEnemy(e, player.dmg);
-    }
-  },150);
-}
-
-/* ------------------------------ (6) Monsters ----------------------------- */
-/* Data-driven roster. Each type has its own look, stats, RUNE bounty and
-   behaviour: melee, fast beast, tank, ranged caster, or boss.               */
-const MONSTERS = {
-  hollow:   {name:'Hollow',           body:0x3a2230,trim:0x6b2f3a,skin:0x8f9c84,scale:1.10,hp:100,speed:2.7,dmg:8, bounty:[5,16],  weight:5},
-  hound:    {name:'Rabid Hound',      body:0x4a3326,trim:0x241a12,skin:0x6a5440,scale:0.85,hp:55, speed:5.4,dmg:6, bounty:[7,15],  weight:3, beast:true},
-  knight:   {name:'Fallen Knight',    body:0x2b3340,trim:0x9097a4,skin:0x9a8f80,scale:1.30,hp:240,speed:2.0,dmg:18,bounty:[20,38], weight:2, armored:true},
-  sorcerer: {name:'Hollow Sorcerer',  body:0x2a2446,trim:0x7a5fc0,skin:0x9a8fb6,scale:1.10,hp:90, speed:1.7,dmg:16,bounty:[18,32], weight:2, ranged:true},
-  sentinel: {name:'Erdtree Sentinel', body:0x4a3a1a,trim:0xc8a24a,skin:0x6a5a3a,scale:2.10,hp:650,speed:1.6,dmg:32,bounty:[90,150],weight:0.5,boss:true, greatRune:true},
-};
-const GREAT_RUNES = [
-  {name:"Godrick's Great Rune", buff:0.25, note:'+25% attack'},
-  {name:"Radahn's Great Rune",  buff:0.30, note:'+30% attack'},
-  {name:"Morgott's Great Rune", buff:0.20, note:'+20% attack'},
-];
-function pickType(){
-  const keys=Object.keys(MONSTERS); let tot=0; for(const k of keys)tot+=MONSTERS[k].weight;
-  let r=Math.random()*tot;
-  for(const k of keys){ r-=MONSTERS[k].weight; if(r<=0)return k; }
-  return 'hollow';
-}
-const enemies=[];
-function spawnEnemy(typeKey){
-  const key=typeKey||pickType();
-  const t=MONSTERS[key];
-  const ang=Math.random()*6.28, r=24+Math.random()*72;
-  const x=Math.cos(ang)*r, z=Math.sin(ang)*r;
-  const av=makeAvatar(key, {body:t.body,trim:t.trim,skin:t.skin}, t.scale);
-  const obj=av.obj;
-  obj.position.set(x,getHeight(x,z),z);
-  if(t.beast && av.kind==='proc') obj.userData.hips.rotation.x=0.7; // hunched (box-rig only)
-  scene.add(obj);
-  const mm=measure(obj);                                  // real size for hitbox + bar
-  const bar=makeBar(); obj.add(bar.group);
-  bar.group.position.y = (mm.height+0.5)/(obj.scale.y||1); // sit just above the head
-  if(t.boss)bar.group.scale.setScalar(1.8);
-  enemies.push({obj,av,type:t,hp:t.hp,maxHp:t.hp,dead:false,phase:Math.random()*6,
-                radius:mm.radius,height:mm.height,
-                bar,speed:t.speed,atkCd:0,castCd:1.5+Math.random()*2,windup:0,winduDur:0});
-}
-function makeBar(){
-  const group=new THREE.Group();
-  const bg=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.16),
-    new THREE.MeshBasicMaterial({color:0x000000,depthTest:false}));
-  const fg=new THREE.Mesh(new THREE.PlaneGeometry(1.36,0.12),
-    new THREE.MeshBasicMaterial({color:0xc0392b,depthTest:false}));
-  fg.position.z=0.01; group.add(bg); group.add(fg);
-  group.renderOrder=999;
-  return {group,fg};
-}
-function damageEnemy(e,amt){
-  e.hp-=amt; flash(e.obj, e.type.boss?0xffcc44:0xff5544);
-  if(e.hp<=0 && !e.dead){
-    e.dead=true; e.av.setDead();                   // play death / topple
-    const [lo,hi]=e.type.bounty;
-    const bounty=lo+Math.round(Math.random()*(hi-lo));
-    Chain.reward(player.name,bounty,'slew a '+e.type.name);
-    log(`Felled a <b>${e.type.name}</b> — <b style="color:#e7cf86">+${bounty} RUNE</b> to the chain`);
-    if(e.type.greatRune){
-      const gr=GREAT_RUNES[Math.floor(Math.random()*GREAT_RUNES.length)];
-      Chain.mintGreatRune(player.name, gr);
-      log(`⭐ A <b style="color:#e7cf86">${gr.name}</b> is minted on-chain — ${gr.note}!`);
-    }
-    Net.sendKill(bounty);
-    setTimeout(()=>{ scene.remove(e.obj);
-      enemies.splice(enemies.indexOf(e),1); spawnEnemy(); }, 4500);
-  }
-}
-let flashes=[];
-function flash(obj,color){
-  obj.traverse(o=>{ if(o.material&&o.material.emissive)o.material.emissive.setHex(color); });
-  flashes.push({obj,t:0.12});
-}
-// sustained emissive (no auto-clear) — used for the attack wind-up telegraph
-function glow(obj,color){ obj.traverse(o=>{ if(o.material&&o.material.emissive)o.material.emissive.setHex(color); }); }
-const _wA=new THREE.Color(0x3a1500), _wB=new THREE.Color(0xff3010), _wC=new THREE.Color();
-function warnColor(k){ _wC.copy(_wA).lerp(_wB, Math.max(0,Math.min(1,k))); return _wC.getHex(); } // dark→red as a blow nears
-/* Hollow Sorcerer projectiles */
-const projectiles=[];
-function castSpell(e){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(0.28,10,10),
-    new THREE.MeshBasicMaterial({color:0x9b7bff}));
-  m.add(new THREE.PointLight(0x9b7bff,1.4,8));
-  const from=e.obj.position.clone(); from.y+=(e.height||2)*0.7; m.position.copy(from);
-  scene.add(m);
-  const aim=player.obj.position.clone().add(new THREE.Vector3(0,(player.height||2)*0.5,0));
-  const dir=aim.sub(from).normalize();
-  projectiles.push({mesh:m,dir,speed:14,life:3,dmg:e.type.dmg});
-}
-function updateProjectiles(dt){
-  const ctr=player.obj.position.clone().add(new THREE.Vector3(0,(player.height||2)*0.5,0));
-  const hitR=(player.radius||0.6)+0.45;
-  for(let i=projectiles.length-1;i>=0;i--){
-    const p=projectiles[i];
-    p.mesh.position.addScaledVector(p.dir,p.speed*dt); p.life-=dt;
-    if(p.mesh.position.distanceTo(ctr)<hitR && !player.dead){ hurtPlayer(p.dmg); p.life=0; }
-    if(p.life<=0){ scene.remove(p.mesh); projectiles.splice(i,1); }
-  }
-}
-// initial spawns happen once assets load — see initWorld()
-function initWorld(){
-  for(let i=0;i<3;i++)spawnEnemy('hollow');
-  for(let i=0;i<5;i++)spawnEnemy();
-  spawnEnemy('sentinel');    // one boss roaming the field to start
-}
-
-/* ----------------------------- (7) Networking ---------------------------- */
-/* Connects to the authoritative relay (server.js) over WebSocket. Broadcasts
-   our transform & mined blocks; renders remote players. If no server is
-   reachable, spins up local "phantom" Tarnished so the realm is never empty
-   and the MMO UI still demonstrates — same code path, simulated peers.       */
+/* ----------------------------- Networking ------------------------------- */
 const Net=(function(){
-  let ws=null, connected=false, id=Math.random().toString(36).slice(2,8);
-  const remotes={};        // id -> {obj,target,name}
-  const phantoms=[];       // local fallback bots
-  let sendTimer=0;
-
-  function avatar(name,isPhantom,pal){
-    const av=makeAvatar(isPhantom?'phantom':'player',
-      pal || {body:isPhantom?0x2c3b2c:0x394a5a,trim:0x6a7a5a,skin:0xc0a080},1);
-    scene.add(av.obj);
-    return av;                 // {obj, drive, setDead, kind}
-  }
-
+  let ws=null, connected=false, id=Math.random().toString(36).slice(2,8), sendTimer=0;
   function connect(){
     try{
-      // Same-origin WebSocket: works locally (served on :8080) and on AWS
-      // behind port 80/443. Falls back to phantoms if opened via file:// .
-      if(!location.host) throw new Error('no host (file://)');
+      if(!location.host)throw new Error('file mode');
       const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/';
       ws=new WebSocket(url);
-      ws.onopen=()=>{ connected=true; log('⛓ Connected to the realm server — true MMO online');
-        ws.send(JSON.stringify({t:'join',id,name:player.name,chain:Chain.chain})); };
+      ws.onopen=()=>{ connected=true; log('Connected to the realm server.'); ws.send(JSON.stringify({t:'join',id,name:player.name,chain:Chain.chain})); updatePeers(); };
       ws.onmessage=ev=>{
         const m=JSON.parse(ev.data);
-        if(m.t==='state' && m.id!==id){
+        if(m.t==='state'&&m.id!==id){
           let r=remotes[m.id];
-          if(!r){ const av=avatar(m.name,false,skinPal(m.skin));
-                  r={av,obj:av.obj,target:new THREE.Vector3(),name:m.name||'Tarnished',skin:m.skin};
-                  remotes[m.id]=r; updatePeers(); }
-          else if(m.skin && m.skin!==r.skin){          // peer changed cosmetic -> rebuild their avatar
-            const pos=r.obj.position.clone(), yaw=r.obj.rotation.y;
-            scene.remove(r.obj); const av=avatar(m.name,false,skinPal(m.skin));
-            av.obj.position.copy(pos); av.obj.rotation.y=yaw;
-            r.av=av; r.obj=av.obj; r.skin=m.skin;
-          }
-          r.target.set(m.x,m.y,m.z); r.yaw=m.yaw; r.moving=m.moving;
+          if(!r){ r={id:m.id,name:m.name||'Tarnished',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false}; remotes[m.id]=r; updatePeers(); }
+          r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0;
         }
-        if(m.t==='leave'){ if(remotes[m.id]){scene.remove(remotes[m.id].obj);delete remotes[m.id];updatePeers();} }
-        if(m.t==='block'){ if(Chain.acceptRemote(m.block)) log('⛓ Received a mined block from a peer'); }
-        if(m.t==='chain'){ Chain.replaceIfLonger(m.chain); }
+        if(m.t==='leave'){ delete remotes[m.id]; updatePeers(); }
+        if(m.t==='block'&&Chain.acceptRemote(m.block))log('Received a mined block from a peer.');
+        if(m.t==='chain')Chain.replaceIfLonger(m.chain);
       };
-      ws.onclose=()=>{ if(connected){connected=false;log('Realm server lost — falling back to phantoms');}
-                       ensurePhantoms(); };
+      ws.onclose=()=>{ if(connected)log('Realm server lost. Solo mode.'); connected=false; updatePeers(); };
       ws.onerror=()=>{ try{ws.close();}catch(_){} };
-    }catch(_){ ensurePhantoms(); }
-    // if no connection within 1.2s, summon phantoms
-    setTimeout(()=>{ if(!connected)ensurePhantoms(); },1200);
+    }catch(_){ connected=false; updatePeers(); }
+    setTimeout(()=>{ if(!connected)updatePeers(); },900);
   }
-
-  function ensurePhantoms(){
-    if(connected||phantoms.length)return;
-    for(let i=0;i<3;i++){
-      const av=avatar('Phantom',true, skinPal(SKINS[(i+1)%SKINS.length].id));  // each phantom flaunts a different skin
-      const ang=Math.random()*6.28, r=10+Math.random()*30;
-      av.obj.position.set(Math.cos(ang)*r,0,Math.sin(ang)*r);
-      phantoms.push({av,obj:av.obj,phase:Math.random()*6,
-        wander:new THREE.Vector3(Math.cos(ang)*r,0,Math.sin(ang)*r),
-        retime:0,name:'Phantom '+(i+1)});
-    }
-    log('No realm server found — 3 phantom Tarnished walk beside you (run <b>node server.js</b> for real MMO)');
-    updatePeers();
-  }
-
   function tick(dt){
-    // drive remote players toward their last-known transform
-    for(const k in remotes){
-      const r=remotes[k];
-      r.obj.position.lerp(r.target,Math.min(1,dt*8));
-      if(r.yaw!=null)r.obj.rotation.y=r.yaw;
-      r.av.drive(r.moving?4:0,dt);
+    for(const k in remotes){ const r=remotes[k]; r.x=lerp(r.x,r.tx,Math.min(1,dt*8)); r.y=lerp(r.y,r.ty,Math.min(1,dt*8)); }
+    if(connected){
+      sendTimer+=dt;
+      if(sendTimer>.08){
+        sendTimer=0;
+        ws.send(JSON.stringify({t:'state',id,name:player.name,skin:player.skinId,x:player.x,y:0,z:player.y,yaw:Math.atan2(player.dirY,player.dirX),moving:player.moving}));
+      }
     }
-    // simulate phantoms
-    for(const p of phantoms){
-      p.retime-=dt;
-      if(p.retime<=0){ const ang=Math.random()*6.28,r=8+Math.random()*40;
-        p.wander.set(Math.cos(ang)*r,0,Math.sin(ang)*r); p.retime=3+Math.random()*4; }
-      const to=p.wander.clone().sub(p.obj.position); to.y=0;
-      const d=to.length();
-      if(d>0.5){ to.normalize(); p.obj.position.addScaledVector(to,dt*2.4);
-        p.obj.rotation.y=Math.atan2(to.x,to.z); p.av.drive(3,dt); }
-      else p.av.drive(0,dt);
-      p.obj.position.y=getHeight(p.obj.position.x,p.obj.position.z);
-    }
-    // broadcast our state ~12x/s
-    if(connected){ sendTimer+=dt; if(sendTimer>0.08){ sendTimer=0;
-      ws.send(JSON.stringify({t:'state',id,name:player.name,skin:player.skinId,
-        x:player.obj.position.x,y:player.obj.position.y,z:player.obj.position.z,
-        yaw:player.yaw,moving:player.vel.length()>0.5})); } }
   }
-  function gossipBlock(block){ if(connected)ws.send(JSON.stringify({t:'block',id,block})); }
-  function sendKill(){ /* reward already added locally & will gossip with the block */ }
+  function gossipBlock(block){ if(connected&&ws&&ws.readyState===1)ws.send(JSON.stringify({t:'block',id,block})); }
   function updatePeers(){
     const el=document.getElementById('peerlist'); el.innerHTML='';
-    const me=document.createElement('div'); me.className='peerline';
-    me.innerHTML=`<span class="dot"></span> ${player.name} <span style="color:#6c6656">(you)</span>`;
-    el.appendChild(me);
-    const list = connected? Object.values(remotes) : phantoms;
-    for(const r of list){ const d=document.createElement('div'); d.className='peerline';
-      d.innerHTML=`<span class="dot ${connected?'':'local'}"></span> ${r.name||'Tarnished'}`;
-      el.appendChild(d); }
-    if(list.length===0){ const d=document.createElement('div');
-      d.style.color='#6c6656'; d.style.fontSize='11px';
-      d.textContent='searching for the realm…'; el.appendChild(d); }
+    const me=document.createElement('div'); me.className='peerline'; me.innerHTML='<span class="dot"></span>'+esc(player.name)+' <span style="color:#7d776b">(you)</span>'; el.appendChild(me);
+    const rs=Object.values(remotes);
+    if(!connected&&!rs.length){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot local"></span>Solo mode'; el.appendChild(d); return; }
+    for(const r of rs){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot"></span>'+esc(r.name); el.appendChild(d); }
   }
-  return {connect,tick,gossipBlock,sendKill,updatePeers,
-          get connected(){return connected;}};
+  return {connect,tick,gossipBlock,updatePeers,get connected(){return connected;}};
 })();
 
-/* --------------------------- (8) HUD + loop ------------------------------ */
-function log(html){ const l=document.getElementById('log');
-  const d=document.createElement('div'); d.innerHTML=html; l.appendChild(d);
+/* ----------------------------- Update loop ------------------------------ */
+function updatePlayer(dt){
+  if(player.dead)return;
+  if(player.attackCd>0)player.attackCd-=dt;
+  if(player.invuln>0)player.invuln-=dt;
+  if(player.hurt>0)player.hurt-=dt;
+  if(player.attack){ player.attack.t+=dt; if(player.attack.t>.2)player.attack=null; else resolveAttack(); }
+  if(player.sta<player.maxSta && !player.attack && player.dash<=0)player.sta=Math.min(player.maxSta,player.sta+24*dt);
+
+  if(player.lock && (player.lock.dead||dist(player.lock,player)>150))player.lock=null;
+  if(player.lock&&!player.lock.dead)faceToward(player.lock.x,player.lock.y);
+  else if(!player.attack)faceToward(mouse.worldX,mouse.worldY);
+
+  if(player.dash>0){
+    player.dash-=dt;
+    player.x+=player.vx*dt; player.y+=player.vy*dt;
+  } else {
+    const mx=(keys.KeyD?1:0)-(keys.KeyA?1:0), my=(keys.KeyS?1:0)-(keys.KeyW?1:0);
+    player.moving=!!(mx||my);
+    let spd=player.moving?PLAYER_SPEED:0;
+    const n=player.moving?norm(mx,my):{x:0,y:0};
+    player.vx=n.x*spd; player.vy=n.y*spd;
+    player.x+=player.vx*dt; player.y+=player.vy*dt;
+  }
+  player.x=clamp(player.x,-WORLD_LIMIT,WORLD_LIMIT); player.y=clamp(player.y,-WORLD_LIMIT,WORLD_LIMIT);
+}
+function update(dt){
+  state.time+=dt;
+  syncMouseWorld();
+  if(state.started){
+    if(state.introMercy>0)state.introMercy-=dt;
+    updatePlayer(dt);
+    updateEnemies(dt);
+    updateProjectiles(dt);
+    resolveSeparation();
+    updateParticles(dt);
+    Net.tick(dt);
+    const mined=Chain.tick(900);
+    Chain.updateHashrate(dt);
+    if(mined)log('Mined block #'+mined.index+' - '+mined.txs.length+' tx confirmed.');
+    const grs=Chain.greatRunesOf(player.name), buff=grs.reduce((m,g)=>Math.max(m,g.buff||0),0);
+    if(buff!==player.runeBuff)recalcStats(false);
+    if(state.graceOpen)refreshGrace();
+    if(state.wardrobeOpen)refreshWardrobe();
+    updateHud();
+  }
+  camera.x=lerp(camera.x,player.x,Math.min(1,dt*7));
+  camera.y=lerp(camera.y,player.y,Math.min(1,dt*7));
+  if(state.shake>0)state.shake=Math.max(0,state.shake-dt*18);
+}
+function frame(now){
+  const dt=Math.min(.05,(now-state.last)/1000); state.last=now;
+  update(dt); draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setInterval(()=>{ if(document.hidden){ const now=performance.now(); const dt=Math.min(.05,(now-state.last)/1000); state.last=now; update(dt); } },33);
+addEventListener('visibilitychange',()=>{ if(!document.hidden)state.last=performance.now(); });
+
+/* ------------------------------ Drawing --------------------------------- */
+function hash2(x,y){ let n=(x*374761393+y*668265263)^0x5bf03635; n=(n^(n>>>13))*1274126177; return ((n^(n>>>16))>>>0)/4294967295; }
+const TILE_ID={grass:0,grassDark:1,grassFlower:2,cobble:3,cobbleEdge:4,dirt:5,dirtEdge:6,plaza:7,plazaCrack:8,cursed:9,graveDirt:10,shadowGrass:11,water:12,sand:13,chapelWall:14,chapelRoof:15,bramble:16,fenceGround:17,mossStone:18,black:19};
+const ENTITY_SCALE=1.48;
+function mapTile(tx,ty){
+  const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2, h=hash2(tx,ty);
+  if(x<-250 && y>96)return TILE_ID.water;
+  if(x<-235 && y>72)return TILE_ID.sand;
+  if(Math.hypot(x-GRACE.x,y-GRACE.y)<86)return h>.74?TILE_ID.plazaCrack:TILE_ID.plaza;
+  if(y>=-32 && y<=32)return (ty===-2||ty===2)?TILE_ID.cobbleEdge:TILE_ID.cobble;
+  if(x>-122 && x<82 && y<-74 && y>-170)return h>.6?TILE_ID.shadowGrass:TILE_ID.grassDark;
+  if(x>170 && x<374 && y<-82 && y>-172)return h>.34?TILE_ID.graveDirt:TILE_ID.grassDark;
+  if(x>430 && (h>.56 || y<-80 || y>82))return h>.78?TILE_ID.bramble:TILE_ID.cursed;
+  if((x>-210&&x<-112&&y>48&&y<142)||(x>102&&x<188&&y>70&&y<150))return h>.55?TILE_ID.fenceGround:TILE_ID.grassFlower;
+  if(h>.94)return TILE_ID.grassFlower;
+  if(h<.18)return TILE_ID.shadowGrass;
+  return h<.52?TILE_ID.grass:TILE_ID.grassDark;
+}
+function drawAtlasTile(id,sx,sy){
+  const img=ASSETS.tiles&&ASSETS.tiles.img;
+  if(img){
+    ctx.drawImage(img,(id%8)*16,Math.floor(id/8)*16,16,16,Math.round(sx),Math.round(sy),16,16);
+    return;
+  }
+  const fallback=['#38a64d','#23763a','#35a449','#7d7661','#766f5b','#c99a43','#c99a43','#696b63','#5f625c','#241820','#5f533f','#1b5b31','#3787a5','#c88d35','#c8ac86','#8f2f2a','#271622','#37a54b','#59615a','#090b0f'];
+  rect(sx,sy,16,16,fallback[id]||'#ff00ff');
+}
+function drawWorldTile(id,tx,ty){
+  const s=worldToScreen(tx*TILE,ty*TILE);
+  drawAtlasTile(id,s.x,s.y);
+}
+function drawTerrain(){
+  const sh=maybeShake(); ctx.save(); ctx.translate(Math.round(sh.x),Math.round(sh.y));
+  ctx.fillStyle='#15311f'; ctx.fillRect(0,0,VIEW_W,VIEW_H);
+  const startX=Math.floor((camera.x-VIEW_W/2)/TILE)-1, endX=Math.floor((camera.x+VIEW_W/2)/TILE)+1;
+  const startY=Math.floor((camera.y-VIEW_H/2)/TILE)-1, endY=Math.floor((camera.y+VIEW_H/2)/TILE)+1;
+  for(let ty=startY;ty<=endY;ty++)for(let tx=startX;tx<=endX;tx++){
+    drawWorldTile(mapTile(tx,ty),tx,ty);
+  }
+  drawDecor();
+  ctx.restore();
+}
+function drawDecor(){
+  drawChapel();
+  for(const f of FENCES)drawFence(f);
+  for(const r of RUINS)drawRuin(r);
+  for(const g of GRAVES)drawGrave(g);
+  for(const b of BRAMBLES)drawBramble(b);
+  for(const t of TREES)drawTree(t);
+  for(const c of CANDLES)drawCandle(c);
+  const g=worldToScreen(GRACE.x,GRACE.y);
+  ctx.globalAlpha=.14; ctx.fillStyle='#f1c75b'; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS*1.25,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+  ctx.strokeStyle='rgba(241,199,91,.55)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS,0,Math.PI*2); ctx.stroke();
+  rect(g.x-20,g.y+16,40,4,'#4a4f4d'); rect(g.x-15,g.y+20,30,4,'#282c2b');
+  rect(g.x-8,g.y-4,16,8,'#4b3a1a'); rect(g.x-3,g.y-34,6,34,'#f1c75b'); rect(g.x-8,g.y-14,16,14,'#f08c3a');
+  rect(g.x-16,g.y-8,4,16,'#756a47'); rect(g.x+12,g.y-8,4,16,'#756a47');
+  if(Math.sin(state.time*5)>0)rect(g.x-2,g.y-43,4,7,'#fff1a8');
+  drawRoadSign(116,-44,'LEDGER');
+  drawRoadSign(514,44,'EAST');
+}
+function drawChapel(){
+  const base=worldToScreen(-92,-118);
+  rect(base.x-8,base.y+78,176,9,'rgba(0,0,0,.22)');
+  for(let y=0;y<5;y++)for(let x=0;x<9;x++)drawAtlasTile(y<2?TILE_ID.chapelRoof:TILE_ID.chapelWall,base.x+x*16,base.y+y*16);
+  rect(base.x-8,base.y+22,160,4,'#5c1d22');
+  rect(base.x+18,base.y+50,22,30,'#6e2b23');
+  rect(base.x+22,base.y+56,14,16,'#9b3a2d');
+  rect(base.x+78,base.y+42,28,24,'#4e5f6c');
+  rect(base.x+82,base.y+46,20,16,'#b5d5dc');
+  rect(base.x+84,base.y+55,16,7,'#7ea9b5');
+  rect(base.x+112,base.y+57,34,10,'#7d4a2a');
+  rect(base.x+116,base.y+61,26,4,'#b6783a');
+  rect(base.x+64,base.y+20,12,12,'#f1c75b');
+  rect(base.x+66,base.y+14,8,22,'#8a5a2d');
+  rect(base.x+48,base.y+80,8,16,'#575b55');
+  rect(base.x+106,base.y+80,8,16,'#575b55');
+}
+function drawRuin(r){
+  const s=worldToScreen(r.x,r.y), x=s.x-r.w/2, y=s.y-r.h/2;
+  rect(x,y,r.w,r.h,r.c||'#4c5152');
+  rect(x,y,r.w,3,'#73786f');
+  for(let i=6;i<r.w;i+=14)rect(x+i,y+r.h-4,7,4,'#2a2d2f');
+  if(r.arch)rect(s.x-8,y+r.h-18,16,18,'#171b1d');
+}
+function drawTree(t){
+  const s=worldToScreen(t.x,t.y), dead=t.dead;
+  rect(s.x-3,s.y-13,6,18,dead?'#3b2a24':'#4b3320');
+  rect(s.x-13,s.y-25,26,11,dead?'#27302b':'#2f5f37');
+  rect(s.x-9,s.y-33,18,10,dead?'#31372f':'#426f43');
+  rect(s.x+8,s.y-22,10,8,dead?'#252b29':'#274a2c');
+  if(dead){ rect(s.x-13,s.y-34,3,13,'#4c2330'); rect(s.x+10,s.y-31,2,11,'#4c2330'); }
+}
+function drawGrave(g){
+  const s=worldToScreen(g.x,g.y);
+  rect(s.x-5,s.y-13,10,12,'#6a6f6d');
+  rect(s.x-4,s.y-16,8,4,'#8c907e');
+  rect(s.x-3,s.y-9,6,2,'#373b3a');
+  if(g.candle)drawCandle({x:g.x+9,y:g.y-2});
+}
+function drawCandle(c){
+  const s=worldToScreen(c.x,c.y);
+  rect(s.x-1,s.y-7,2,7,'#e8dcc2');
+  rect(s.x-2,s.y-10,4,3,Math.sin(state.time*9+c.x)>.1?'#ffd36a':'#f08c3a');
+  ctx.globalAlpha=.18; rect(s.x-6,s.y-15,12,12,'#f1c75b'); ctx.globalAlpha=1;
+}
+function drawBramble(b){
+  const s=worldToScreen(b.x,b.y);
+  for(let i=0;i<b.n;i++){
+    const ox=(i*7)%b.w-b.w/2, oy=((i*13)%b.h)-b.h/2;
+    rect(s.x+ox,s.y+oy,10,2,'#3d1d29');
+    rect(s.x+ox+5,s.y+oy-5,2,10,'#542534');
+    if(i%3===0)rect(s.x+ox+8,s.y+oy-2,3,3,'#8a263d');
+  }
+}
+function drawFence(f){
+  const s=worldToScreen(f.x,f.y);
+  if(f.dir==='v'){
+    for(let i=0;i<f.len;i+=14){ rect(s.x-2,s.y+i-f.len/2,4,12,'#5b3d24'); rect(s.x-6,s.y+i+2-f.len/2,12,3,'#7a5532'); }
+  } else {
+    for(let i=0;i<f.len;i+=14){ rect(s.x+i-f.len/2,s.y-6,4,12,'#5b3d24'); rect(s.x+i-f.len/2-4,s.y-2,12,3,'#7a5532'); }
+  }
+}
+function drawRoadSign(x,y,label){
+  const s=worldToScreen(x,y);
+  rect(s.x-2,s.y-9,4,18,'#5a3a20');
+  rect(s.x-16,s.y-20,32,11,'#7a5532');
+  rect(s.x-14,s.y-18,28,2,'#a97a42');
+  ctx.font='6px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#211609'; ctx.fillText(label,s.x,s.y-12);
+}
+const RUINS=[
+  {x:-164,y:-28,w:72,h:14,c:'#555b5a'},
+  {x:82,y:-62,w:48,h:12,c:'#484d4f'},
+  {x:198,y:46,w:62,h:13,c:'#44494b'},
+  {x:338,y:-104,w:52,h:30,c:'#3b3e42',arch:true},
+  {x:574,y:74,w:76,h:14,c:'#46494c'},
+  {x:742,y:-42,w:50,h:34,c:'#4f4a3d',arch:true}
+];
+const TREES=[
+  {x:-248,y:-126},{x:-172,y:104,dead:true},{x:-42,y:128},{x:146,y:-142},
+  {x:286,y:122},{x:404,y:-132,dead:true},{x:538,y:142,dead:true},{x:706,y:-126,dead:true},{x:826,y:106,dead:true}
+];
+const GRAVES=[
+  {x:188,y:-118,candle:true},{x:214,y:-132},{x:240,y:-112,candle:true},{x:266,y:-138},
+  {x:304,y:-118},{x:330,y:-142,candle:true},{x:354,y:-104},{x:624,y:116},{x:650,y:136,candle:true}
+];
+const CANDLES=[
+  {x:-36,y:-48},{x:38,y:48},{x:126,y:32},{x:260,y:28},{x:420,y:-18},{x:560,y:22},{x:780,y:-24}
+];
+const BRAMBLES=[
+  {x:442,y:-118,w:74,h:34,n:12},{x:500,y:94,w:82,h:42,n:14},{x:674,y:-96,w:96,h:46,n:18},{x:832,y:68,w:86,h:38,n:16}
+];
+const FENCES=[
+  {x:-178,y:58,len:82,dir:'h'},{x:-216,y:98,len:76,dir:'v'},{x:120,y:92,len:92,dir:'h'},{x:158,y:130,len:54,dir:'v'}
+];
+function drawShadow(x,y,w,h){
+  const s=worldToScreen(x,y); ctx.fillStyle='rgba(0,0,0,.34)'; ctx.fillRect(s.x-w/2,s.y-h/2,w,h);
+}
+function drawSheet(key,x,y,frame,scale=1){
+  const a=ASSETS[key], img=a&&a.img;
+  if(!img)return false;
+  const s=worldToScreen(x,y);
+  ctx.drawImage(img,frame*a.w,0,a.w,a.h,Math.round(s.x-a.w*scale/2),Math.round(s.y-a.h*scale+8),a.w*scale,a.h*scale);
+  return true;
+}
+function drawEntityFallback(e,key,frame){
+  const s=worldToScreen(e.x,e.y);
+  if(key==='hollow'){ rect(s.x-6,s.y-18,12,15,'#3a1115'); rect(s.x-5,s.y-23,10,8,'#e24a4a'); rect(s.x-3,s.y-21,2,2,'#090b0f'); rect(s.x+2,s.y-21,2,2,'#090b0f'); }
+  else if(key==='hound'){ rect(s.x-10,s.y-12,18,8,'#f26b2f'); rect(s.x+5,s.y-17,8,7,'#ffad4d'); rect(s.x-9,s.y-5,4,5,'#2a1611'); rect(s.x+5,s.y-5,4,5,'#2a1611'); }
+  else if(key==='sentinel'){ rect(s.x-16,s.y-34,32,28,'#7d6221'); rect(s.x-10,s.y-48,20,16,'#f1c75b'); rect(s.x+12,s.y-40,5,32,'#e24a4a'); }
+  else { rect(s.x-7,s.y-22,14,18,TYPES[key].color); rect(s.x-5,s.y-28,10,8,'#d8dce2'); }
+}
+function drawPlayerSprite(p,remote=false){
+  const frame=p.attack?2:(p.hurt>0?3:(p.moving?1:0));
+  drawShadow(p.x,p.y,24,8);
+  const s=worldToScreen(p.x,p.y);
+  if(!drawSheet(remote?'phantom':'player',p.x,p.y,frame,ENTITY_SCALE)){
+    const pal=skinPal(p.skinId||'tarnished'), bob=p.moving?Math.sin(state.time*14)*1:0;
+    rect(s.x-9,s.y-28+bob,18,22,pal.body);
+    rect(s.x-7,s.y-39+bob,14,11,pal.skin);
+    rect(s.x-11,s.y-26+bob,4,18,pal.trim);
+    rect(s.x+7,s.y-26+bob,4,18,pal.trim);
+    rect(s.x-5,s.y-6,4,7,'#151617');
+    rect(s.x+1,s.y-6,4,7,'#151617');
+  }
+  if(!remote){
+    const sx=s.x+p.dirX*15, sy=s.y-23+p.dirY*9;
+    if(p.attack)rect(sx,sy,18,4,'#f1e6c8'); else rect(s.x+13,s.y-30,4,21,'#dce8ef');
+  }
+}
+function drawEnemy(e){
+  if(e.dead&&e.deathT<=0)return;
+  const frame=e.dead?3:e.windup>0?2:e.hurt>0?3:Math.floor(state.time*6)%2;
+  const scale=e.type.boss?1.36:ENTITY_SCALE;
+  const spriteH=(e.type.boss?48:24)*scale;
+  drawShadow(e.x,e.y,e.type.boss?48:25,e.type.boss?13:8);
+  if(!drawSheet(e.key,e.x,e.y,frame,scale))drawEntityFallback(e,e.key,frame);
+  const s=worldToScreen(e.x,e.y);
+  if(e.hitFlash>0){ ctx.globalAlpha=.55; rect(s.x-(e.type.boss?32:18),s.y-spriteH-2,e.type.boss?64:36,spriteH,'#ffffff'); ctx.globalAlpha=1; }
+  if(e.windup>0){ ctx.strokeStyle=e.type.boss?'#f1c75b':'#e24a4a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y-12,e.type.reach+4,0,Math.PI*2); ctx.stroke(); rect(s.x-2,s.y-spriteH-10,4,7,'#ffffff'); }
+  const relevant=e.hp<e.maxHp || e.aggroed || player.lock===e || dist(e,player)<78;
+  if(relevant){
+    const w=e.type.boss?68:48, y=s.y-spriteH-12;
+    rect(s.x-w/2,y,w,4,'#090b0f'); rect(s.x-w/2+1,y+1,(w-2)*(e.hp/e.maxHp),2,e.type.color);
+    ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle=e.type.color;
+    ctx.fillText(e.type.boss?'SENTINEL':e.type.name.replace('Hollow ','').replace('Fallen ',''),s.x,y-3);
+  }
+}
+function drawProjectiles(){
+  for(const p of projectiles){ const s=worldToScreen(p.x,p.y); rect(s.x-3,s.y-3,6,6,'#9b74ff'); rect(s.x-1,s.y-1,2,2,'#efe8ff'); }
+}
+function drawParticles(){
+  for(const p of particles){
+    const s=worldToScreen(p.x,p.y);
+    if(p.kind==='slash'){
+      const k=p.t/p.max; ctx.globalAlpha=k; rect(s.x+p.dx*16-10,s.y-20+p.dy*8,22,4,'#f1c75b'); rect(s.x+p.dx*20-5,s.y-17+p.dy*7,11,2,'#ffffff'); ctx.globalAlpha=1;
+    } else if(p.kind==='cast'){
+      ctx.globalAlpha=p.t/p.max; rect(s.x-7,s.y-17,14,14,'#9b74ff'); ctx.globalAlpha=1;
+    } else {
+      ctx.font='10px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle=p.color||'#ffffff'; ctx.fillText(p.text,s.x,s.y-(1-p.t/p.max)*18);
+    }
+  }
+}
+function drawTargetLine(){
+  if(!player.lock||player.lock.dead)return;
+  const a=worldToScreen(player.x,player.y), b=worldToScreen(player.lock.x,player.lock.y);
+  ctx.strokeStyle='rgba(241,199,91,.7)'; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(a.x,a.y-15); ctx.lineTo(b.x,b.y-15); ctx.stroke(); ctx.setLineDash([]);
+}
+function drawAim(){
+  if(player.lock)return;
+  ctx.strokeStyle='rgba(241,199,91,.8)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(mouse.x-4,mouse.y); ctx.lineTo(mouse.x+4,mouse.y); ctx.moveTo(mouse.x,mouse.y-4); ctx.lineTo(mouse.x,mouse.y+4); ctx.stroke();
+}
+function draw(){
+  ctx.imageSmoothingEnabled=false;
+  drawTerrain();
+  const actors=[...enemies.filter(e=>!(e.dead&&e.deathT<=0)),...Object.values(remotes),player].sort((a,b)=>a.y-b.y);
+  for(const a of actors){
+    if(a===player)drawPlayerSprite(player,false);
+    else if(a.type)drawEnemy(a);
+    else drawPlayerSprite(a,true);
+  }
+  drawProjectiles();
+  drawTargetLine();
+  drawParticles();
+  drawAim();
+}
+
+/* ------------------------------- HUD ------------------------------------ */
+const hpFill=document.querySelector('#hp>i'), staFill=document.querySelector('#sta>i');
+function log(html){
+  const l=document.getElementById('log'), d=document.createElement('div');
+  d.innerHTML=html; l.appendChild(d);
   while(l.children.length>5)l.removeChild(l.firstChild);
   setTimeout(()=>{ if(d.parentNode)d.remove(); },5200);
 }
-
-const elBal=document.getElementById('bal'), elPend=document.getElementById('pend'),
-      elGold=document.getElementById('gold'), elBurned=document.getElementById('burned'),
-      elPrize=document.getElementById('prizepool'), elFee=document.getElementById('feepool'),
-      elHeight=document.getElementById('height'), elDiff=document.getElementById('diff'),
-      elHr=document.getElementById('hr'), elChain=document.getElementById('chain'),
-      hpFill=document.querySelector('#hp>i'), staFill=document.querySelector('#sta>i'),
-      elLvl=document.getElementById('lvl'), elVgr=document.getElementById('sVgr'),
-      elEnd=document.getElementById('sEnd'), elStr=document.getElementById('sStr'),
-      elDmg=document.getElementById('sDmg'), elRunes=document.getElementById('runes');
-elDiff.textContent=Chain.DIFFICULTY+' nibbles';
-
-function renderChain(){
-  const c=Chain.chain; let html='';
-  const recent=c.slice(-5).reverse();
-  if(Chain.mining){ html+=`<div class="blk mining">#${Chain.mining.index} ⛏ mining…
-    nonce ${Chain.mining.nonce.toLocaleString()} · ${Chain.mining.txs.length} tx</div>`; }
-  for(const b of recent){
-    html+=`<div class="blk">#${b.index} <span class="h">${b.hash.slice(0,12)}…</span>
-      · ${b.txs.length} tx</div>`;
-  }
-  elChain.innerHTML=html;
+function updateHud(){
+  hpFill.style.width=(player.hp/player.maxHp*100)+'%';
+  staFill.style.width=(player.sta/player.maxSta*100)+'%';
+  document.getElementById('lvl').textContent=player.level;
+  document.getElementById('sVgr').textContent=player.vigor;
+  document.getElementById('sEnd').textContent=player.endurance;
+  document.getElementById('sStr').textContent=player.strength;
+  document.getElementById('sDmg').textContent=player.dmg;
+  const grs=Chain.greatRunesOf(player.name);
+  document.getElementById('runes').textContent=grs.length?'Great Rune: '+grs.map(g=>g.name.split("'")[0]).join(', '):'';
+  Story.updateHud();
+  updateWallet();
+  const prompt=document.getElementById('prompt');
+  if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Grace Zone - press <b>G</b> to rest, level, forge'; }
+  else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }
+  else prompt.style.display='none';
+  const boss=enemies.find(e=>e.type.boss&&!e.dead);
+  const box=document.getElementById('bossbar');
+  if(boss&&(boss.hp<boss.maxHp||dist(boss,player)<130||player.lock===boss)){
+    box.style.display='block';
+    document.getElementById('bossfill').style.width=(boss.hp/boss.maxHp*100)+'%';
+  } else box.style.display='none';
 }
-
-let started=false, last=performance.now();
+function updateWallet(){
+  document.getElementById('bal').textContent=Chain.balanceOf(player.name).toFixed(2);
+  document.getElementById('pend').textContent=Chain.pendingCredit(player.name).toFixed(2);
+  document.getElementById('gold').textContent=Econ.goldSpendable(player.name).toFixed(2);
+  document.getElementById('height').textContent=Chain.chain.length-1;
+  document.getElementById('diff').textContent=Chain.DIFFICULTY+' nibbles';
+  document.getElementById('hr').textContent=Chain.hashrate.toLocaleString()+' H/s';
+  document.getElementById('burned').textContent=Econ.solTally(ECON.BURN_ADDR).toFixed(4);
+  document.getElementById('prizepool').textContent=Econ.solTally(ECON.PRIZE_ADDR).toFixed(4);
+  document.getElementById('feepool').textContent=Econ.solTally(ECON.FEE_ADDR).toFixed(4);
+  let html='';
+  if(Chain.mining)html+='<div class="blk mining">#'+Chain.mining.index+' mining - nonce '+Chain.mining.nonce.toLocaleString()+'</div>';
+  for(const b of Chain.chain.slice(-5).reverse())html+='<div class="blk">#'+b.index+' '+b.hash.slice(0,12)+' - '+(b.txs||[]).length+' tx</div>';
+  document.getElementById('chain').innerHTML=html;
+}
 function startGame(){
-  if(!player||started)return;          // rig still loading
+  if(state.started)return;
   player.name=(document.getElementById('name').value.trim()||'Tarnished').slice(0,14);
   document.getElementById('charname').textContent=player.name;
   document.getElementById('start').style.display='none';
-  started=true; canvas.requestPointerLock();
-  Net.connect(); Net.updatePeers();
-  log('Rise now, Tarnished. Slay foes for RUNE, then rest at a Site of Grace to level up.');
+  document.body.classList.add('playing');
+  state.started=true; state.introMercy=4; recalcStats(true);
+  Story.event('start'); Net.connect(); Net.updatePeers();
+  log('Grace is safe. Move east when ready. One Hollow first, then escalation.');
 }
 document.getElementById('go').onclick=startGame;
-document.getElementById('name').addEventListener('keydown',e=>{if(e.code==='Enter')startGame();});
+document.getElementById('name').addEventListener('keydown',e=>{ if(e.code==='Enter')startGame(); });
 document.getElementById('respawn').onclick=()=>{
-  player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false;
-  player.roll=0; player.iframes=0; player.hitstun=0; player.attack=null; player.lock=null;
-  player.obj.position.copy(SPAWN); player.obj.rotation.set(0,player.yaw,0);
+  player.x=0; player.y=0; player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false; player.invuln=1; player.lock=null;
   document.getElementById('death').style.display='none';
-  if(started)canvas.requestPointerLock();
 };
 
-function updatePlayer(dt){
-  if(player.dead)return;
-
-  // ---- timers ----
-  if(player.attackCd>0)player.attackCd-=dt;
-  if(player.iframes>0)player.iframes-=dt;
-  if(player.hitstun>0)player.hitstun-=dt;
-  if(player.staDelay>0)player.staDelay-=dt;
-  let atk=null;
-  if(player.attack!=null){ player.attack+=dt*2.6; atk=player.attack; if(player.attack>=1)player.attack=null; }
-
-  // drop a lock that died or wandered out of range
-  if(player.lock && (player.lock.dead ||
-      player.lock.obj.position.distanceTo(player.obj.position)>LOCK_RANGE*1.6)) player.lock=null;
-
-  // resolve Shift: held past the tap window = sprint (tap already rolled on keyup)
-  if(shiftPending && (keys.ShiftLeft||keys.ShiftRight)){
-    shiftHoldT+=dt; if(shiftHoldT>=ROLL_TAP_MAX){ shiftIsSprint=true; shiftPending=false; }
-  }
-
-  if(player.roll>0){
-    // ---- DODGE-ROLL: overrides control; i-frames active early in the window ----
-    player.roll-=dt;
-    const k=Math.max(0,player.roll/ROLL_DUR);                 // 1 -> 0
-    const spd=2.5+ROLL_SPEED*k;
-    player.vel.copy(player.rollDir).multiplyScalar(spd);
-    player.obj.position.addScaledVector(player.vel,dt);
-    player.obj.rotation.x=(1-k)*Math.PI*2;                    // forward somersault
-    player.av.drive(spd,dt,{air:!player.onGround});
-  } else {
-    player.obj.rotation.x=0;
-    // input -> desired movement in camera space
-    const f=(keys.KeyW?1:0)-(keys.KeyS?1:0);
-    const s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
-    const moving=(f||s);
-    let speed=3.4;
-    const move=new THREE.Vector3();
-    if(moving){
-      const ang=cam.yaw;
-      const fwd=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));
-      const right=new THREE.Vector3(Math.cos(ang),0,-Math.sin(ang));
-      move.addScaledVector(fwd,f).addScaledVector(right,s);
-      if(move.lengthSq()>0)move.normalize();
-    }
-    // stamina: hold-Shift sprint drains; otherwise regen after a short delay
-    const sprint=shiftIsSprint && moving && player.sta>0 && player.hitstun<=0;
-    if(sprint){ speed=6.4; player.sta=Math.max(0,player.sta-dt*18); player.staDelay=0.3;
-      if(player.sta<=0)speed=3.4; }
-    else if(player.staDelay<=0)player.sta=Math.min(player.maxSta,player.sta+dt*16);
-    if(player.hitstun>0)speed*=0.4;                            // staggered: sluggish
-
-    // facing: lock-on holds the target, else turn toward movement (strafe when locked)
-    if(player.lock){
-      const t=player.lock.obj.position;
-      player.yaw=Math.atan2(t.x-player.obj.position.x,t.z-player.obj.position.z);
-      player.obj.rotation.y=player.yaw;
-    } else if(moving){
-      player.yaw=Math.atan2(move.x,move.z); player.obj.rotation.y=player.yaw;
-    }
-
-    player.vel.copy(move).multiplyScalar(speed);
-    player.obj.position.addScaledVector(player.vel,dt);
-    player.av.drive(player.vel.length(), dt, {air:!player.onGround, attack:atk});
-  }
-
-  // ---- gravity + ground (shared) ----
-  player.vy-=22*dt;
-  if(player.onGround && keys.Space && player.roll<=0){ player.vy=8.2; player.onGround=false; }
-  player.obj.position.y+=player.vy*dt;
-  const ground=getHeight(player.obj.position.x,player.obj.position.z);
-  if(player.obj.position.y<=ground){ player.obj.position.y=ground; player.vy=0; player.onGround=true; }
-  const lim=TERR/2-6;
-  player.obj.position.x=Math.max(-lim,Math.min(lim,player.obj.position.x));
-  player.obj.position.z=Math.max(-lim,Math.min(lim,player.obj.position.z));
-
-  // ---- camera: lock-on eases onto the target, else free orbit ----
-  if(player.lock){
-    const t=player.lock.obj.position;
-    const aim=Math.atan2(t.x-player.obj.position.x,t.z-player.obj.position.z);
-    cam.yaw=lerpAngle(cam.yaw,aim,Math.min(1,dt*8));
-    cam.pitch += (0.34-cam.pitch)*Math.min(1,dt*5);
-  }
-  const tgt=player.obj.position.clone().add(new THREE.Vector3(0,1.5,0));
-  const cp=new THREE.Vector3(
-    Math.sin(cam.yaw)*Math.cos(cam.pitch),
-    Math.sin(cam.pitch),
-    Math.cos(cam.yaw)*Math.cos(cam.pitch)
-  ).multiplyScalar(cam.dist);
-  const want=tgt.clone().sub(cp);
-  want.y=Math.max(want.y,getHeight(want.x,want.z)+0.6); // don't clip under ground
-  camera.position.lerp(want,Math.min(1,dt*10));
-  camera.lookAt(tgt);
-  updateReticle();
-}
-
-function updateEnemies(dt){
-  for(const e of enemies){
-    if(e.dead){ e.av.drive(0,dt,{dead:true}); continue; }
-    const to=player.obj.position.clone().sub(e.obj.position); to.y=0;
-    const d=to.length();
-    e.atkCd-=dt;
-    if(e.type.ranged){
-      // caster: hold mid-range and lob spells; back off if you close in
-      e.castCd-=dt;
-      e.obj.rotation.y=Math.atan2(to.x,to.z);
-      if(d>22){ to.normalize(); e.obj.position.addScaledVector(to,dt*e.speed); e.av.drive(e.speed,dt); }
-      else if(d<10){ to.normalize(); e.obj.position.addScaledVector(to,-dt*e.speed); e.av.drive(e.speed,dt); }
-      else e.av.drive(0,dt);
-      if(d<34 && e.castCd<=0 && !player.dead){ e.castCd=2.2; castSpell(e); }
-    } else {
-      const reach=(e.radius||0.6)+(player.radius||0.6)+0.5;   // contact = both bodies
-      const strike=reach+0.6;                                 // the committed swing's reach at impact
-      if(e.windup>0){
-        // committed swing: plant, telegraph, then land the blow when the tell elapses
-        e.windup-=dt;
-        e.obj.rotation.y=Math.atan2(to.x,to.z);
-        glow(e.obj, warnColor(1-Math.max(0,e.windup)/e.winduDur));   // brightens toward the strike
-        e.av.drive(1,dt,{attack:1});
-        if(e.windup<=0){                                       // STRIKE — i-frames (a timed roll) negate it
-          flash(e.obj, e.type.boss?0xffaa33:0xff7744);
-          if(d<=strike && !player.dead) hurtPlayer(e.type.dmg);
-          e.atkCd=e.type.boss?1.9:1.4;                         // recovery before the next tell
-        }
-      } else if(d<30 && d>reach){ to.normalize();
-        e.obj.position.addScaledVector(to,dt*e.speed);
-        e.obj.rotation.y=Math.atan2(to.x,to.z); e.av.drive(e.speed,dt);
-      } else if(d<=reach){
-        e.obj.rotation.y=Math.atan2(to.x,to.z); e.av.drive(0,dt);
-        if(e.atkCd<=0) e.windup=e.winduDur=(e.type.boss?0.7:0.45);  // begin the wind-up tell
-      } else e.av.drive(0,dt);
-    }
-    e.obj.position.y=getHeight(e.obj.position.x,e.obj.position.z);
-    e.bar.fg.scale.x=Math.max(0.001,e.hp/e.maxHp);
-    e.bar.fg.position.x=-(1-e.hp/e.maxHp)*0.68;
-    e.bar.group.lookAt(camera.position);
-  }
-}
-
-function loop(now){
-  const dt=Math.min(0.05,(now-last)/1000); last=now;
-  if(started){
-    if(!player.dead) updatePlayer(dt); else player.av.drive(0,dt,{dead:true});
-    updateEnemies(dt);
-    updateProjectiles(dt);
-    Net.tick(dt);
-    // mine the chain a little each frame (cooperative PoW)
-    const mined=Chain.tick(900);
-    Chain.updateHashrate(dt);
-    if(mined)log(`⛏ Mined block #${mined.index} — ${mined.txs.length} tx confirmed on-chain`);
-    // flashes
-    flashes=flashes.filter(fl=>{ fl.t-=dt;
-      if(fl.t<=0){ fl.obj.traverse(o=>{if(o.material&&o.material.emissive)o.material.emissive.setHex(0x000000);}); return false; }
-      return true; });
-    // grace beacon shimmer
-    beam.material.opacity=0.28+Math.sin(now*0.003)*0.1;
-    grace.rotation.y+=dt*0.4;
-    // HUD
-    // apply Great Rune buff if our on-chain holdings changed
-    const grs=Chain.greatRunesOf(player.name);
-    const buff=grs.reduce((m,g)=>Math.max(m,g.buff),0);
-    if(buff!==player.runeBuff){ player.runeBuff=buff; recalcStats(false); }
-    // vitals
-    hpFill.style.width=(player.hp/player.maxHp*100)+'%';
-    staFill.style.width=(player.sta/player.maxSta*100)+'%';
-    elLvl.textContent=player.level;
-    elVgr.textContent=player.vigor; elEnd.textContent=player.endurance;
-    elStr.textContent=player.strength; elDmg.textContent=player.dmg;
-    elRunes.textContent = grs.length ? '⭐ '+grs.map(g=>g.name.split("'")[0]).join(', ') : '';
-    // wallet
-    elBal.textContent=Chain.balanceOf(player.name).toFixed(2);
-    elPend.textContent=Chain.pendingCredit(player.name).toFixed(2);
-    elGold.textContent=Econ.goldSpendable(player.name).toFixed(2);
-    elBurned.textContent=Econ.solTally(ECON.BURN_ADDR).toFixed(4);
-    elPrize.textContent=Econ.solTally(ECON.PRIZE_ADDR).toFixed(4);
-    elFee.textContent=Econ.solTally(ECON.FEE_ADDR).toFixed(4);
-    elHeight.textContent=Chain.chain.length-1;
-    elHr.textContent=Chain.hashrate.toLocaleString()+' H/s';
-    // grace prompt + live level-up panel
-    document.getElementById('graceprompt').style.display=(nearGrace()&&!graceOpen&&!player.dead)?'block':'none';
-    if(graceOpen)refreshGrace();
-    if(wardrobeOpen)refreshWardrobe();
-    renderChain();
-  }
-  renderer.render(scene,camera);
-}
-// Drive with rAF while visible; fall back to a timer when the page is hidden/backgrounded
-// (rAF pauses while hidden, which would otherwise freeze the realm — and embedded previews
-// run hidden). `frame` is the only thing that schedules rAF, so no callback pile-up builds
-// up while hidden; the document.hidden guard stops the timer from double-stepping when visible.
-function frame(now){ requestAnimationFrame(frame); loop(now); }
-requestAnimationFrame(frame);
-setInterval(()=>{ if(document.hidden) loop(performance.now()); }, 33);
-// coming back from a background tab: reset the clock so dt doesn't spike (it's also clamped)
-addEventListener('visibilitychange',()=>{ if(!document.hidden) last=performance.now(); });
-
-addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-});
-renderer.setSize(innerWidth,innerHeight);
-
-/* ---- bootstrap: load the rigged character, then build player + world ---- */
-function onAssetsReady(){
-  initPlayer();
-  initWorld();
-  const go=document.getElementById('go');
-  go.disabled=false; go.textContent='Enter the Lands Between';
-  const rs=document.getElementById('rigstatus');
-  const loaded=Object.keys(ASSETS.models).filter(r=>r!=='default');
-  if(loaded.length){ rs.style.color='#7fd39a';
-    rs.innerHTML='✓ Loaded models: <b>'+loaded.join(', ')+'</b> — skeletal animation active'; }
-  else if(ASSETS.models.default){ rs.style.color='#c8a24a';
-    rs.innerHTML='◐ Using the online placeholder rig. Drop GLBs in <code>models/</code> for the wild mix.'; }
-  else { rs.style.color='#e0a04b';
-    rs.innerHTML='⚠ No models loaded — using the built-in box rig (offline? check console).'; }
-  console.log('[runechain] ready —', loaded.length?('models: '+loaded):'fallback rig');
-}
-loadAssets(onAssetsReady);
+/* ----------------------------- Bootstrap -------------------------------- */
+recalcStats(true);
+initWorld();
+Story.updateHud();
+Net.updatePeers();
+updateHud();
 </script>
 </body>
 </html>

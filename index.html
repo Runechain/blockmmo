@@ -522,6 +522,24 @@ const RELICS = [
   {id:'rune-lens', name:'Rune Lens', price:48, desc:'+20% RUNE bounty from kills.', runeMult:0.2},
   {id:'tallow-brand', name:'Tallow Brand', price:90, desc:'+18 attack and +25 health.', dmg:18, hp:25}
 ];
+/* Boss Sigils — unique on-chain final-boss drops. RATIFIED RULINGS (docs/design/DESIGN-BIBLE.md):
+   sigils grant RUNE-ACQUISITION bonuses earned by boss kills (grind-gated), never purchasable power.
+   RUNE buys power ONLY at a Hearthlight; Gold is cosmetics only; endgame loops grant no farmable power. */
+const SIGILS = {
+  'waxen-testament': { name:'The Waxen Testament', runeMult:0.12, note:'Legitimately Recorded' },
+  'contested-will':  { name:'The Contested Will', runeMult:0.10, atkSpeed:0.12, iframeOnHit:true, note:'Severed from inheritance' },
+  'amended-record':  { name:'The Amended Record', runeMult:0.15, endgame:true, note:'Co-authored' }
+};
+function sigilBonuses(){
+  const out={hp:0,sta:0,dmg:0,runeMult:0,atkSpeed:0};
+  for(const g of Chain.greatRunesOf(player.name)){
+    const s=g.key&&SIGILS[g.key];
+    if(s){ out.hp+=s.hp||0; out.sta+=s.sta||0; out.dmg+=s.dmg||0; out.runeMult+=s.runeMult||0; out.atkSpeed+=s.atkSpeed||0; }
+    else { out.dmg+=g.buff||0; out.hp+=(g.buff||0)*2; } // legacy unkeyed sigils keep their flat bonus
+  }
+  return out;
+}
+function sigilSig(){ return Chain.greatRunesOf(player.name).map(g=>g.key||('b'+(g.buff||0))).join(','); }
 const SKINS = [
   { id:'tarnished', name:'Recorded', price:0, body:'#334052', trim:'#8ca0b8', skin:'#cfa982' },
   { id:'crimson', name:'Crimson Lord', price:120, body:'#6b2020', trim:'#e24a4a', skin:'#cfa982' },
@@ -583,7 +601,7 @@ function maybeShake(){
 /* ------------------------------ Player ---------------------------------- */
 let player={
   name:'Recorded', x:0, y:0, vx:0, vy:0, dirX:1, dirY:0, moving:false, radius:7,
-  level:1, vigor:10, endurance:10, strength:10, runeBuff:0,
+  level:1, vigor:10, endurance:10, strength:10, runeMult:0, atkSpeedMult:0, sigilSig:'',
   hp:120, maxHp:120, sta:100, maxSta:100, dmg:34,
   attack:null, attackCd:0, invuln:0, dash:0, hurt:0, dead:false, lock:null,
   skinId:'tarnished', pal:skinPal('tarnished')
@@ -593,12 +611,13 @@ const progress={hollows:0, forged:false, interactions:new Set()};
 
 function recalcStats(fullHeal){
   const b=itemBonuses();
-  const grs=Chain.greatRunesOf(player.name);
-  const buff=grs.reduce((m,g)=>Math.max(m,g.buff||0),0);
-  player.runeBuff=buff;
-  const hp=80+player.vigor*6+b.hp+buff*2;
-  const sta=68+player.endurance*5+b.sta;
-  player.dmg=14+player.strength*2+b.dmg+buff;
+  const s=sigilBonuses();
+  player.runeMult=s.runeMult;
+  player.atkSpeedMult=s.atkSpeed;
+  player.sigilSig=sigilSig();
+  const hp=80+player.vigor*6+b.hp+s.hp;
+  const sta=68+player.endurance*5+b.sta+s.sta;
+  player.dmg=14+player.strength*2+b.dmg+s.dmg;
   player.maxHp=hp; player.maxSta=sta;
   if(fullHeal){ player.hp=player.maxHp; player.sta=player.maxSta; }
   else{ player.hp=Math.min(player.hp,player.maxHp); player.sta=Math.min(player.sta,player.maxSta); }
@@ -615,7 +634,7 @@ function doAttack(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen)return;
   if(player.attackCd>0)return;
   if(player.sta<14){ flashBar('sta'); return; }
-  player.sta-=14; player.attackCd=.32; player.attack={t:0,hit:false}; state.shake=2.2;
+  player.sta-=14; player.attackCd=.32/(1+(player.atkSpeedMult||0)); player.attack={t:0,hit:false}; state.shake=2.2;
   if(player.lock&&!player.lock.dead)faceToward(player.lock.x,player.lock.y);
   else faceToward(mouse.worldX,mouse.worldY);
   slashFx(player.x,player.y,player.dirX,player.dirY);
@@ -649,7 +668,7 @@ const TYPES={
   sorcerer:{key:'sorcerer',name:'Hollow Sorcerer',hp:54,dmg:12,speed:20,reward:30,aggro:125,reach:85,ranged:true,color:'#9b74ff'},
   sexton:{key:'sexton',asset:'knight',name:'Gate Sexton Marrow',short:'SEXTON',hp:96,dmg:14,speed:27,reward:34,aggro:108,reach:19,color:'#d8b36b'},
   mempool:{key:'mempool',asset:'sorcerer',name:'Mempool Warden',short:'WARDEN',hp:92,dmg:13,speed:22,reward:42,aggro:125,reach:88,ranged:true,color:'#b88cff'},
-  tallow:{key:'tallow',asset:'sentinel',name:'Mother Tallow',short:'MOTHER TALLOW',hp:260,dmg:22,speed:20,reward:100,aggro:134,reach:28,boss:true,color:'#f1c75b',sigilName:'Tallow Sigil',sigilBuff:14}
+  tallow:{key:'tallow',asset:'sentinel',name:'Mother Tallow',short:'MOTHER TALLOW',hp:260,dmg:22,speed:20,reward:100,aggro:134,reach:28,boss:true,color:'#f1c75b',sigilName:'The Waxen Testament',sigilKey:'waxen-testament'}
 };
 function spawnEnemy(key,x,y,gate=0,opts={}){
   const t=TYPES[key];
@@ -685,12 +704,12 @@ function killEnemy(e){
   e.dead=true; e.deathT=1.2; state.shake=e.type.boss?7:3;
   if(e.key==='hollow')progress.hollows++;
   const bonus=itemBonuses();
-  const reward=+(e.type.reward*(1+bonus.runeMult)).toFixed(2);
+  const reward=+(e.type.reward*(1+bonus.runeMult+(player.runeMult||0))).toFixed(2);
   Chain.reward(player.name,reward,e.type.name+' slain');
   Story.event('kill',{key:e.key});
   log('<b>'+esc(e.type.name)+'</b> slain. +'+reward.toFixed(2)+' RUNE pending.');
   if(e.type.boss){
-    const rune={id:e.key+'-'+Date.now(),name:e.type.sigilName||e.type.name+' Sigil',buff:e.type.sigilBuff||12};
+    const rune={id:e.key+'-'+Date.now(),name:e.type.sigilName||e.type.name+' Sigil',key:e.type.sigilKey||null,buff:e.type.sigilKey?0:(e.type.sigilBuff||12)};
     Chain.mintGreatRune(player.name,rune);
     Story.event('greatRune',{rune:rune.id});
     lootFlash('Boss Sigil sealed<br><small>'+esc(rune.name)+'</small>');
@@ -1012,8 +1031,7 @@ function update(dt){
     const mined=Chain.tick(900);
     Chain.updateHashrate(dt);
     if(mined)log('Mined block #'+mined.index+' - '+mined.txs.length+' tx confirmed.');
-    const grs=Chain.greatRunesOf(player.name), buff=grs.reduce((m,g)=>Math.max(m,g.buff||0),0);
-    if(buff!==player.runeBuff)recalcStats(false);
+    if(sigilSig()!==player.sigilSig)recalcStats(false);
     if(state.graceOpen)refreshGrace();
     if(state.wardrobeOpen)refreshWardrobe();
     updateHud();

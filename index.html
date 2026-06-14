@@ -653,14 +653,18 @@ const CLIP_WANT = {
 };
 // the wild roster — drop matching GLBs in ./models/ (server.js serves them).
 // `default` is an online fallback so it still renders before you download anything.
+// Local CC0 GLBs served same-origin (the preview sandbox blocks runtime cross-origin
+// model fetches, so external URLs 404 here — keep these local). robot.glb (RobotExpressive)
+// carries the full Idle/Walking/Running/Jump/Punch/Death set the combat hooks expect.
+// Drop bespoke per-creature GLBs (e.g. Meshy-generated) at these paths to override.
 const MODELS = {
-  default:  { url:'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/models/gltf/RobotExpressive/RobotExpressive.glb' },
-  player:   { url:'models/player.glb'   },
-  hollow:   { url:'models/hollow.glb'   },
-  hound:    { url:'models/hound.glb'    },
-  knight:   { url:'models/knight.glb'   },
-  sorcerer: { url:'models/sorcerer.glb' },
-  sentinel: { url:'models/sentinel.glb' },
+  default:  { url:'models/robot.glb'   },
+  player:   { url:'models/robot.glb'   },
+  hollow:   { url:'models/robot.glb'   },
+  hound:    { url:'models/robot.glb'   },
+  knight:   { url:'models/robot.glb'   },
+  sorcerer: { url:'models/robot.glb'   },
+  sentinel: { url:'models/soldier.glb' },   // distinct, imposing silhouette for the boss
 };
 const ASSETS = { ready:false, models:{} };   // role -> {scene, animations, norm}
 

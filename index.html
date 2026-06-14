@@ -48,6 +48,15 @@
   #center{top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
   .cross{width:6px;height:6px;border:2px solid rgba(255,255,255,.6);border-radius:50%;
     margin:0 auto;box-shadow:0 0 4px #000}
+  /* lock-on reticle */
+  #lockon{display:none;color:#e0594b;font-size:26px;line-height:1;transform:translate(-50%,-50%);
+    text-shadow:0 0 8px #000,0 0 14px #e0594b;z-index:6;animation:lockpulse 1.6s infinite ease-in-out}
+  @keyframes lockpulse{0%,100%{opacity:.65;transform:translate(-50%,-50%) scale(1)}
+    50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}}
+  /* stamina too low to act */
+  .bar.flash{animation:staflash .35s}
+  @keyframes staflash{0%,100%{box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+    50%{box-shadow:inset 0 0 0 2px #e0594b,0 0 10px rgba(224,89,75,.7)}}
   /* start overlay */
   #start{position:fixed;inset:0;background:radial-gradient(60% 60% at 50% 35%,#16130c,#000);
     display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;
@@ -78,14 +87,35 @@
     font-size:14px;letter-spacing:.08em;display:none;background:rgba(14,15,18,.72);
     padding:8px 16px;border:1px solid #3a342a;border-radius:8px}
   #graceprompt b{color:#fff}
-  #levelup{position:fixed;inset:0;background:rgba(8,7,5,.74);display:none;align-items:center;
+  #levelup,#wardrobe{position:fixed;inset:0;background:rgba(8,7,5,.74);display:none;align-items:center;
     justify-content:center;z-index:45}
-  #levelup .panel{width:440px;background:linear-gradient(#15130d,#0c0b08);border:1px solid #6b542e;
+  #levelup .panel,#wardrobe .panel{width:440px;max-height:86vh;overflow:auto;
+    background:linear-gradient(#15130d,#0c0b08);border:1px solid #6b542e;
     border-radius:12px;padding:24px 26px;box-shadow:0 20px 80px rgba(0,0,0,.7)}
-  #levelup h2{margin:0 0 4px;color:#e7cf86;letter-spacing:.2em;font-size:20px;text-transform:uppercase}
-  #levelup .gsub{color:#9a8a5a;font-size:12px;letter-spacing:.14em;margin-bottom:16px}
-  #levelup .lvrow{display:flex;justify-content:space-between;color:#cfc7af;font-size:13px;margin:6px 0}
-  #levelup .lvrow b{color:#e7cf86}
+  #levelup h2,#wardrobe h2{margin:0 0 4px;color:#e7cf86;letter-spacing:.2em;font-size:20px;text-transform:uppercase}
+  #levelup .gsub,#wardrobe .gsub{color:#9a8a5a;font-size:12px;letter-spacing:.14em;margin-bottom:16px}
+  #levelup .lvrow,#wardrobe .lvrow{display:flex;justify-content:space-between;color:#cfc7af;font-size:13px;margin:6px 0}
+  #levelup .lvrow b,#wardrobe .lvrow b{color:#e7cf86}
+  /* wallet split rows */
+  .row.split{margin-top:6px;border-top:1px solid #2a2620;padding-top:6px}
+  /* wardrobe economy controls + skin list */
+  .econrow{display:flex;gap:8px;margin:12px 0 6px}
+  .econbtn{pointer-events:auto;flex:1;padding:9px 10px;background:#1d1a12;border:1px solid #3a342a;
+    border-radius:8px;color:#e9e4d4;cursor:pointer;font-size:12px;letter-spacing:.02em}
+  .econbtn:hover:not(:disabled){border-color:#c8a24a;background:#26210f}
+  .econbtn:disabled{opacity:.4;cursor:not-allowed}
+  .econbtn.pay{border-color:#6b542e;color:#e7cf86}
+  .econnote{color:#6c6656;font-size:10.5px;line-height:1.55;margin:10px 0 6px}
+  .econnote b{color:#9a8a5a}
+  .wlist{margin-top:4px}
+  .skin{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #221f18}
+  .skin.equipped{background:rgba(200,162,74,.08)}
+  .sw{width:22px;height:22px;border-radius:5px;flex:none}
+  .sn{flex:1;font-size:13px;color:#e9e4d4}
+  .skinbtn{pointer-events:auto;min-width:78px;padding:7px 10px;background:#1d1a12;border:1px solid #3a342a;
+    border-radius:7px;color:#e7cf86;cursor:pointer;font-size:12px;font-variant-numeric:tabular-nums}
+  .skinbtn:hover:not(:disabled){border-color:#c8a24a}
+  .skinbtn:disabled{opacity:.5;cursor:default}
   .statbtn{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;width:100%;
     margin:8px 0;padding:12px 14px;background:#1d1a12;border:1px solid #3a342a;border-radius:8px;
     color:#e9e4d4;cursor:pointer;font-size:14px;text-align:left}
@@ -93,7 +123,7 @@
   .statbtn:disabled{opacity:.4;cursor:not-allowed}
   .statbtn small{color:#9a937f;display:block;font-size:11px}
   .statbtn .cost{color:#e7cf86;font-variant-numeric:tabular-nums;font-size:13px}
-  #lvclose{pointer-events:auto;margin-top:14px;width:100%;padding:10px;background:#2a1a14;color:#e7cf86;
+  #lvclose,#wclose{pointer-events:auto;margin-top:14px;width:100%;padding:10px;background:#2a1a14;color:#e7cf86;
     border:1px solid #6b4a2e;border-radius:8px;cursor:pointer;letter-spacing:.14em}
 </style>
 </head>
@@ -101,6 +131,7 @@
 <canvas id="c"></canvas>
 
 <div id="center" class="hud"><div class="cross"></div></div>
+<div id="lockon" class="hud">◎</div>
 
 <div id="vitals" class="hud">
   <div class="lab"><span id="charname">Tarnished</span> — Level <b id="lvl" style="color:#e7cf86">1</b></div>
@@ -115,9 +146,13 @@
   <h3>⛓ Runechain Wallet</h3>
   <div class="row"><span>Confirmed RUNE</span><b id="bal">0.00</b></div>
   <div class="row"><span>Pending (mempool)</span><b id="pend">0.00</b></div>
+  <div class="row"><span>Gold (spendable)</span><b id="gold" style="color:#e7cf86">0.00</b></div>
   <div class="row"><span>Block height</span><b id="height">0</b></div>
   <div class="row"><span>Difficulty</span><b id="diff">3 nibbles</b></div>
   <div class="row"><span>Hashrate</span><b id="hr">0 H/s</b></div>
+  <div class="row split"><span>🔥 Burned (wSOL)</span><b id="burned">0.0000</b></div>
+  <div class="row"><span>🏆 Prize pool</span><b id="prizepool">0.0000</b></div>
+  <div class="row"><span>⚙ Fees</span><b id="feepool">0.0000</b></div>
   <div id="chain"></div>
 </div>
 
@@ -144,6 +179,22 @@
   </div>
 </div>
 
+<div id="wardrobe">
+  <div class="panel">
+    <h2>Wardrobe</h2>
+    <div class="gsub">Cosmetics only — looks, never power. Soulbound &amp; recorded on-chain.</div>
+    <div class="lvrow"><span>Gold <small id="wGoldPend" style="color:#9a8a5a"></small></span><b id="wGold">0.00</b></div>
+    <div class="lvrow"><span>RUNE (grind)</span><b id="wRune">0.00</b></div>
+    <div class="econrow">
+      <button id="wConv" class="econbtn">⚖ Convert RUNE → Gold</button>
+      <button id="wBuy" class="econbtn pay">💎 Buy Gold · 1 wSOL</button>
+    </div>
+    <div id="wlist" class="wlist"></div>
+    <div class="econnote">Direct purchase, no loot boxes. Each wSOL splits <b>50%</b> prize pool · <b>35%</b> burn · <b>15%</b> fee. Devnet mock — no real funds.</div>
+    <button id="wclose">Close  (B)</button>
+  </div>
+</div>
+
 <div id="death">
   <h1>YOU DIED</h1>
   <button id="respawn">Return to the Site of Grace</button>
@@ -156,8 +207,8 @@
   a token settled by a genuine SHA‑256 <i>proof-of-work</i> chain your own browser mines. Other Tarnished
   you meet are real players synced over the network (or phantoms, if you roam alone).</p>
   <div class="keys">
-    <b>WASD</b> move &nbsp;·&nbsp; <b>Mouse</b> look &nbsp;·&nbsp; <b>Shift</b> sprint &nbsp;·&nbsp;
-    <b>Space</b> jump &nbsp;·&nbsp; <b>Click</b>/<b>L</b> attack &nbsp;·&nbsp; <b>G</b> rest &amp; level &nbsp;·&nbsp; <b>M</b> wallet
+    <b>WASD</b> move &nbsp;·&nbsp; <b>Mouse</b> look &nbsp;·&nbsp; <b>Shift</b> hold-sprint / tap-roll &nbsp;·&nbsp;
+    <b>Q</b> lock-on &nbsp;·&nbsp; <b>Space</b> jump &nbsp;·&nbsp; <b>Click</b>/<b>L</b> attack &nbsp;·&nbsp; <b>G</b> rest &amp; level &nbsp;·&nbsp; <b>B</b> wardrobe &nbsp;·&nbsp; <b>M</b> wallet
   </div>
   <input id="name" maxlength="14" placeholder="name your Tarnished" />
   <button id="go">Enter the Lands Between</button>
@@ -254,12 +305,17 @@ const Chain = (function () {
   genesis();
 
   const rid=()=>Math.random().toString(36).slice(2,8);
-  // credit: a monster bounty paid to a player
-  function reward(to, amt, note){ mempool.push({to,amt:+amt.toFixed(2),note,id:rid()}); }
-  // debit: a player spends RUNE (e.g. to level up) — recorded on-chain to a sink address
-  function spend(from, amt, note){ mempool.push({from,to:'ERDTREE_SINK',amt:+amt.toFixed(2),note,id:rid()}); }
+  // generic currency-tagged entries ('RUNE' grind | 'GOLD' spend | 'SOL' paid).
+  // Untagged legacy txs are treated as RUNE so old blocks still balance.
+  function credit(to, amt, note, cur){ mempool.push({to,amt:+(+amt).toFixed(4),note,cur:cur||'RUNE',id:rid()}); }
+  function debit(from, amt, note, cur, to){ mempool.push({from,to:to||'ERDTREE_SINK',amt:+(+amt).toFixed(4),note,cur:cur||'RUNE',id:rid()}); }
+  // back-compat wrappers (the RUNE grind faucet/sink)
+  function reward(to, amt, note){ credit(to, amt, note, 'RUNE'); }
+  function spend(from, amt, note){ debit(from, amt, note, 'RUNE', 'ERDTREE_SINK'); }
   // mint a unique on-chain asset (a Great Rune) to a player
-  function mintGreatRune(to, rune){ mempool.push({to,amt:0,greatRune:rune,note:'Great Rune: '+rune.name,id:rid()}); }
+  function mintGreatRune(to, rune){ mempool.push({to,amt:0,greatRune:rune,note:'Great Rune: '+rune.name,cur:'RUNE',id:rid()}); }
+  // record a soulbound cosmetic unlock on-chain (no power, non-transferable)
+  function mintCosmetic(to, id){ mempool.push({to,amt:0,cosmetic:id,note:'unlocked skin '+id,cur:'GOLD',id:rid()}); }
 
   function startBlock(){
     if(miner||mempool.length===0)return;
@@ -306,32 +362,94 @@ const Chain = (function () {
     return false;
   }
 
-  function balanceOf(name){            // confirmed credits − confirmed debits
+  function balanceOf(name, cur){ cur=cur||'RUNE';   // confirmed credits − confirmed debits, per currency
     let bal=0;
     for(const blk of chain) for(const t of blk.txs){
+      if((t.cur||'RUNE')!==cur)continue;
       if(t.to===name)bal+=t.amt;
       if(t.from===name)bal-=t.amt;
     }
     return bal;
   }
   function pool(){ return miner?mempool.concat(miner.txs):mempool; }
-  function pendingCredit(name){ let p=0; for(const t of pool()) if(t.to===name)p+=t.amt; return p; }
-  function pendingDebit(name){  let p=0; for(const t of pool()) if(t.from===name)p+=t.amt; return p; }
+  function pendingCredit(name, cur){ cur=cur||'RUNE'; let p=0; for(const t of pool()) if((t.cur||'RUNE')===cur && t.to===name)p+=t.amt; return p; }
+  function pendingDebit(name, cur){  cur=cur||'RUNE'; let p=0; for(const t of pool()) if((t.cur||'RUNE')===cur && t.from===name)p+=t.amt; return p; }
   // spendable = confirmed balance minus spends already queued (prevents double-spend)
-  function spendable(name){ return balanceOf(name)-pendingDebit(name); }
+  function spendable(name, cur){ return balanceOf(name,cur)-pendingDebit(name,cur); }
+  // running total credited to an address (confirmed + pending) — for burn/prize/fee pools
+  function tallyTo(addr, cur){ cur=cur||'RUNE'; let v=0;
+    for(const blk of chain) for(const t of blk.txs) if(t.to===addr && (t.cur||'RUNE')===cur)v+=t.amt;
+    for(const t of pool()) if(t.to===addr && (t.cur||'RUNE')===cur)v+=t.amt;
+    return v; }
   function greatRunesOf(name){ const out=[];
     for(const blk of chain) for(const t of blk.txs) if(t.to===name && t.greatRune)out.push(t.greatRune);
     return out; }
+  // soulbound cosmetics owned (confirmed + pending so equips feel instant)
+  function cosmeticsOf(name){ const out=[];
+    for(const blk of chain) for(const t of blk.txs) if(t.to===name && t.cosmetic)out.push(t.cosmetic);
+    for(const t of pool()) if(t.to===name && t.cosmetic)out.push(t.cosmetic);
+    return out; }
 
   return {
-    DIFFICULTY, reward, spend, mintGreatRune, tick, updateHashrate, acceptRemote,
-    balanceOf, pendingCredit, pendingDebit, spendable, greatRunesOf,
+    DIFFICULTY, reward, spend, credit, debit, mintGreatRune, mintCosmetic, tick, updateHashrate, acceptRemote,
+    balanceOf, pendingCredit, pendingDebit, spendable, tallyTo, greatRunesOf, cosmeticsOf,
     get chain(){return chain;}, get hashrate(){return hashrate;},
     get mining(){return miner;}, replaceIfLonger(remote){
       if(remote.length>chain.length && remote.every((b,i)=>i===0||valid(b))){ chain=remote; return true;}
       return false; }
   };
 })();
+
+/* ----------------------- (2b) Real-money economy ------------------------- */
+/* Gold is the one in-game spend currency. Two ONE-WAY on-ramps fill it — no
+   cash-out, ever:
+     • grind RUNE, then convert at a FLAT rate (the free path)
+     • buy with wrapped SOL — each purchase splits 50% burn / 35% skill-prize
+       pool / 15% fee, routed on-chain
+   Costs rise on a gentle curve so grinding stays viable-but-slow (reachable,
+   just far slower than paying). Every lever lives here — tune and re-balance
+   in one place. The SOL purchase is a DEVNET MOCK; swap buyGoldWithSol() for a
+   real SPL token transfer to go live.                                        */
+const ECON = {
+  GOLD_PER_RUNE : 1,                          // RUNE → gold (the flat grind rate)
+  GOLD_PER_SOL  : 1000,                        // wrapped-SOL → gold (the pay rate)
+  SPLIT         : { prize:0.50, burn:0.35, fee:0.15 },   // half back to players, 15% platform fee, rest burned
+  BURN_ADDR:'🔥 BURN', PRIZE_ADDR:'🏆 PRIZE POOL', FEE_ADDR:'⚙ FEE', EXCHANGE_ADDR:'⚖ EXCHANGE',
+};
+(function(){ const s=ECON.SPLIT.burn+ECON.SPLIT.prize+ECON.SPLIT.fee;
+  if(Math.abs(s-1)>1e-9)console.warn('[econ] SPLIT does not sum to 1 — got',s); })();
+
+const Econ = {
+  goldSpendable(name){ return Chain.spendable(name,'GOLD'); },
+  goldPending(name){ return Chain.pendingCredit(name,'GOLD'); },
+  solTally(addr){ return Chain.tallyTo(addr,'SOL'); },
+
+  // GRIND PATH: burn confirmed RUNE, mint gold at the flat rate (both on-chain)
+  convertRuneToGold(name, runeAmt){
+    runeAmt=Math.min(runeAmt, Chain.spendable(name,'RUNE'));
+    if(runeAmt<=0.0001)return 0;
+    const gold=+(runeAmt*ECON.GOLD_PER_RUNE).toFixed(2);
+    Chain.debit(name, runeAmt, 'convert → gold', 'RUNE', ECON.EXCHANGE_ADDR);
+    Chain.credit(name, gold, 'gold from RUNE', 'GOLD');
+    return gold;
+  },
+
+  // PAY PATH (DEVNET MOCK): mint gold to the buyer, route the SOL split on-chain.
+  // Replace the body with a real wrapped-SOL SPL transfer (50/35/15 to three
+  // wallets) to take this to mainnet — the call sites don't change.
+  buyGoldWithSol(name, sol){
+    if(sol<=0)return 0;
+    const gold=+(sol*ECON.GOLD_PER_SOL).toFixed(2);
+    Chain.credit(name, gold, `bought with ${sol} wSOL`, 'GOLD');
+    Chain.credit(ECON.BURN_ADDR,  sol*ECON.SPLIT.burn,  'burned',     'SOL');
+    Chain.credit(ECON.PRIZE_ADDR, sol*ECON.SPLIT.prize, 'prize pool', 'SOL');
+    Chain.credit(ECON.FEE_ADDR,   sol*ECON.SPLIT.fee,   'fee',        'SOL');
+    return gold;
+  },
+
+  // gold is the universal sink: leveling, items, everything
+  spendGold(name, amt, note){ Chain.debit(name, amt, note, 'GOLD', 'GOLD_SINK'); },
+};
 
 /* ------------------------------- (3) World ------------------------------- */
 const canvas=document.getElementById('c');
@@ -643,6 +761,8 @@ function initPlayer(){
     level:1, vigor:10, endurance:10, strength:10, runeBuff:0,
     hp:100, maxHp:100, sta:100, maxSta:100, dmg:50,
     attack:null, attackCd:0, dead:false, name:'Tarnished',
+    roll:0, iframes:0, rollDir:new THREE.Vector3(), hitstun:0, staDelay:0, lock:null,
+    skinId:'tarnished', pal:Object.assign({},PLAYER_PAL),
   };
   player.av=makeAvatar('player',PLAYER_PAL,1); player.obj=player.av.obj;
   player.obj.position.copy(SPAWN); scene.add(player.obj);
@@ -660,17 +780,18 @@ function recalcStats(heal){
 
 // single funnel for all damage dealt to the player
 function hurtPlayer(amt){
-  if(player.dead)return;
-  player.hp-=amt; flash(player.obj,0xff0000);
+  if(player.dead||player.iframes>0)return;          // rolled through it
+  player.hp-=amt; player.hitstun=0.28; flash(player.obj,0xff0000);
   if(player.hp<=0){ player.hp=0; player.dead=true; player.av.setDead();
     document.getElementById('death').style.display='flex';
     if(pointer)document.exitPointerLock();
     if(graceOpen)closeGrace();
+    if(wardrobeOpen)closeWardrobe();
   }
 }
 
 /* ---- levelling at the Site of Grace (spends real on-chain RUNE) -------- */
-function levelCost(){ return Math.floor(30*Math.pow(1.12, player.level-1)); }
+function levelCost(){ return Math.floor(30*Math.pow(1.12, player.level-1)); }   // RUNE — power is earned, never bought
 let graceOpen=false;
 function nearGrace(){ return player.obj.position.distanceTo(SPAWN)<6; }
 function openGrace(){
@@ -684,7 +805,7 @@ function closeGrace(){
   if(started&&!player.dead)canvas.requestPointerLock();
 }
 function refreshGrace(){
-  const cost=levelCost(), sp=Chain.spendable(player.name);
+  const cost=levelCost(), sp=Chain.spendable(player.name,'RUNE');
   document.getElementById('lvLevel').textContent=player.level;
   document.getElementById('lvBal').textContent=sp.toFixed(2);
   document.getElementById('lvCost').textContent=cost;
@@ -693,14 +814,89 @@ function refreshGrace(){
 }
 function doLevel(stat){
   const cost=levelCost();
-  if(Chain.spendable(player.name)<cost){ log('Not enough confirmed RUNE — slay more and let the chain settle'); return; }
-  Chain.spend(player.name, cost, 'leveled '+stat);   // recorded as an on-chain debit
+  if(Chain.spendable(player.name,'RUNE')<cost){ log('Not enough confirmed RUNE — slay more and let the chain settle'); return; }
+  Chain.spend(player.name, cost, 'leveled '+stat);   // on-chain RUNE debit — power is grind-only
   player[stat]++; player.level++; recalcStats(true);
   log(`Leveled <b style="color:#e7cf86">${stat}</b> to ${player[stat]} — −${cost} RUNE spent on-chain (now Level ${player.level})`);
   refreshGrace();
 }
 document.querySelectorAll('.statbtn').forEach(b=>b.addEventListener('click',()=>doLevel(b.dataset.stat)));
 document.getElementById('lvclose').onclick=closeGrace;
+
+/* ---- Wardrobe: cosmetics only (Gold). Soulbound, on-chain, no power ------ */
+const SKINS = [
+  { id:'tarnished', name:'Tarnished',        price:0,   body:0x2f3a4a, trim:0x55617a, skin:0xcaa985 },
+  { id:'crimson',   name:'Crimson Lord',     price:120, body:0x6b1f1f, trim:0xc0392b, skin:0xcaa985 },
+  { id:'verdant',   name:'Verdant Knight',   price:180, body:0x1f3a2a, trim:0x3fa66a, skin:0xcaa985 },
+  { id:'azure',     name:'Azure Sentinel',   price:240, body:0x1f2f5a, trim:0x4a78c0, skin:0xcaa985 },
+  { id:'gilded',    name:'Gilded Champion',  price:500, body:0x4a3a14, trim:0xe7cf86, skin:0xd8c79a },
+  { id:'void',      name:'Voidwalker',       price:800, body:0x14121a, trim:0x7a5fc0, skin:0x6a6480 },
+];
+// resolve a skin id -> palette (shared catalog, so peers only need to send the id)
+function skinPal(id){ const s=SKINS.find(x=>x.id===id);
+  return s ? {body:s.body,trim:s.trim,skin:s.skin} : {body:0x394a5a,trim:0x6a7a5a,skin:0xc0a080}; }
+let wardrobeOpen=false;
+function ownedSkin(id){ return id==='tarnished' || Chain.cosmeticsOf(player.name).includes(id); }
+// rebuild the player avatar with a new palette (works for both gltf + procedural rigs)
+function applySkin(pal){
+  const pos=player.obj.position.clone(), yaw=player.yaw, wasDead=player.dead;
+  scene.remove(player.obj);
+  player.av=makeAvatar('player', pal, 1); player.obj=player.av.obj;
+  player.obj.position.copy(pos); player.obj.rotation.y=yaw; scene.add(player.obj);
+  if(wasDead)player.av.setDead();
+}
+function equipSkin(s){
+  player.skinId=s.id; player.pal={body:s.body,trim:s.trim,skin:s.skin};
+  applySkin(player.pal);
+  log(`🎽 Equipped <b>${s.name}</b>`); refreshWardrobe();
+}
+function buySkin(s){
+  if(ownedSkin(s.id)){ equipSkin(s); return; }
+  if(Econ.goldSpendable(player.name)<s.price){ log('Not enough Gold for <b>'+s.name+'</b> — convert RUNE or buy Gold'); return; }
+  Econ.spendGold(player.name, s.price, 'skin: '+s.name);   // on-chain Gold debit (the cosmetic sink)
+  Chain.mintCosmetic(player.name, s.id);                   // soulbound unlock, recorded on-chain
+  log(`🎽 Unlocked <b>${s.name}</b> for ${s.price} Gold — soulbound, on-chain`);
+  equipSkin(s);
+}
+function openWardrobe(){ if(wardrobeOpen||player.dead)return; wardrobeOpen=true;
+  if(pointer)document.exitPointerLock();
+  document.getElementById('wardrobe').style.display='flex'; refreshWardrobe(); }
+function closeWardrobe(){ if(!wardrobeOpen)return; wardrobeOpen=false;
+  document.getElementById('wardrobe').style.display='none';
+  if(started&&!player.dead)canvas.requestPointerLock(); }
+function refreshWardrobe(){
+  document.getElementById('wGold').textContent=Econ.goldSpendable(player.name).toFixed(2);
+  const pend=Econ.goldPending(player.name);
+  document.getElementById('wGoldPend').textContent=pend>0.0001?('+'+pend.toFixed(2)+' settling…'):'';
+  document.getElementById('wRune').textContent=Chain.spendable(player.name,'RUNE').toFixed(2);
+  const spend=Econ.goldSpendable(player.name);
+  const list=document.getElementById('wlist'); list.innerHTML='';
+  for(const s of SKINS){
+    const own=ownedSkin(s.id), eq=player.skinId===s.id;
+    const row=document.createElement('div'); row.className='skin'+(eq?' equipped':'');
+    const hex=n=>'#'+n.toString(16).padStart(6,'0');
+    row.innerHTML=`<span class="sw" style="background:${hex(s.body)};box-shadow:inset 0 0 0 3px ${hex(s.trim)}"></span>`
+      +`<span class="sn">${s.name}</span>`
+      +`<button class="skinbtn">${eq?'Equipped':own?'Equip':(s.price+' G')}</button>`;
+    const btn=row.querySelector('.skinbtn');
+    btn.disabled = eq || (!own && spend<s.price);
+    btn.onclick=()=>buySkin(s);
+    list.appendChild(row);
+  }
+  document.getElementById('wConv').disabled = Chain.spendable(player.name,'RUNE')<=0.0001;
+}
+document.getElementById('wclose').onclick=closeWardrobe;
+document.getElementById('wConv').onclick=()=>{
+  const g=Econ.convertRuneToGold(player.name, Chain.spendable(player.name,'RUNE'));
+  if(g>0)log(`⚖ Converting <b style="color:#e7cf86">${g.toFixed(2)} Gold</b> from RUNE — mining to confirm…`);
+  refreshWardrobe();
+};
+document.getElementById('wBuy').onclick=()=>{
+  const sol=1, g=Econ.buyGoldWithSol(player.name, sol);
+  log(`💎 Bought <b style="color:#e7cf86">${g.toFixed(2)} Gold</b> · ${sol} wSOL → `
+     +`${(sol*ECON.SPLIT.burn).toFixed(2)} burned · ${(sol*ECON.SPLIT.prize).toFixed(2)} prize · ${(sol*ECON.SPLIT.fee).toFixed(2)} fee`);
+  refreshWardrobe();
+};
 
 // camera orbit state
 const cam={yaw:0,pitch:0.32,dist:6.4};
@@ -717,19 +913,85 @@ canvas.addEventListener('mousedown',e=>{ if(pointer&&e.button===0)doAttack(); })
 
 const keys={};
 addEventListener('keydown',e=>{ keys[e.code]=true;
+  if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&!e.repeat){ shiftPending=true; shiftHoldT=0; shiftIsSprint=false; }
   if(e.code==='KeyL')doAttack();
+  if(e.code==='KeyQ')toggleLock();
   if(e.code==='KeyG'){ graceOpen?closeGrace():openGrace(); }
-  if(e.code==='Escape'&&graceOpen)closeGrace();
+  if(e.code==='KeyB'){ wardrobeOpen?closeWardrobe():openWardrobe(); }
+  if(e.code==='Escape'){ if(graceOpen)closeGrace(); else if(wardrobeOpen)closeWardrobe(); else if(player&&player.lock)player.lock=null; }
   if(e.code==='KeyM')document.getElementById('wallet').style.display=
      (document.getElementById('wallet').style.display==='none'?'block':'none');
 });
-addEventListener('keyup',e=>keys[e.code]=false);
+addEventListener('keyup',e=>{ keys[e.code]=false;
+  if(e.code==='ShiftLeft'||e.code==='ShiftRight'){
+    if(shiftPending){ shiftPending=false; tryRoll(); }   // released quickly = tap = roll
+    shiftIsSprint=false; shiftHoldT=0;
+  }
+});
+
+/* ---- Soulslike combat: dodge-roll, stamina, lock-on -------------------- */
+const ROLL_DUR=0.5, IFRAME_DUR=0.34, ROLL_COST=25, ROLL_SPEED=11, ROLL_TAP_MAX=0.2, LOCK_RANGE=30;
+let shiftPending=false, shiftHoldT=0, shiftIsSprint=false;
+
+function lerpAngle(a,b,t){ let d=b-a; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI; return a+d*t; }
+
+function staFlash(){ const s=document.getElementById('sta'); s.classList.remove('flash'); void s.offsetWidth; s.classList.add('flash'); }
+
+// tap Shift -> dodge-roll (directional, or backstep when standing); i-frames + stamina
+function tryRoll(){
+  if(!started||player.dead||graceOpen||player.roll>0)return;
+  if(player.sta<ROLL_COST){ staFlash(); return; }
+  player.sta-=ROLL_COST; player.staDelay=0.55; player.attack=null; player.hitstun=0;
+  const f=(keys.KeyW?1:0)-(keys.KeyS?1:0), s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+  const dir=new THREE.Vector3();
+  if(f||s){
+    const ang=cam.yaw;
+    const fwd=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));
+    const right=new THREE.Vector3(Math.cos(ang),0,-Math.sin(ang));
+    dir.addScaledVector(fwd,f).addScaledVector(right,s).normalize();
+    player.yaw=Math.atan2(dir.x,dir.z); player.obj.rotation.y=player.yaw;
+  } else {
+    dir.set(Math.sin(player.yaw),0,Math.cos(player.yaw)).multiplyScalar(-1);  // backstep
+  }
+  player.rollDir.copy(dir); player.roll=ROLL_DUR; player.iframes=IFRAME_DUR;
+}
+
+// Q -> lock onto / release the nearest foe roughly in front of you
+function toggleLock(){
+  if(player.lock){ player.lock=null; return; }
+  const camFwd=new THREE.Vector3(Math.sin(cam.yaw),0,Math.cos(cam.yaw));
+  let best=null,bestScore=Infinity;
+  for(const e of enemies){ if(e.dead)continue;
+    const to=e.obj.position.clone().sub(player.obj.position); to.y=0;
+    const d=to.length(); if(d>LOCK_RANGE)continue;
+    const dot=camFwd.dot(to.clone().normalize()); if(dot<0.1)continue;   // must be in front
+    const score=d*(1.6-dot);                                            // prefer close + centered
+    if(score<bestScore){ bestScore=score; best=e; }
+  }
+  player.lock=best;
+  if(best)log('🎯 Locked on — <b>'+best.type.name+'</b>  (Q to release)');
+}
+
+function updateReticle(){
+  const el=document.getElementById('lockon');
+  if(player.lock && !player.lock.dead){
+    const p=player.lock.obj.position.clone(); p.y+=(player.lock.height||2)*0.6; p.project(camera);
+    if(p.z<1){ el.style.display='block';
+      el.style.left=((p.x*0.5+0.5)*innerWidth)+'px';
+      el.style.top=((-p.y*0.5+0.5)*innerHeight)+'px'; return; }
+  }
+  el.style.display='none';
+}
 
 function doAttack(){
-  if(player.dead||graceOpen||player.attackCd>0||player.sta<14)return;
-  player.attack=0; player.attackCd=0.55; player.sta-=14;
-  player.yaw=cam.yaw; player.obj.rotation.y=cam.yaw;          // swing where you're looking
-  const fwd=new THREE.Vector3(Math.sin(cam.yaw),0,Math.cos(cam.yaw));
+  if(player.dead||graceOpen||player.roll>0||player.hitstun>0||player.attackCd>0||player.sta<14)return;
+  player.attack=0; player.attackCd=0.55; player.sta-=14; player.staDelay=0.55;
+  // swing toward the locked target, else where you're looking
+  const aim = player.lock && !player.lock.dead
+    ? Math.atan2(player.lock.obj.position.x-player.obj.position.x, player.lock.obj.position.z-player.obj.position.z)
+    : cam.yaw;
+  player.yaw=aim; player.obj.rotation.y=aim;
+  const fwd=new THREE.Vector3(Math.sin(aim),0,Math.cos(aim));
   // hit detection slightly delayed to match the swing
   setTimeout(()=>{
     for(const e of enemies){
@@ -855,9 +1117,9 @@ const Net=(function(){
   const phantoms=[];       // local fallback bots
   let sendTimer=0;
 
-  function avatar(name,isPhantom){
+  function avatar(name,isPhantom,pal){
     const av=makeAvatar(isPhantom?'phantom':'player',
-      {body:isPhantom?0x2c3b2c:0x394a5a,trim:0x6a7a5a,skin:0xc0a080},1);
+      pal || {body:isPhantom?0x2c3b2c:0x394a5a,trim:0x6a7a5a,skin:0xc0a080},1);
     scene.add(av.obj);
     return av;                 // {obj, drive, setDead, kind}
   }
@@ -875,9 +1137,15 @@ const Net=(function(){
         const m=JSON.parse(ev.data);
         if(m.t==='state' && m.id!==id){
           let r=remotes[m.id];
-          if(!r){ const av=avatar(m.name);
-                  r={av,obj:av.obj,target:new THREE.Vector3(),name:m.name||'Tarnished'};
+          if(!r){ const av=avatar(m.name,false,skinPal(m.skin));
+                  r={av,obj:av.obj,target:new THREE.Vector3(),name:m.name||'Tarnished',skin:m.skin};
                   remotes[m.id]=r; updatePeers(); }
+          else if(m.skin && m.skin!==r.skin){          // peer changed cosmetic -> rebuild their avatar
+            const pos=r.obj.position.clone(), yaw=r.obj.rotation.y;
+            scene.remove(r.obj); const av=avatar(m.name,false,skinPal(m.skin));
+            av.obj.position.copy(pos); av.obj.rotation.y=yaw;
+            r.av=av; r.obj=av.obj; r.skin=m.skin;
+          }
           r.target.set(m.x,m.y,m.z); r.yaw=m.yaw; r.moving=m.moving;
         }
         if(m.t==='leave'){ if(remotes[m.id]){scene.remove(remotes[m.id].obj);delete remotes[m.id];updatePeers();} }
@@ -895,7 +1163,7 @@ const Net=(function(){
   function ensurePhantoms(){
     if(connected||phantoms.length)return;
     for(let i=0;i<3;i++){
-      const av=avatar('Phantom',true);
+      const av=avatar('Phantom',true, skinPal(SKINS[(i+1)%SKINS.length].id));  // each phantom flaunts a different skin
       const ang=Math.random()*6.28, r=10+Math.random()*30;
       av.obj.position.set(Math.cos(ang)*r,0,Math.sin(ang)*r);
       phantoms.push({av,obj:av.obj,phase:Math.random()*6,
@@ -928,7 +1196,7 @@ const Net=(function(){
     }
     // broadcast our state ~12x/s
     if(connected){ sendTimer+=dt; if(sendTimer>0.08){ sendTimer=0;
-      ws.send(JSON.stringify({t:'state',id,name:player.name,
+      ws.send(JSON.stringify({t:'state',id,name:player.name,skin:player.skinId,
         x:player.obj.position.x,y:player.obj.position.y,z:player.obj.position.z,
         yaw:player.yaw,moving:player.vel.length()>0.5})); } }
   }
@@ -959,6 +1227,8 @@ function log(html){ const l=document.getElementById('log');
 }
 
 const elBal=document.getElementById('bal'), elPend=document.getElementById('pend'),
+      elGold=document.getElementById('gold'), elBurned=document.getElementById('burned'),
+      elPrize=document.getElementById('prizepool'), elFee=document.getElementById('feepool'),
       elHeight=document.getElementById('height'), elDiff=document.getElementById('diff'),
       elHr=document.getElementById('hr'), elChain=document.getElementById('chain'),
       hpFill=document.querySelector('#hp>i'), staFill=document.querySelector('#sta>i'),
@@ -993,56 +1263,94 @@ document.getElementById('go').onclick=startGame;
 document.getElementById('name').addEventListener('keydown',e=>{if(e.code==='Enter')startGame();});
 document.getElementById('respawn').onclick=()=>{
   player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false;
-  player.obj.position.copy(SPAWN); player.obj.rotation.z=0;
+  player.roll=0; player.iframes=0; player.hitstun=0; player.attack=null; player.lock=null;
+  player.obj.position.copy(SPAWN); player.obj.rotation.set(0,player.yaw,0);
   document.getElementById('death').style.display='none';
   if(started)canvas.requestPointerLock();
 };
 
 function updatePlayer(dt){
   if(player.dead)return;
-  // input -> desired movement in camera space
-  const f=(keys.KeyW?1:0)-(keys.KeyS?1:0);
-  const s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
-  const sprint=keys.ShiftLeft||keys.ShiftRight;
-  let speed=(sprint&&player.sta>0?6.4:3.4);
-  const moving=(f||s);
-  const move=new THREE.Vector3();
-  if(moving){
-    const ang=cam.yaw;
-    const fwd=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));
-    const right=new THREE.Vector3(Math.cos(ang),0,-Math.sin(ang));
-    move.addScaledVector(fwd,f).addScaledVector(right,s);
-    if(move.lengthSq()>0){ move.normalize();
-      player.yaw=Math.atan2(move.x,move.z);
-      player.obj.rotation.y=player.yaw;
-    }
+
+  // ---- timers ----
+  if(player.attackCd>0)player.attackCd-=dt;
+  if(player.iframes>0)player.iframes-=dt;
+  if(player.hitstun>0)player.hitstun-=dt;
+  if(player.staDelay>0)player.staDelay-=dt;
+  let atk=null;
+  if(player.attack!=null){ player.attack+=dt*2.6; atk=player.attack; if(player.attack>=1)player.attack=null; }
+
+  // drop a lock that died or wandered out of range
+  if(player.lock && (player.lock.dead ||
+      player.lock.obj.position.distanceTo(player.obj.position)>LOCK_RANGE*1.6)) player.lock=null;
+
+  // resolve Shift: held past the tap window = sprint (tap already rolled on keyup)
+  if(shiftPending && (keys.ShiftLeft||keys.ShiftRight)){
+    shiftHoldT+=dt; if(shiftHoldT>=ROLL_TAP_MAX){ shiftIsSprint=true; shiftPending=false; }
   }
-  // stamina
-  if(sprint&&moving){ player.sta=Math.max(0,player.sta-dt*18); if(player.sta<=0)speed=3.4; }
-  else player.sta=Math.min(player.maxSta,player.sta+dt*16);
 
-  player.vel.copy(move).multiplyScalar(speed);
-  player.obj.position.addScaledVector(player.vel,dt);
+  if(player.roll>0){
+    // ---- DODGE-ROLL: overrides control; i-frames active early in the window ----
+    player.roll-=dt;
+    const k=Math.max(0,player.roll/ROLL_DUR);                 // 1 -> 0
+    const spd=2.5+ROLL_SPEED*k;
+    player.vel.copy(player.rollDir).multiplyScalar(spd);
+    player.obj.position.addScaledVector(player.vel,dt);
+    player.obj.rotation.x=(1-k)*Math.PI*2;                    // forward somersault
+    player.av.drive(spd,dt,{air:!player.onGround});
+  } else {
+    player.obj.rotation.x=0;
+    // input -> desired movement in camera space
+    const f=(keys.KeyW?1:0)-(keys.KeyS?1:0);
+    const s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+    const moving=(f||s);
+    let speed=3.4;
+    const move=new THREE.Vector3();
+    if(moving){
+      const ang=cam.yaw;
+      const fwd=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));
+      const right=new THREE.Vector3(Math.cos(ang),0,-Math.sin(ang));
+      move.addScaledVector(fwd,f).addScaledVector(right,s);
+      if(move.lengthSq()>0)move.normalize();
+    }
+    // stamina: hold-Shift sprint drains; otherwise regen after a short delay
+    const sprint=shiftIsSprint && moving && player.sta>0 && player.hitstun<=0;
+    if(sprint){ speed=6.4; player.sta=Math.max(0,player.sta-dt*18); player.staDelay=0.3;
+      if(player.sta<=0)speed=3.4; }
+    else if(player.staDelay<=0)player.sta=Math.min(player.maxSta,player.sta+dt*16);
+    if(player.hitstun>0)speed*=0.4;                            // staggered: sluggish
 
-  // gravity + ground
+    // facing: lock-on holds the target, else turn toward movement (strafe when locked)
+    if(player.lock){
+      const t=player.lock.obj.position;
+      player.yaw=Math.atan2(t.x-player.obj.position.x,t.z-player.obj.position.z);
+      player.obj.rotation.y=player.yaw;
+    } else if(moving){
+      player.yaw=Math.atan2(move.x,move.z); player.obj.rotation.y=player.yaw;
+    }
+
+    player.vel.copy(move).multiplyScalar(speed);
+    player.obj.position.addScaledVector(player.vel,dt);
+    player.av.drive(player.vel.length(), dt, {air:!player.onGround, attack:atk});
+  }
+
+  // ---- gravity + ground (shared) ----
   player.vy-=22*dt;
-  if(player.onGround && keys.Space){ player.vy=8.2; player.onGround=false; }
+  if(player.onGround && keys.Space && player.roll<=0){ player.vy=8.2; player.onGround=false; }
   player.obj.position.y+=player.vy*dt;
   const ground=getHeight(player.obj.position.x,player.obj.position.z);
   if(player.obj.position.y<=ground){ player.obj.position.y=ground; player.vy=0; player.onGround=true; }
-  // keep inside the field
   const lim=TERR/2-6;
   player.obj.position.x=Math.max(-lim,Math.min(lim,player.obj.position.x));
   player.obj.position.z=Math.max(-lim,Math.min(lim,player.obj.position.z));
 
-  // attack timer
-  if(player.attackCd>0)player.attackCd-=dt;
-  let atk=null;
-  if(player.attack!=null){ player.attack+=dt*2.6; atk=player.attack; if(player.attack>=1)player.attack=null; }
-
-  player.av.drive(player.vel.length(), dt, {air:!player.onGround, attack:atk});
-
-  // camera follow
+  // ---- camera: lock-on eases onto the target, else free orbit ----
+  if(player.lock){
+    const t=player.lock.obj.position;
+    const aim=Math.atan2(t.x-player.obj.position.x,t.z-player.obj.position.z);
+    cam.yaw=lerpAngle(cam.yaw,aim,Math.min(1,dt*8));
+    cam.pitch += (0.34-cam.pitch)*Math.min(1,dt*5);
+  }
   const tgt=player.obj.position.clone().add(new THREE.Vector3(0,1.5,0));
   const cp=new THREE.Vector3(
     Math.sin(cam.yaw)*Math.cos(cam.pitch),
@@ -1053,6 +1361,7 @@ function updatePlayer(dt){
   want.y=Math.max(want.y,getHeight(want.x,want.z)+0.6); // don't clip under ground
   camera.position.lerp(want,Math.min(1,dt*10));
   camera.lookAt(tgt);
+  updateReticle();
 }
 
 function updateEnemies(dt){
@@ -1120,11 +1429,16 @@ function loop(now){
     // wallet
     elBal.textContent=Chain.balanceOf(player.name).toFixed(2);
     elPend.textContent=Chain.pendingCredit(player.name).toFixed(2);
+    elGold.textContent=Econ.goldSpendable(player.name).toFixed(2);
+    elBurned.textContent=Econ.solTally(ECON.BURN_ADDR).toFixed(4);
+    elPrize.textContent=Econ.solTally(ECON.PRIZE_ADDR).toFixed(4);
+    elFee.textContent=Econ.solTally(ECON.FEE_ADDR).toFixed(4);
     elHeight.textContent=Chain.chain.length-1;
     elHr.textContent=Chain.hashrate.toLocaleString()+' H/s';
     // grace prompt + live level-up panel
     document.getElementById('graceprompt').style.display=(nearGrace()&&!graceOpen&&!player.dead)?'block':'none';
     if(graceOpen)refreshGrace();
+    if(wardrobeOpen)refreshWardrobe();
     renderChain();
   }
   renderer.render(scene,camera);

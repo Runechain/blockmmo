@@ -30,11 +30,47 @@ browser shares one world and one ledger.
 |-----|--------|
 | `WASD` | Move |
 | Mouse | Look (click to capture) |
-| `Shift` | Sprint |
+| `Shift` | **Hold** to sprint · **tap** to dodge-roll (i-frames, costs stamina) |
+| `Q` | Lock on / release the nearest foe |
 | `Space` | Jump |
-| Click / `L` | Attack |
-| `G` | Rest at Site of Grace / level up |
+| Click / `L` | Attack (costs stamina) |
+| `G` | Rest at Site of Grace / level up (spends **RUNE**) |
+| `B` | Open the **Wardrobe** (buy/equip cosmetic skins with **Gold**) |
 | `M` | Toggle wallet |
+
+**Combat feel:** rolling grants brief invulnerability (i-frames) — time it against a swing
+to take no damage. Attacks, rolls and sprinting all draw from one stamina bar that pauses
+before refilling, so you can't spam. Taking a hit briefly staggers you (slowed, can't
+attack) — roll to break out. With a target locked, you strafe around it and your swings
+and rolls orient to it.
+
+## Economy
+
+Two currencies, and the line between them is the whole design:
+
+- **RUNE** — the grind currency. Drops from kills, mined into the proof-of-work chain.
+  **Power is bought only with RUNE** (leveling at the Site of Grace). It is *never* for sale.
+- **Gold** — the spend currency for **cosmetics only** (skins in the Wardrobe). No power,
+  ever. Skins are **soulbound** (non-transferable), bought by **direct purchase** — no loot
+  boxes, no randomness.
+
+Two one-way on-ramps fill Gold (there is **no cash-out**):
+
+1. **Grind → convert:** turn confirmed RUNE into Gold at a flat rate.
+2. **Buy with wrapped SOL:** each purchase splits **50% to the skill-prize pool · 35% burned ·
+   15% platform fee**, all routed on-chain. This 15% is the *only* fee in the whole game —
+   grinding, converting, spending, and account trades are all free.
+
+Because real money can only ever buy *looks*, the free grind always reaches every power
+tier (just slower than a payer would gear cosmetically), and there's no pay-to-win and no
+chance-based spending. Every lever — rates, the split, skin prices — lives in the `ECON`
+config and `SKINS` table in [`index.html`](index.html).
+
+> The wrapped-SOL purchase is currently a **devnet mock** — it mints Gold and records the
+> split on-chain locally, with **no real funds**. Swapping `Econ.buyGoldWithSol()` for a real
+> SPL token transfer is the seam to go live, and should not happen without proper legal/
+> compliance review first (selling cosmetics for real crypto still has tax/jurisdiction
+> implications; a tradeable secondary market would reopen far more).
 
 ## What's in it
 
@@ -45,7 +81,12 @@ browser shares one world and one ledger.
   mix and match free CC0 model packs. Falls back to a procedural rig if none are present.
 - **Monster roster** — Hollow, Rabid Hound, Fallen Knight, ranged Hollow Sorcerer, and
   the Erdtree Sentinel boss, with size-aware hitboxes.
-- **Souls-style levelling** — spend confirmed RUNE on Vigor / Endurance / Strength.
+- **Soulslike combat** — dodge-roll with invulnerability frames, a shared stamina bar
+  gating attacks / rolls / sprint, hit-stagger recovery, and lock-on strafing.
+- **Souls-style levelling** — spend confirmed RUNE on Vigor / Endurance / Strength (power is grind-only).
+- **Cosmetic economy** — a Gold-funded Wardrobe of soulbound skins (no power, no loot boxes),
+  with two one-way on-ramps (RUNE→Gold, or wrapped-SOL split 50% prize / 35% burn / 15% fee).
+  Equipped skins sync over the network, so other Tarnished see what you're wearing.
 - **A real blockchain economy** — from-scratch SHA-256 proof-of-work chain (verified
   against Node's `crypto`), credits from kills, on-chain debits when levelling,
   unique Great Rune assets, and pending-debit anti-double-spend accounting. Blocks

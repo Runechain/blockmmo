@@ -569,7 +569,7 @@ const camera={x:0,y:0};
 const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false};
 const GRACE={x:0,y:0};
 const ASSETS={
-  tiles:{src:'assets/pixel/tiles.png',w:16,h:16,img:null},
+  tiles:{src:'assets/pixel/tiles-rogue.png',w:16,h:16,img:null},
   playerDir:{src:'assets/pixel/player-directions.png',w:56,h:56,img:null},
   player:{src:'assets/pixel/player.png',w:24,h:24,img:null},
   hollow:{src:'assets/pixel/hollow.png',w:24,h:24,img:null},
@@ -1052,6 +1052,10 @@ addEventListener('visibilitychange',()=>{ if(!document.hidden)state.last=perform
 /* ------------------------------ Drawing --------------------------------- */
 function hash2(x,y){ let n=(x*374761393+y*668265263)^0x5bf03635; n=(n^(n>>>13))*1274126177; return ((n^(n>>>16))>>>0)/4294967295; }
 const TILE_ID={grass:0,grassDark:1,grassFlower:2,cobble:3,cobbleEdge:4,dirt:5,dirtEdge:6,plaza:7,plazaCrack:8,cursed:9,graveDirt:10,shadowGrass:11,water:12,sand:13,chapelWall:14,chapelRoof:15,bramble:16,fenceGround:17,mossStone:18,black:19};
+/* Map each semantic tile to a tile index in the Kenney atlas (tiles-rogue.png, 57 wide).
+   Index = row*ATLAS_COLS + col. Picked by color-matching the atlas (see assets/CREDITS.md). */
+const ATLAS_COLS=57;
+const TILE_TEX=[638,528,743,748,750,292,293,697,702,809,294,585,0,699,703,6,744,638,638,292];
 const ENTITY_SCALE=1.48;
 function mapTile(tx,ty){
   const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2, h=hash2(tx,ty);
@@ -1070,7 +1074,7 @@ function mapTile(tx,ty){
 function drawAtlasTile(id,sx,sy){
   const img=ASSETS.tiles&&ASSETS.tiles.img;
   if(img){
-    ctx.drawImage(img,(id%8)*16,Math.floor(id/8)*16,16,16,Math.round(sx),Math.round(sy),16,16);
+    const kid=TILE_TEX[id]||0; ctx.drawImage(img,(kid%ATLAS_COLS)*16,Math.floor(kid/ATLAS_COLS)*16,16,16,Math.round(sx),Math.round(sy),16,16);
     return;
   }
   const fallback=['#38a64d','#23763a','#35a449','#7d7661','#766f5b','#c99a43','#c99a43','#696b63','#5f625c','#241820','#5f533f','#1b5b31','#3787a5','#c88d35','#c8ac86','#8f2f2a','#271622','#37a54b','#59615a','#090b0f'];

@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RUNECHAIN — a tiny Soulslike MMO with a real blockchain</title>
+<style>
+  :root{
+    --gold:#c8a24a; --gold2:#e7cf86; --bg:#0b0c0e; --panel:rgba(14,15,18,.82);
+    --ok:#5fd38a; --bad:#e0594b; --txt:#e9e4d4; --dim:#9a937f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);
+    font-family:"Trebuchet MS",Segoe UI,system-ui,sans-serif;}
+  #c{display:block;width:100vw;height:100vh}
+  .hud{position:fixed;pointer-events:none;user-select:none;text-shadow:0 2px 6px #000}
+  /* top-left vitals */
+  #vitals{top:14px;left:14px;width:320px}
+  .bar{height:16px;border:1px solid #000;border-radius:3px;background:#1c1a16;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);margin:5px 0;overflow:hidden}
+  .bar > i{display:block;height:100%;width:100%;transition:width .12s linear}
+  #hp > i{background:linear-gradient(#b6443a,#7d2a22)}
+  #sta > i{background:linear-gradient(#6fae54,#3f6e32)}
+  .lab{font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+  /* wallet / chain */
+  #wallet{top:14px;right:14px;width:330px;background:var(--panel);border:1px solid #2a2620;
+    border-radius:8px;padding:12px 14px;pointer-events:auto}
+  #wallet h3{margin:0 0 6px;font-size:12px;letter-spacing:.18em;color:var(--gold2);
+    text-transform:uppercase;border-bottom:1px solid #2a2620;padding-bottom:6px}
+  .row{display:flex;justify-content:space-between;font-size:12px;margin:3px 0;color:var(--txt)}
+  .row b{color:var(--gold2);font-variant-numeric:tabular-nums}
+  #chain{margin-top:8px;max-height:150px;overflow:auto;font-family:ui-monospace,Menlo,monospace;
+    font-size:10px;line-height:1.45;color:#8f8a78}
+  #chain .blk{padding:3px 5px;border-left:2px solid var(--gold);margin:3px 0;background:rgba(255,255,255,.02)}
+  #chain .blk.mining{border-color:#e0a94b;color:#e7cf86}
+  #chain .h{color:#5fd38a}
+  /* peers */
+  #peers{bottom:14px;right:14px;width:230px;background:var(--panel);border:1px solid #2a2620;
+    border-radius:8px;padding:10px 12px;font-size:12px}
+  #peers h3{margin:0 0 6px;font-size:11px;letter-spacing:.16em;color:var(--gold2);text-transform:uppercase}
+  .peerline{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 6px var(--ok)}
+  .dot.local{background:#888;box-shadow:none}
+  /* combat log / hints */
+  #log{bottom:14px;left:14px;width:360px;font-size:12px;color:#cfc7af}
+  #log div{opacity:.0;animation:fade 5s forwards}
+  @keyframes fade{0%{opacity:0;transform:translateY(6px)}8%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+  #center{top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+  .cross{width:6px;height:6px;border:2px solid rgba(255,255,255,.6);border-radius:50%;
+    margin:0 auto;box-shadow:0 0 4px #000}
+  /* start overlay */
+  #start{position:fixed;inset:0;background:radial-gradient(60% 60% at 50% 35%,#16130c,#000);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;
+    text-align:center;padding:24px}
+  #start h1{font-size:46px;margin:0;letter-spacing:.16em;color:var(--gold2);
+    text-shadow:0 0 30px rgba(200,162,74,.5)}
+  #start .sub{color:var(--gold);letter-spacing:.34em;font-size:13px;margin:6px 0 26px}
+  #start p{max-width:560px;color:#b8b09a;font-size:14px;line-height:1.7}
+  #start .keys{margin:18px 0;color:#9a937f;font-size:13px}
+  #start .keys b{color:var(--gold2)}
+  #go{pointer-events:auto;margin-top:14px;padding:14px 40px;background:linear-gradient(#c8a24a,#9a7a2e);
+    color:#1a1407;border:none;border-radius:6px;font-size:16px;letter-spacing:.18em;cursor:pointer;
+    font-weight:bold;text-transform:uppercase;box-shadow:0 6px 24px rgba(200,162,74,.35)}
+  #go:hover{filter:brightness(1.1)}
+  #name{pointer-events:auto;margin-top:14px;background:#111;border:1px solid #3a342a;color:#e7cf86;
+    padding:10px 14px;border-radius:6px;text-align:center;letter-spacing:.1em;font-size:14px;width:240px}
+  .mini{color:#6c6656;font-size:11px;margin-top:26px;max-width:560px;line-height:1.6}
+  #death{position:fixed;inset:0;background:rgba(20,0,0,.55);display:none;align-items:center;
+    justify-content:center;z-index:40;flex-direction:column}
+  #death h1{color:#c0392b;letter-spacing:.3em;font-size:54px;text-shadow:0 0 30px #000}
+  #death button{pointer-events:auto;margin-top:20px;padding:12px 30px;background:#2a1a14;color:#e7cf86;
+    border:1px solid #6b4a2e;border-radius:6px;cursor:pointer;letter-spacing:.16em}
+  /* stats + levelling */
+  .statline{font-size:11px;color:#9a937f;margin-top:6px;letter-spacing:.04em}
+  .statline b{color:#e7cf86;font-variant-numeric:tabular-nums}
+  #runes{margin-top:3px;color:#c8a24a;font-size:11px}
+  #graceprompt{bottom:92px;left:50%;transform:translateX(-50%);text-align:center;color:#e7cf86;
+    font-size:14px;letter-spacing:.08em;display:none;background:rgba(14,15,18,.72);
+    padding:8px 16px;border:1px solid #3a342a;border-radius:8px}
+  #graceprompt b{color:#fff}
+  #levelup{position:fixed;inset:0;background:rgba(8,7,5,.74);display:none;align-items:center;
+    justify-content:center;z-index:45}
+  #levelup .panel{width:440px;background:linear-gradient(#15130d,#0c0b08);border:1px solid #6b542e;
+    border-radius:12px;padding:24px 26px;box-shadow:0 20px 80px rgba(0,0,0,.7)}
+  #levelup h2{margin:0 0 4px;color:#e7cf86;letter-spacing:.2em;font-size:20px;text-transform:uppercase}
+  #levelup .gsub{color:#9a8a5a;font-size:12px;letter-spacing:.14em;margin-bottom:16px}
+  #levelup .lvrow{display:flex;justify-content:space-between;color:#cfc7af;font-size:13px;margin:6px 0}
+  #levelup .lvrow b{color:#e7cf86}
+  .statbtn{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;width:100%;
+    margin:8px 0;padding:12px 14px;background:#1d1a12;border:1px solid #3a342a;border-radius:8px;
+    color:#e9e4d4;cursor:pointer;font-size:14px;text-align:left}
+  .statbtn:hover{border-color:#c8a24a;background:#26210f}
+  .statbtn:disabled{opacity:.4;cursor:not-allowed}
+  .statbtn small{color:#9a937f;display:block;font-size:11px}
+  .statbtn .cost{color:#e7cf86;font-variant-numeric:tabular-nums;font-size:13px}
+  #lvclose{pointer-events:auto;margin-top:14px;width:100%;padding:10px;background:#2a1a14;color:#e7cf86;
+    border:1px solid #6b4a2e;border-radius:8px;cursor:pointer;letter-spacing:.14em}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="center" class="hud"><div class="cross"></div></div>
+
+<div id="vitals" class="hud">
+  <div class="lab"><span id="charname">Tarnished</span> — Level <b id="lvl" style="color:#e7cf86">1</b></div>
+  <div id="hp" class="bar"><i></i></div>
+  <div class="lab">Stamina</div>
+  <div id="sta" class="bar"><i></i></div>
+  <div class="statline">VGR <b id="sVgr">10</b> &nbsp;·&nbsp; END <b id="sEnd">10</b> &nbsp;·&nbsp; STR <b id="sStr">10</b> &nbsp;·&nbsp; DMG <b id="sDmg">50</b></div>
+  <div id="runes" class="statline"></div>
+</div>
+
+<div id="wallet" class="hud">
+  <h3>⛓ Runechain Wallet</h3>
+  <div class="row"><span>Confirmed RUNE</span><b id="bal">0.00</b></div>
+  <div class="row"><span>Pending (mempool)</span><b id="pend">0.00</b></div>
+  <div class="row"><span>Block height</span><b id="height">0</b></div>
+  <div class="row"><span>Difficulty</span><b id="diff">3 nibbles</b></div>
+  <div class="row"><span>Hashrate</span><b id="hr">0 H/s</b></div>
+  <div id="chain"></div>
+</div>
+
+<div id="peers" class="hud">
+  <h3>◢ Connected Realm</h3>
+  <div id="peerlist"></div>
+</div>
+
+<div id="log" class="hud"></div>
+
+<div id="graceprompt" class="hud">Site of Grace — press <b>G</b> to rest &amp; level up</div>
+
+<div id="levelup">
+  <div class="panel">
+    <h2>Site of Grace</h2>
+    <div class="gsub">Spend confirmed RUNE from the chain to grow stronger</div>
+    <div class="lvrow"><span>Level</span><b id="lvLevel">1</b></div>
+    <div class="lvrow"><span>Spendable RUNE</span><b id="lvBal">0.00</b></div>
+    <div class="lvrow"><span>Next level costs</span><b id="lvCost">30</b></div>
+    <button class="statbtn" data-stat="vigor"><span>Vigor <small>+ max health</small></span><span class="cost" id="cVigor"></span></button>
+    <button class="statbtn" data-stat="endurance"><span>Endurance <small>+ max stamina</small></span><span class="cost" id="cEnd"></span></button>
+    <button class="statbtn" data-stat="strength"><span>Strength <small>+ attack damage</small></span><span class="cost" id="cStr"></span></button>
+    <button id="lvclose">Leave Grace  (G)</button>
+  </div>
+</div>
+
+<div id="death">
+  <h1>YOU DIED</h1>
+  <button id="respawn">Return to the Site of Grace</button>
+</div>
+
+<div id="start">
+  <h1>RUNECHAIN</h1>
+  <div class="sub">A SOULSLIKE MMO ON A REAL BLOCKCHAIN</div>
+  <p>A mechanically-real 3D world. Bipedal warriors. Hollowed foes that drop <b style="color:#e7cf86">RUNE</b> —
+  a token settled by a genuine SHA‑256 <i>proof-of-work</i> chain your own browser mines. Other Tarnished
+  you meet are real players synced over the network (or phantoms, if you roam alone).</p>
+  <div class="keys">
+    <b>WASD</b> move &nbsp;·&nbsp; <b>Mouse</b> look &nbsp;·&nbsp; <b>Shift</b> sprint &nbsp;·&nbsp;
+    <b>Space</b> jump &nbsp;·&nbsp; <b>Click</b>/<b>L</b> attack &nbsp;·&nbsp; <b>G</b> rest &amp; level &nbsp;·&nbsp; <b>M</b> wallet
+  </div>
+  <input id="name" maxlength="14" placeholder="name your Tarnished" />
+  <button id="go">Enter the Lands Between</button>
+  <div class="mini">Single player works instantly. For true MMO, run <code>node server.js</code> and reload —
+  every browser that connects shares one world and one ledger. Pure JS proof-of-work; no wallet, no real money.</div>
+  <div id="rigstatus" class="mini" style="color:#c8a24a;margin-top:10px">◌ Loading character rig…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+<script>
+/* ============================================================================
+   RUNECHAIN — single-file Soulslike MMO demo
+   Sections:  (1) sha256  (2) blockchain  (3) world  (4) bipedal rig
+              (5) player  (6) enemies  (7) networking  (8) loop/HUD
+   ========================================================================== */
+
+/* ----------------------------- (1) SHA-256 ------------------------------- */
+/* Compact, dependency-free, synchronous SHA-256 so we can hash fast enough
+   to actually mine proof-of-work in the render loop. Verified against
+   Node's crypto for the standard "abc" test vector.                         */
+const SHA256 = (function () {
+  const K = new Uint32Array([
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+  function rotr(x,n){return (x>>>n)|(x<<(32-n));}
+  return function sha256(ascii){
+    const bytes=[]; for(let i=0;i<ascii.length;i++){let c=ascii.charCodeAt(i);
+      if(c<128)bytes.push(c);
+      else if(c<2048){bytes.push(192|(c>>6),128|(c&63));}
+      else{bytes.push(224|(c>>12),128|((c>>6)&63),128|(c&63));}}
+    const l=bytes.length; bytes.push(0x80);
+    while(bytes.length%64!==56)bytes.push(0);
+    const bl=l*8;
+    bytes.push(0,0,0,0,(bl>>>24)&255,(bl>>>16)&255,(bl>>>8)&255,bl&255);
+    let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,
+        h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+    const w=new Uint32Array(64);
+    for(let i=0;i<bytes.length;i+=64){
+      for(let t=0;t<16;t++)
+        w[t]=(bytes[i+t*4]<<24)|(bytes[i+t*4+1]<<16)|(bytes[i+t*4+2]<<8)|(bytes[i+t*4+3]);
+      for(let t=16;t<64;t++){
+        const s0=rotr(w[t-15],7)^rotr(w[t-15],18)^(w[t-15]>>>3);
+        const s1=rotr(w[t-2],17)^rotr(w[t-2],19)^(w[t-2]>>>10);
+        w[t]=(w[t-16]+s0+w[t-7]+s1)|0;
+      }
+      let a=h0,b=h1,c=h2,d=h3,e=h4,f=h5,g=h6,h=h7;
+      for(let t=0;t<64;t++){
+        const S1=rotr(e,6)^rotr(e,11)^rotr(e,25);
+        const ch=(e&f)^(~e&g);
+        const t1=(h+S1+ch+K[t]+w[t])|0;
+        const S0=rotr(a,2)^rotr(a,13)^rotr(a,22);
+        const maj=(a&b)^(a&c)^(b&c);
+        const t2=(S0+maj)|0;
+        h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0;
+      }
+      h0=(h0+a)|0;h1=(h1+b)|0;h2=(h2+c)|0;h3=(h3+d)|0;
+      h4=(h4+e)|0;h5=(h5+f)|0;h6=(h6+g)|0;h7=(h7+h)|0;
+    }
+    const toHex=x=>('00000000'+(x>>>0).toString(16)).slice(-8);
+    return toHex(h0)+toHex(h1)+toHex(h2)+toHex(h3)+toHex(h4)+toHex(h5)+toHex(h6)+toHex(h7);
+  };
+})();
+
+/* --------------------------- (2) Blockchain ------------------------------ */
+/* A genuine proof-of-work chain. Kills create reward transactions in the
+   mempool; the miner grinds nonces until SHA256(block) has `difficulty`
+   leading zero nibbles. Confirmed blocks credit the wallet. Blocks gossip
+   over the network so the whole realm shares one ledger (longest valid
+   chain wins).                                                              */
+const Chain = (function () {
+  const DIFFICULTY = 3;                 // leading zero hex chars (~4096 hashes)
+  let chain = [];
+  let mempool = [];
+  let miner = null;                     // in-progress block being ground
+  let hashes = 0, hrTimer = 0, hashrate = 0;
+
+  function hashBlock(b){
+    return SHA256(b.index+'|'+b.prev+'|'+b.time+'|'+JSON.stringify(b.txs)+'|'+b.nonce);
+  }
+  function valid(b){ return b.hash===hashBlock(b) && b.hash.startsWith('0'.repeat(DIFFICULTY)); }
+
+  function genesis(){
+    const g={index:0,prev:'0'.repeat(64),time:0,txs:[{to:'GENESIS',amt:0,note:'Erdtree spark'}],nonce:0};
+    g.hash=hashBlock(g); chain=[g];
+  }
+  genesis();
+
+  const rid=()=>Math.random().toString(36).slice(2,8);
+  // credit: a monster bounty paid to a player
+  function reward(to, amt, note){ mempool.push({to,amt:+amt.toFixed(2),note,id:rid()}); }
+  // debit: a player spends RUNE (e.g. to level up) — recorded on-chain to a sink address
+  function spend(from, amt, note){ mempool.push({from,to:'ERDTREE_SINK',amt:+amt.toFixed(2),note,id:rid()}); }
+  // mint a unique on-chain asset (a Great Rune) to a player
+  function mintGreatRune(to, rune){ mempool.push({to,amt:0,greatRune:rune,note:'Great Rune: '+rune.name,id:rid()}); }
+
+  function startBlock(){
+    if(miner||mempool.length===0)return;
+    const prev=chain[chain.length-1];
+    miner={index:prev.index+1, prev:prev.hash, time:Date.now(),
+           txs:mempool.slice(0,6), nonce:0};
+  }
+
+  // grind a budget of hashes per frame; returns true when a block lands
+  function tick(budget){
+    if(!miner)startBlock();
+    if(!miner)return false;
+    for(let i=0;i<budget;i++){
+      const h=hashBlock(miner); hashes++;
+      if(h.startsWith('0'.repeat(DIFFICULTY))){
+        miner.hash=h; chain.push(miner);
+        const mined=miner.txs;
+        mempool=mempool.slice(mined.length);
+        const justMined=miner; miner=null;
+        Net.gossipBlock(chain[chain.length-1]);
+        return justMined;
+      }
+      miner.nonce++;
+    }
+    return false;
+  }
+
+  function updateHashrate(dt){
+    hrTimer+=dt;
+    if(hrTimer>=0.5){ hashrate=Math.round(hashes/hrTimer); hashes=0; hrTimer=0; }
+  }
+
+  // accept a block mined elsewhere (network gossip)
+  function acceptRemote(b){
+    const tip=chain[chain.length-1];
+    if(b.index===tip.index+1 && b.prev===tip.hash && valid(b)){
+      chain.push(b);
+      // drop any of its txs from our mempool
+      const ids=new Set(b.txs.map(t=>t.id));
+      mempool=mempool.filter(t=>!ids.has(t.id));
+      if(miner && miner.index<=b.index)miner=null;
+      return true;
+    }
+    return false;
+  }
+
+  function balanceOf(name){            // confirmed credits − confirmed debits
+    let bal=0;
+    for(const blk of chain) for(const t of blk.txs){
+      if(t.to===name)bal+=t.amt;
+      if(t.from===name)bal-=t.amt;
+    }
+    return bal;
+  }
+  function pool(){ return miner?mempool.concat(miner.txs):mempool; }
+  function pendingCredit(name){ let p=0; for(const t of pool()) if(t.to===name)p+=t.amt; return p; }
+  function pendingDebit(name){  let p=0; for(const t of pool()) if(t.from===name)p+=t.amt; return p; }
+  // spendable = confirmed balance minus spends already queued (prevents double-spend)
+  function spendable(name){ return balanceOf(name)-pendingDebit(name); }
+  function greatRunesOf(name){ const out=[];
+    for(const blk of chain) for(const t of blk.txs) if(t.to===name && t.greatRune)out.push(t.greatRune);
+    return out; }
+
+  return {
+    DIFFICULTY, reward, spend, mintGreatRune, tick, updateHashrate, acceptRemote,
+    balanceOf, pendingCredit, pendingDebit, spendable, greatRunesOf,
+    get chain(){return chain;}, get hashrate(){return hashrate;},
+    get mining(){return miner;}, replaceIfLonger(remote){
+      if(remote.length>chain.length && remote.every((b,i)=>i===0||valid(b))){ chain=remote; return true;}
+      return false; }
+  };
+})();
+
+/* ------------------------------- (3) World ------------------------------- */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;   // cinematic contrast/colour
+renderer.toneMappingExposure=1.05;
+
+const scene=new THREE.Scene();
+// painted gradient sky: deep teal zenith → warm golden Erdtree horizon
+function gradientSky(top,bot){
+  const cv=document.createElement('canvas'); cv.width=4; cv.height=512;
+  const ctx=cv.getContext('2d'); const g=ctx.createLinearGradient(0,0,0,512);
+  g.addColorStop(0,top); g.addColorStop(0.62,bot); g.addColorStop(1,'#e6cd9a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,4,512);
+  const tex=new THREE.CanvasTexture(cv); tex.encoding=THREE.sRGBEncoding; return tex;
+}
+scene.background=gradientSky('#1d3147','#caa86e');
+scene.fog=new THREE.FogExp2(0xc9ad84,0.0042);       // warm haze that hides the world edge
+
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,900);
+
+// lighting — strong low golden "Erdtree" sun + cool sky fill + warm bounce
+const sun=new THREE.DirectionalLight(0xffdd9c,2.0);
+sun.position.set(70,80,30); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=1; sun.shadow.camera.far=320;
+sun.shadow.camera.left=-130; sun.shadow.camera.right=130;
+sun.shadow.camera.top=130; sun.shadow.camera.bottom=-130;
+sun.shadow.bias=-0.0004; sun.shadow.radius=2.5;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbcd0e6,0x6b5a3a,0.85));
+// faint cool rim light from behind to separate silhouettes from the haze
+const rim=new THREE.DirectionalLight(0x9fb8d8,0.5); rim.position.set(-50,30,-60); scene.add(rim);
+scene.add(new THREE.AmbientLight(0x3a3a44,0.35));
+
+// deterministic terrain heightfield
+function getHeight(x,z){
+  return  6.0*Math.sin(x*0.018)*Math.cos(z*0.020)
+        + 3.2*Math.sin(x*0.05 +z*0.03)
+        + 1.6*Math.cos(x*0.11 -z*0.07)
+        - 0.6;
+}
+const TERR=420, SEG=160;
+const tGeo=new THREE.PlaneGeometry(TERR,TERR,SEG,SEG);
+tGeo.rotateX(-Math.PI/2);
+const pos=tGeo.attributes.position;
+for(let i=0;i<pos.count;i++){
+  const x=pos.getX(i), z=pos.getZ(i);
+  pos.setY(i,getHeight(x,z));
+}
+tGeo.computeVertexNormals();
+// vertex colours: grass / stone by height
+const colors=[];
+for(let i=0;i<pos.count;i++){
+  const y=pos.getY(i);
+  const c=new THREE.Color();
+  if(y>5) c.setHSL(0.10,0.10,0.62);          // pale stone peaks
+  else if(y>1.5) c.setHSL(0.09,0.22,0.42);   // dry earth
+  else c.setHSL(0.26,0.32,0.30+Math.random()*0.05); // grass
+  colors.push(c.r,c.g,c.b);
+}
+tGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+const terrain=new THREE.Mesh(tGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0}));
+terrain.receiveShadow=true; scene.add(terrain);
+
+// scatter trees & rocks & a "site of grace" beacon
+function placeProp(builder,count,scaleMin,scaleMax){
+  for(let i=0;i<count;i++){
+    const x=(Math.random()-0.5)*TERR*0.92, z=(Math.random()-0.5)*TERR*0.92;
+    const m=builder(); const s=scaleMin+Math.random()*(scaleMax-scaleMin);
+    m.scale.setScalar(s);
+    m.position.set(x,getHeight(x,z),z);
+    m.rotation.y=Math.random()*6.28;
+    scene.add(m);
+  }
+}
+function tree(){
+  const g=new THREE.Group();
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.5,4.2,6),
+    new THREE.MeshStandardMaterial({color:0x4b3826,roughness:1}));
+  trunk.position.y=2.1; trunk.castShadow=true; g.add(trunk);
+  for(let k=0;k<3;k++){
+    const leaf=new THREE.Mesh(new THREE.ConeGeometry(2.4-k*0.5,2.6,7),
+      new THREE.MeshStandardMaterial({color:0x36502c,roughness:1}));
+    leaf.position.y=4+ k*1.4; leaf.castShadow=true; g.add(leaf);
+  }
+  return g;
+}
+function rock(){
+  const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),
+    new THREE.MeshStandardMaterial({color:0x6b6b6b,roughness:1,flatShading:true}));
+  m.castShadow=true; m.receiveShadow=true; return m;
+}
+placeProp(tree,90,0.7,1.7);
+placeProp(rock,60,0.6,2.4);
+
+// site of grace (spawn beacon)
+const grace=new THREE.Group();
+const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,30,8),
+  new THREE.MeshBasicMaterial({color:0xf2d68a,transparent:true,opacity:0.35}));
+beam.position.y=15; grace.add(beam);
+const SPAWN=new THREE.Vector3(0,getHeight(0,0),0);
+grace.position.copy(SPAWN); scene.add(grace);
+
+/* ---------------------------- (4) Bipedal rig ---------------------------- */
+/* Procedurally-animated humanoid built from primitives. Returns a group with
+   limb references; animate() drives a believable walk/run/jump/attack from a
+   single phase + speed input — no external animation assets needed.         */
+function buildBiped(palette){
+  const g=new THREE.Group();
+  const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.7,metalness:.15});
+  const part=(w,h,d,c,y)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));
+    m.castShadow=true;m.position.y=y;return m;};
+
+  const hips=new THREE.Group(); hips.position.y=1.05; g.add(hips);
+  const torso=part(0.62,0.85,0.34,palette.body,0.45); hips.add(torso);
+  const chest=part(0.7,0.4,0.4,palette.body,0.95); hips.add(chest);
+  // head
+  const head=new THREE.Group(); head.position.y=1.32; hips.add(head);
+  head.add(part(0.34,0.36,0.34,palette.skin,0));
+  const helm=part(0.4,0.22,0.42,palette.trim,0.16); head.add(helm);
+  // shoulders/arms
+  function arm(side){
+    const s=new THREE.Group(); s.position.set(side*0.46,1.12,0); hips.add(s);
+    const upper=part(0.2,0.5,0.2,palette.trim,-0.25); s.add(upper);
+    const fore=new THREE.Group(); fore.position.y=-0.5; s.add(fore);
+    fore.add(part(0.18,0.5,0.18,palette.skin,-0.25));
+    if(side<0){ // weapon in left/main hand
+      const sword=new THREE.Mesh(new THREE.BoxGeometry(0.08,1.5,0.16),
+        new THREE.MeshStandardMaterial({color:0xd9dde2,metalness:.8,roughness:.3}));
+      sword.position.y=-0.95; sword.castShadow=true; fore.add(sword);
+      const guard=part(0.34,0.08,0.1,0x8a6a32,-0.5); fore.add(guard);
+    }
+    return {s,fore};
+  }
+  const armL=arm(-1), armR=arm(1);
+  // legs
+  function leg(side){
+    const s=new THREE.Group(); s.position.set(side*0.2,0,0); hips.add(s);
+    const thigh=part(0.24,0.55,0.24,palette.body,-0.3); s.add(thigh);
+    const shin=new THREE.Group(); shin.position.y=-0.58; s.add(shin);
+    shin.add(part(0.2,0.55,0.2,palette.trim,-0.3));
+    const foot=part(0.24,0.12,0.4,palette.trim,-0.6); foot.position.z=0.06; shin.add(foot);
+    return {s,shin};
+  }
+  const legL=leg(-1), legR=leg(1);
+  g.userData={hips,head,armL,armR,legL,legR,phase:0};
+  return g;
+}
+function animateBiped(b,speed,dt,opts={}){
+  const u=b.userData;
+  u.phase += dt*(4+speed*1.6);
+  const sw=Math.sin(u.phase), sw2=Math.cos(u.phase);
+  const amp=Math.min(1,speed/5)*0.9 + (opts.idle?0:0);
+  // legs swing
+  u.legL.s.rotation.x = sw*amp;
+  u.legR.s.rotation.x = -sw*amp;
+  u.legL.shin.rotation.x = Math.max(0,-sw)*amp*1.2;
+  u.legR.shin.rotation.x = Math.max(0, sw)*amp*1.2;
+  // arms counter-swing
+  u.armR.s.rotation.x = sw*amp*0.8;
+  u.armL.s.rotation.x = (opts.attack? -2.3 : -sw*amp*0.8);
+  // attack: snap main hand down
+  if(opts.attack!=null){
+    const a=opts.attack; // 0..1 progress
+    u.armL.s.rotation.x = THREE.MathUtils.lerp(-2.3,0.9,a);
+    u.hips.rotation.y = Math.sin(a*Math.PI)*0.4;
+  } else { u.hips.rotation.y *= 0.8; }
+  // gentle idle breathing + airborne tuck
+  u.head.rotation.z = Math.sin(u.phase*0.5)*0.04;
+  if(opts.air){ u.legL.s.rotation.x=0.5; u.legR.s.rotation.x=-0.3; }
+  // bob the whole body while walking
+  u.hips.position.y = 1.05 + Math.abs(sw2)*amp*0.08;
+}
+
+/* ---------------------- (4b) glTF characters + mixer --------------------- */
+/* MULTI-MODEL "wild mix" loader. Each role (player / each monster) points at
+   its own GLB in the MODELS manifest below. The loader:
+     • loads every GLB in parallel, tolerating any that are missing,
+     • AUTO-NORMALISES size (any pack's native scale → fits our world),
+     • FUZZY-MAPS each pack's animation clip names onto our canonical states
+       (Idle/Walking/Running/Jump/Punch/Death) so different packs "just work",
+     • clones per character via SkeletonUtils with its own AnimationMixer.
+   Anything without a model falls back to the procedural box-rig, so the game
+   always runs and simply gets wilder as you drop more GLBs into ./models/.
+   Grab CC0 animated packs from Poly Pizza (see models/README.md).            */
+const FACE_OFFSET  = Math.PI;     // flip to 0 if avatars walk backwards
+const TARGET_HEIGHT = 1.9;        // every "scale 1" character normalised to ~this tall
+const ONE_SHOT = ['Jump','Punch','Death'];
+// canonical state -> substrings to look for in a pack's clip names (first hit wins)
+const CLIP_WANT = {
+  Idle:    ['idle','breath','static','stand','pose'],
+  Walking: ['walk'],
+  Running: ['run','sprint','jog'],
+  Jump:    ['jump','fly','hover'],
+  Punch:   ['attack','punch','slash','melee','bite','cast','shoot','swing','headbutt'],
+  Death:   ['death','die','dead','defeat','hit'],
+};
+// the wild roster — drop matching GLBs in ./models/ (server.js serves them).
+// `default` is an online fallback so it still renders before you download anything.
+const MODELS = {
+  default:  { url:'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/models/gltf/RobotExpressive/RobotExpressive.glb' },
+  player:   { url:'models/player.glb'   },
+  hollow:   { url:'models/hollow.glb'   },
+  hound:    { url:'models/hound.glb'    },
+  knight:   { url:'models/knight.glb'   },
+  sorcerer: { url:'models/sorcerer.glb' },
+  sentinel: { url:'models/sentinel.glb' },
+};
+const ASSETS = { ready:false, models:{} };   // role -> {scene, animations, norm}
+
+function modelHeight(scene){
+  scene.updateMatrixWorld(true);
+  const b=new THREE.Box3().setFromObject(scene); const s=new THREE.Vector3(); b.getSize(s);
+  return (isFinite(s.y)&&s.y>0)?s.y:1.8;
+}
+function loadAssets(done){
+  const go=document.getElementById('go');
+  if(go){ go.disabled=true; go.textContent='Summoning the rigged dead…'; }
+  if(typeof THREE.GLTFLoader!=='function' || typeof THREE.SkeletonUtils==='undefined'){
+    console.warn('[runechain] GLTF tooling missing — procedural rig'); return done();
+  }
+  const loader=new THREE.GLTFLoader();
+  const entries=Object.entries(MODELS);
+  let pending=entries.length;
+  const finish=()=>{ ASSETS.ready=Object.keys(ASSETS.models).length>0;
+    console.log('[runechain] models loaded:', Object.keys(ASSETS.models)); done(); };
+  if(!pending) return finish();
+  entries.forEach(([role,info])=>{
+    loader.load(info.url,
+      g=>{ ASSETS.models[role]={scene:g.scene, animations:g.animations||[],
+             norm:TARGET_HEIGHT/modelHeight(g.scene)};
+           if(--pending===0)finish(); },
+      undefined,
+      ()=>{ console.warn('[runechain] missing model:',role,info.url); if(--pending===0)finish(); });
+  });
+}
+function modelFor(role){ return ASSETS.models[role] || ASSETS.models.default || null; }
+
+function pickClip(animations, wants){
+  for(const w of wants){ const f=animations.find(c=>c.name.toLowerCase().includes(w)); if(f)return f; }
+  return null;
+}
+function makeChar(role, palette, scale){
+  const model=modelFor(role);
+  const root=THREE.SkeletonUtils.clone(model.scene);
+  root.scale.setScalar(model.norm*(scale||1));
+  root.rotation.y=FACE_OFFSET;
+  const tint=new THREE.Color(palette.body);
+  root.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.frustumCulled=false;
+    if(o.material&&o.material.color){ o.material=o.material.clone(); o.material.color.lerp(tint,0.4); } }});
+  const wrap=new THREE.Group(); wrap.add(root);
+  const mixer=new THREE.AnimationMixer(root);
+  const actions={};
+  for(const [canon,wants] of Object.entries(CLIP_WANT)){
+    let clip=pickClip(model.animations,wants);
+    if(!clip && canon==='Idle')clip=model.animations[0];      // ensure a resting clip
+    if(clip){ const a=mixer.clipAction(clip); actions[canon]=a;
+      if(ONE_SHOT.includes(canon)){ a.setLoop(THREE.LoopOnce); a.clampWhenFinished=true; } }
+  }
+  let current=null;
+  function play(name,fade){ const a=actions[name]||actions.Idle; if(!a||a===current)return;
+    if(current)current.fadeOut(fade==null?0.2:fade);
+    a.reset().fadeIn(fade==null?0.2:fade).play(); current=a; }
+  if(actions.Idle){ actions.Idle.play(); current=actions.Idle; }
+  return { wrap, mixer, play };
+}
+function gltfAvatar(role,palette,scale){
+  const c=makeChar(role,palette,scale);
+  return { obj:c.wrap, kind:'gltf',
+    drive(speed,dt,o){ o=o||{}; c.mixer.update(dt);
+      const want = o.dead ? 'Death'
+        : (o.attack!=null) ? 'Punch'
+        : o.air ? 'Jump'
+        : speed>4.5 ? 'Running'
+        : speed>0.4 ? 'Walking' : 'Idle';
+      c.play(want); },
+    setDead(){ c.play('Death'); } };
+}
+function proceduralAvatar(palette,scale){
+  const obj=buildBiped(palette); if(scale)obj.scale.setScalar(scale);
+  return { obj, kind:'proc',
+    drive(speed,dt,o){ animateBiped(obj,speed,dt,o||{}); },
+    setDead(){ obj.rotation.z=Math.PI/2.2; } };
+}
+function makeAvatar(role,palette,scale){
+  return modelFor(role) ? gltfAvatar(role,palette,scale) : proceduralAvatar(palette,scale);
+}
+// measure a character's real size so hitboxes match whatever rig/scale is live
+function measure(obj){
+  obj.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(obj);
+  const s=new THREE.Vector3(); box.getSize(s);
+  const h=(isFinite(s.y)&&s.y>0)?s.y:2;
+  return { height:h, radius:Math.max(0.5, h*0.25) };   // body radius ≈ ¼ of height
+}
+
+/* ------------------------------ (5) Player ------------------------------- */
+const PLAYER_PAL={body:0x2f3a4a,trim:0x55617a,skin:0xcaa985};
+let player;
+function initPlayer(){
+  player={
+    av:null, obj:null,
+    vel:new THREE.Vector3(),
+    yaw:0, vy:0, onGround:true,
+    level:1, vigor:10, endurance:10, strength:10, runeBuff:0,
+    hp:100, maxHp:100, sta:100, maxSta:100, dmg:50,
+    attack:null, attackCd:0, dead:false, name:'Tarnished',
+  };
+  player.av=makeAvatar('player',PLAYER_PAL,1); player.obj=player.av.obj;
+  player.obj.position.copy(SPAWN); scene.add(player.obj);
+  const m=measure(player.obj); player.radius=m.radius; player.height=m.height;
+  recalcStats(true);
+}
+
+// derive HP / stamina / damage from stats (+ Great Rune buff)
+function recalcStats(heal){
+  player.maxHp  = 80 + player.vigor*8;
+  player.maxSta = 70 + player.endurance*5;
+  player.dmg    = Math.round((20 + player.strength*3)*(1+player.runeBuff));
+  if(heal){ player.hp=player.maxHp; player.sta=player.maxSta; }
+}
+
+// single funnel for all damage dealt to the player
+function hurtPlayer(amt){
+  if(player.dead)return;
+  player.hp-=amt; flash(player.obj,0xff0000);
+  if(player.hp<=0){ player.hp=0; player.dead=true; player.av.setDead();
+    document.getElementById('death').style.display='flex';
+    if(pointer)document.exitPointerLock();
+    if(graceOpen)closeGrace();
+  }
+}
+
+/* ---- levelling at the Site of Grace (spends real on-chain RUNE) -------- */
+function levelCost(){ return Math.floor(30*Math.pow(1.12, player.level-1)); }
+let graceOpen=false;
+function nearGrace(){ return player.obj.position.distanceTo(SPAWN)<6; }
+function openGrace(){
+  if(graceOpen||player.dead||!nearGrace())return;
+  graceOpen=true; if(pointer)document.exitPointerLock();
+  document.getElementById('levelup').style.display='flex'; refreshGrace();
+}
+function closeGrace(){
+  if(!graceOpen)return; graceOpen=false;
+  document.getElementById('levelup').style.display='none';
+  if(started&&!player.dead)canvas.requestPointerLock();
+}
+function refreshGrace(){
+  const cost=levelCost(), sp=Chain.spendable(player.name);
+  document.getElementById('lvLevel').textContent=player.level;
+  document.getElementById('lvBal').textContent=sp.toFixed(2);
+  document.getElementById('lvCost').textContent=cost;
+  for(const id of ['cVigor','cEnd','cStr'])document.getElementById(id).textContent=cost+' R';
+  document.querySelectorAll('.statbtn').forEach(b=>b.disabled = sp<cost);
+}
+function doLevel(stat){
+  const cost=levelCost();
+  if(Chain.spendable(player.name)<cost){ log('Not enough confirmed RUNE — slay more and let the chain settle'); return; }
+  Chain.spend(player.name, cost, 'leveled '+stat);   // recorded as an on-chain debit
+  player[stat]++; player.level++; recalcStats(true);
+  log(`Leveled <b style="color:#e7cf86">${stat}</b> to ${player[stat]} — −${cost} RUNE spent on-chain (now Level ${player.level})`);
+  refreshGrace();
+}
+document.querySelectorAll('.statbtn').forEach(b=>b.addEventListener('click',()=>doLevel(b.dataset.stat)));
+document.getElementById('lvclose').onclick=closeGrace;
+
+// camera orbit state
+const cam={yaw:0,pitch:0.32,dist:6.4};
+let pointer=false;
+canvas.addEventListener('click',()=>{ if(started&&!pointer)canvas.requestPointerLock(); });
+document.addEventListener('pointerlockchange',()=>pointer=document.pointerLockElement===canvas);
+document.addEventListener('mousemove',e=>{
+  if(!pointer)return;
+  cam.yaw  -= e.movementX*0.0024;
+  cam.pitch -= e.movementY*0.0024;
+  cam.pitch = Math.max(-0.25,Math.min(1.15,cam.pitch));
+});
+canvas.addEventListener('mousedown',e=>{ if(pointer&&e.button===0)doAttack(); });
+
+const keys={};
+addEventListener('keydown',e=>{ keys[e.code]=true;
+  if(e.code==='KeyL')doAttack();
+  if(e.code==='KeyG'){ graceOpen?closeGrace():openGrace(); }
+  if(e.code==='Escape'&&graceOpen)closeGrace();
+  if(e.code==='KeyM')document.getElementById('wallet').style.display=
+     (document.getElementById('wallet').style.display==='none'?'block':'none');
+});
+addEventListener('keyup',e=>keys[e.code]=false);
+
+function doAttack(){
+  if(player.dead||graceOpen||player.attackCd>0||player.sta<14)return;
+  player.attack=0; player.attackCd=0.55; player.sta-=14;
+  player.yaw=cam.yaw; player.obj.rotation.y=cam.yaw;          // swing where you're looking
+  const fwd=new THREE.Vector3(Math.sin(cam.yaw),0,Math.cos(cam.yaw));
+  // hit detection slightly delayed to match the swing
+  setTimeout(()=>{
+    for(const e of enemies){
+      if(e.dead)continue;
+      const to=e.obj.position.clone().sub(player.obj.position); to.y=0;
+      const d=to.length();
+      const reach=(player.radius||0.6)+(e.radius||0.6)+1.4;   // weapon + both bodies
+      if(d<reach && fwd.dot(to.clone().normalize())>0.25) damageEnemy(e, player.dmg);
+    }
+  },150);
+}
+
+/* ------------------------------ (6) Monsters ----------------------------- */
+/* Data-driven roster. Each type has its own look, stats, RUNE bounty and
+   behaviour: melee, fast beast, tank, ranged caster, or boss.               */
+const MONSTERS = {
+  hollow:   {name:'Hollow',           body:0x3a2230,trim:0x6b2f3a,skin:0x8f9c84,scale:1.10,hp:100,speed:2.7,dmg:8, bounty:[5,16],  weight:5},
+  hound:    {name:'Rabid Hound',      body:0x4a3326,trim:0x241a12,skin:0x6a5440,scale:0.85,hp:55, speed:5.4,dmg:6, bounty:[7,15],  weight:3, beast:true},
+  knight:   {name:'Fallen Knight',    body:0x2b3340,trim:0x9097a4,skin:0x9a8f80,scale:1.30,hp:240,speed:2.0,dmg:18,bounty:[20,38], weight:2, armored:true},
+  sorcerer: {name:'Hollow Sorcerer',  body:0x2a2446,trim:0x7a5fc0,skin:0x9a8fb6,scale:1.10,hp:90, speed:1.7,dmg:16,bounty:[18,32], weight:2, ranged:true},
+  sentinel: {name:'Erdtree Sentinel', body:0x4a3a1a,trim:0xc8a24a,skin:0x6a5a3a,scale:2.10,hp:650,speed:1.6,dmg:32,bounty:[90,150],weight:0.5,boss:true, greatRune:true},
+};
+const GREAT_RUNES = [
+  {name:"Godrick's Great Rune", buff:0.25, note:'+25% attack'},
+  {name:"Radahn's Great Rune",  buff:0.30, note:'+30% attack'},
+  {name:"Morgott's Great Rune", buff:0.20, note:'+20% attack'},
+];
+function pickType(){
+  const keys=Object.keys(MONSTERS); let tot=0; for(const k of keys)tot+=MONSTERS[k].weight;
+  let r=Math.random()*tot;
+  for(const k of keys){ r-=MONSTERS[k].weight; if(r<=0)return k; }
+  return 'hollow';
+}
+const enemies=[];
+function spawnEnemy(typeKey){
+  const key=typeKey||pickType();
+  const t=MONSTERS[key];
+  const ang=Math.random()*6.28, r=24+Math.random()*72;
+  const x=Math.cos(ang)*r, z=Math.sin(ang)*r;
+  const av=makeAvatar(key, {body:t.body,trim:t.trim,skin:t.skin}, t.scale);
+  const obj=av.obj;
+  obj.position.set(x,getHeight(x,z),z);
+  if(t.beast && av.kind==='proc') obj.userData.hips.rotation.x=0.7; // hunched (box-rig only)
+  scene.add(obj);
+  const mm=measure(obj);                                  // real size for hitbox + bar
+  const bar=makeBar(); obj.add(bar.group);
+  bar.group.position.y = (mm.height+0.5)/(obj.scale.y||1); // sit just above the head
+  if(t.boss)bar.group.scale.setScalar(1.8);
+  enemies.push({obj,av,type:t,hp:t.hp,maxHp:t.hp,dead:false,phase:Math.random()*6,
+                radius:mm.radius,height:mm.height,
+                bar,speed:t.speed,atkCd:0,castCd:1.5+Math.random()*2});
+}
+function makeBar(){
+  const group=new THREE.Group();
+  const bg=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.16),
+    new THREE.MeshBasicMaterial({color:0x000000,depthTest:false}));
+  const fg=new THREE.Mesh(new THREE.PlaneGeometry(1.36,0.12),
+    new THREE.MeshBasicMaterial({color:0xc0392b,depthTest:false}));
+  fg.position.z=0.01; group.add(bg); group.add(fg);
+  group.renderOrder=999;
+  return {group,fg};
+}
+function damageEnemy(e,amt){
+  e.hp-=amt; flash(e.obj, e.type.boss?0xffcc44:0xff5544);
+  if(e.hp<=0 && !e.dead){
+    e.dead=true; e.av.setDead();                   // play death / topple
+    const [lo,hi]=e.type.bounty;
+    const bounty=lo+Math.round(Math.random()*(hi-lo));
+    Chain.reward(player.name,bounty,'slew a '+e.type.name);
+    log(`Felled a <b>${e.type.name}</b> — <b style="color:#e7cf86">+${bounty} RUNE</b> to the chain`);
+    if(e.type.greatRune){
+      const gr=GREAT_RUNES[Math.floor(Math.random()*GREAT_RUNES.length)];
+      Chain.mintGreatRune(player.name, gr);
+      log(`⭐ A <b style="color:#e7cf86">${gr.name}</b> is minted on-chain — ${gr.note}!`);
+    }
+    Net.sendKill(bounty);
+    setTimeout(()=>{ scene.remove(e.obj);
+      enemies.splice(enemies.indexOf(e),1); spawnEnemy(); }, 4500);
+  }
+}
+let flashes=[];
+function flash(obj,color){
+  obj.traverse(o=>{ if(o.material&&o.material.emissive)o.material.emissive.setHex(color); });
+  flashes.push({obj,t:0.12});
+}
+/* Hollow Sorcerer projectiles */
+const projectiles=[];
+function castSpell(e){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(0.28,10,10),
+    new THREE.MeshBasicMaterial({color:0x9b7bff}));
+  m.add(new THREE.PointLight(0x9b7bff,1.4,8));
+  const from=e.obj.position.clone(); from.y+=(e.height||2)*0.7; m.position.copy(from);
+  scene.add(m);
+  const aim=player.obj.position.clone().add(new THREE.Vector3(0,(player.height||2)*0.5,0));
+  const dir=aim.sub(from).normalize();
+  projectiles.push({mesh:m,dir,speed:14,life:3,dmg:e.type.dmg});
+}
+function updateProjectiles(dt){
+  const ctr=player.obj.position.clone().add(new THREE.Vector3(0,(player.height||2)*0.5,0));
+  const hitR=(player.radius||0.6)+0.45;
+  for(let i=projectiles.length-1;i>=0;i--){
+    const p=projectiles[i];
+    p.mesh.position.addScaledVector(p.dir,p.speed*dt); p.life-=dt;
+    if(p.mesh.position.distanceTo(ctr)<hitR && !player.dead){ hurtPlayer(p.dmg); p.life=0; }
+    if(p.life<=0){ scene.remove(p.mesh); projectiles.splice(i,1); }
+  }
+}
+// initial spawns happen once assets load — see initWorld()
+function initWorld(){
+  for(let i=0;i<3;i++)spawnEnemy('hollow');
+  for(let i=0;i<5;i++)spawnEnemy();
+  spawnEnemy('sentinel');    // one boss roaming the field to start
+}
+
+/* ----------------------------- (7) Networking ---------------------------- */
+/* Connects to the authoritative relay (server.js) over WebSocket. Broadcasts
+   our transform & mined blocks; renders remote players. If no server is
+   reachable, spins up local "phantom" Tarnished so the realm is never empty
+   and the MMO UI still demonstrates — same code path, simulated peers.       */
+const Net=(function(){
+  let ws=null, connected=false, id=Math.random().toString(36).slice(2,8);
+  const remotes={};        // id -> {obj,target,name}
+  const phantoms=[];       // local fallback bots
+  let sendTimer=0;
+
+  function avatar(name,isPhantom){
+    const av=makeAvatar(isPhantom?'phantom':'player',
+      {body:isPhantom?0x2c3b2c:0x394a5a,trim:0x6a7a5a,skin:0xc0a080},1);
+    scene.add(av.obj);
+    return av;                 // {obj, drive, setDead, kind}
+  }
+
+  function connect(){
+    try{
+      // Same-origin WebSocket: works locally (served on :8080) and on AWS
+      // behind port 80/443. Falls back to phantoms if opened via file:// .
+      if(!location.host) throw new Error('no host (file://)');
+      const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/';
+      ws=new WebSocket(url);
+      ws.onopen=()=>{ connected=true; log('⛓ Connected to the realm server — true MMO online');
+        ws.send(JSON.stringify({t:'join',id,name:player.name,chain:Chain.chain})); };
+      ws.onmessage=ev=>{
+        const m=JSON.parse(ev.data);
+        if(m.t==='state' && m.id!==id){
+          let r=remotes[m.id];
+          if(!r){ const av=avatar(m.name);
+                  r={av,obj:av.obj,target:new THREE.Vector3(),name:m.name||'Tarnished'};
+                  remotes[m.id]=r; updatePeers(); }
+          r.target.set(m.x,m.y,m.z); r.yaw=m.yaw; r.moving=m.moving;
+        }
+        if(m.t==='leave'){ if(remotes[m.id]){scene.remove(remotes[m.id].obj);delete remotes[m.id];updatePeers();} }
+        if(m.t==='block'){ if(Chain.acceptRemote(m.block)) log('⛓ Received a mined block from a peer'); }
+        if(m.t==='chain'){ Chain.replaceIfLonger(m.chain); }
+      };
+      ws.onclose=()=>{ if(connected){connected=false;log('Realm server lost — falling back to phantoms');}
+                       ensurePhantoms(); };
+      ws.onerror=()=>{ try{ws.close();}catch(_){} };
+    }catch(_){ ensurePhantoms(); }
+    // if no connection within 1.2s, summon phantoms
+    setTimeout(()=>{ if(!connected)ensurePhantoms(); },1200);
+  }
+
+  function ensurePhantoms(){
+    if(connected||phantoms.length)return;
+    for(let i=0;i<3;i++){
+      const av=avatar('Phantom',true);
+      const ang=Math.random()*6.28, r=10+Math.random()*30;
+      av.obj.position.set(Math.cos(ang)*r,0,Math.sin(ang)*r);
+      phantoms.push({av,obj:av.obj,phase:Math.random()*6,
+        wander:new THREE.Vector3(Math.cos(ang)*r,0,Math.sin(ang)*r),
+        retime:0,name:'Phantom '+(i+1)});
+    }
+    log('No realm server found — 3 phantom Tarnished walk beside you (run <b>node server.js</b> for real MMO)');
+    updatePeers();
+  }
+
+  function tick(dt){
+    // drive remote players toward their last-known transform
+    for(const k in remotes){
+      const r=remotes[k];
+      r.obj.position.lerp(r.target,Math.min(1,dt*8));
+      if(r.yaw!=null)r.obj.rotation.y=r.yaw;
+      r.av.drive(r.moving?4:0,dt);
+    }
+    // simulate phantoms
+    for(const p of phantoms){
+      p.retime-=dt;
+      if(p.retime<=0){ const ang=Math.random()*6.28,r=8+Math.random()*40;
+        p.wander.set(Math.cos(ang)*r,0,Math.sin(ang)*r); p.retime=3+Math.random()*4; }
+      const to=p.wander.clone().sub(p.obj.position); to.y=0;
+      const d=to.length();
+      if(d>0.5){ to.normalize(); p.obj.position.addScaledVector(to,dt*2.4);
+        p.obj.rotation.y=Math.atan2(to.x,to.z); p.av.drive(3,dt); }
+      else p.av.drive(0,dt);
+      p.obj.position.y=getHeight(p.obj.position.x,p.obj.position.z);
+    }
+    // broadcast our state ~12x/s
+    if(connected){ sendTimer+=dt; if(sendTimer>0.08){ sendTimer=0;
+      ws.send(JSON.stringify({t:'state',id,name:player.name,
+        x:player.obj.position.x,y:player.obj.position.y,z:player.obj.position.z,
+        yaw:player.yaw,moving:player.vel.length()>0.5})); } }
+  }
+  function gossipBlock(block){ if(connected)ws.send(JSON.stringify({t:'block',id,block})); }
+  function sendKill(){ /* reward already added locally & will gossip with the block */ }
+  function updatePeers(){
+    const el=document.getElementById('peerlist'); el.innerHTML='';
+    const me=document.createElement('div'); me.className='peerline';
+    me.innerHTML=`<span class="dot"></span> ${player.name} <span style="color:#6c6656">(you)</span>`;
+    el.appendChild(me);
+    const list = connected? Object.values(remotes) : phantoms;
+    for(const r of list){ const d=document.createElement('div'); d.className='peerline';
+      d.innerHTML=`<span class="dot ${connected?'':'local'}"></span> ${r.name||'Tarnished'}`;
+      el.appendChild(d); }
+    if(list.length===0){ const d=document.createElement('div');
+      d.style.color='#6c6656'; d.style.fontSize='11px';
+      d.textContent='searching for the realm…'; el.appendChild(d); }
+  }
+  return {connect,tick,gossipBlock,sendKill,updatePeers,
+          get connected(){return connected;}};
+})();
+
+/* --------------------------- (8) HUD + loop ------------------------------ */
+function log(html){ const l=document.getElementById('log');
+  const d=document.createElement('div'); d.innerHTML=html; l.appendChild(d);
+  while(l.children.length>5)l.removeChild(l.firstChild);
+  setTimeout(()=>{ if(d.parentNode)d.remove(); },5200);
+}
+
+const elBal=document.getElementById('bal'), elPend=document.getElementById('pend'),
+      elHeight=document.getElementById('height'), elDiff=document.getElementById('diff'),
+      elHr=document.getElementById('hr'), elChain=document.getElementById('chain'),
+      hpFill=document.querySelector('#hp>i'), staFill=document.querySelector('#sta>i'),
+      elLvl=document.getElementById('lvl'), elVgr=document.getElementById('sVgr'),
+      elEnd=document.getElementById('sEnd'), elStr=document.getElementById('sStr'),
+      elDmg=document.getElementById('sDmg'), elRunes=document.getElementById('runes');
+elDiff.textContent=Chain.DIFFICULTY+' nibbles';
+
+function renderChain(){
+  const c=Chain.chain; let html='';
+  const recent=c.slice(-5).reverse();
+  if(Chain.mining){ html+=`<div class="blk mining">#${Chain.mining.index} ⛏ mining…
+    nonce ${Chain.mining.nonce.toLocaleString()} · ${Chain.mining.txs.length} tx</div>`; }
+  for(const b of recent){
+    html+=`<div class="blk">#${b.index} <span class="h">${b.hash.slice(0,12)}…</span>
+      · ${b.txs.length} tx</div>`;
+  }
+  elChain.innerHTML=html;
+}
+
+let started=false, last=performance.now();
+function startGame(){
+  if(!player||started)return;          // rig still loading
+  player.name=(document.getElementById('name').value.trim()||'Tarnished').slice(0,14);
+  document.getElementById('charname').textContent=player.name;
+  document.getElementById('start').style.display='none';
+  started=true; canvas.requestPointerLock();
+  Net.connect(); Net.updatePeers();
+  log('Rise now, Tarnished. Slay foes for RUNE, then rest at a Site of Grace to level up.');
+}
+document.getElementById('go').onclick=startGame;
+document.getElementById('name').addEventListener('keydown',e=>{if(e.code==='Enter')startGame();});
+document.getElementById('respawn').onclick=()=>{
+  player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false;
+  player.obj.position.copy(SPAWN); player.obj.rotation.z=0;
+  document.getElementById('death').style.display='none';
+  if(started)canvas.requestPointerLock();
+};
+
+function updatePlayer(dt){
+  if(player.dead)return;
+  // input -> desired movement in camera space
+  const f=(keys.KeyW?1:0)-(keys.KeyS?1:0);
+  const s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+  const sprint=keys.ShiftLeft||keys.ShiftRight;
+  let speed=(sprint&&player.sta>0?6.4:3.4);
+  const moving=(f||s);
+  const move=new THREE.Vector3();
+  if(moving){
+    const ang=cam.yaw;
+    const fwd=new THREE.Vector3(Math.sin(ang),0,Math.cos(ang));
+    const right=new THREE.Vector3(Math.cos(ang),0,-Math.sin(ang));
+    move.addScaledVector(fwd,f).addScaledVector(right,s);
+    if(move.lengthSq()>0){ move.normalize();
+      player.yaw=Math.atan2(move.x,move.z);
+      player.obj.rotation.y=player.yaw;
+    }
+  }
+  // stamina
+  if(sprint&&moving){ player.sta=Math.max(0,player.sta-dt*18); if(player.sta<=0)speed=3.4; }
+  else player.sta=Math.min(player.maxSta,player.sta+dt*16);
+
+  player.vel.copy(move).multiplyScalar(speed);
+  player.obj.position.addScaledVector(player.vel,dt);
+
+  // gravity + ground
+  player.vy-=22*dt;
+  if(player.onGround && keys.Space){ player.vy=8.2; player.onGround=false; }
+  player.obj.position.y+=player.vy*dt;
+  const ground=getHeight(player.obj.position.x,player.obj.position.z);
+  if(player.obj.position.y<=ground){ player.obj.position.y=ground; player.vy=0; player.onGround=true; }
+  // keep inside the field
+  const lim=TERR/2-6;
+  player.obj.position.x=Math.max(-lim,Math.min(lim,player.obj.position.x));
+  player.obj.position.z=Math.max(-lim,Math.min(lim,player.obj.position.z));
+
+  // attack timer
+  if(player.attackCd>0)player.attackCd-=dt;
+  let atk=null;
+  if(player.attack!=null){ player.attack+=dt*2.6; atk=player.attack; if(player.attack>=1)player.attack=null; }
+
+  player.av.drive(player.vel.length(), dt, {air:!player.onGround, attack:atk});
+
+  // camera follow
+  const tgt=player.obj.position.clone().add(new THREE.Vector3(0,1.5,0));
+  const cp=new THREE.Vector3(
+    Math.sin(cam.yaw)*Math.cos(cam.pitch),
+    Math.sin(cam.pitch),
+    Math.cos(cam.yaw)*Math.cos(cam.pitch)
+  ).multiplyScalar(cam.dist);
+  const want=tgt.clone().sub(cp);
+  want.y=Math.max(want.y,getHeight(want.x,want.z)+0.6); // don't clip under ground
+  camera.position.lerp(want,Math.min(1,dt*10));
+  camera.lookAt(tgt);
+}
+
+function updateEnemies(dt){
+  for(const e of enemies){
+    if(e.dead){ e.av.drive(0,dt,{dead:true}); continue; }
+    const to=player.obj.position.clone().sub(e.obj.position); to.y=0;
+    const d=to.length();
+    e.atkCd-=dt;
+    if(e.type.ranged){
+      // caster: hold mid-range and lob spells; back off if you close in
+      e.castCd-=dt;
+      e.obj.rotation.y=Math.atan2(to.x,to.z);
+      if(d>22){ to.normalize(); e.obj.position.addScaledVector(to,dt*e.speed); e.av.drive(e.speed,dt); }
+      else if(d<10){ to.normalize(); e.obj.position.addScaledVector(to,-dt*e.speed); e.av.drive(e.speed,dt); }
+      else e.av.drive(0,dt);
+      if(d<34 && e.castCd<=0 && !player.dead){ e.castCd=2.2; castSpell(e); }
+    } else {
+      const reach=(e.radius||0.6)+(player.radius||0.6)+0.5;   // contact = both bodies
+      if(d<30 && d>reach){ to.normalize();
+        e.obj.position.addScaledVector(to,dt*e.speed);
+        e.obj.rotation.y=Math.atan2(to.x,to.z); e.av.drive(e.speed,dt);
+      } else if(d<=reach){
+        e.av.drive(1,dt,{attack:1});
+        if(e.atkCd<=0){ e.atkCd=e.type.boss?1.8:1.3; hurtPlayer(e.type.dmg); }
+      } else e.av.drive(0,dt);
+    }
+    e.obj.position.y=getHeight(e.obj.position.x,e.obj.position.z);
+    e.bar.fg.scale.x=Math.max(0.001,e.hp/e.maxHp);
+    e.bar.fg.position.x=-(1-e.hp/e.maxHp)*0.68;
+    e.bar.group.lookAt(camera.position);
+  }
+}
+
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(started){
+    if(!player.dead) updatePlayer(dt); else player.av.drive(0,dt,{dead:true});
+    updateEnemies(dt);
+    updateProjectiles(dt);
+    Net.tick(dt);
+    // mine the chain a little each frame (cooperative PoW)
+    const mined=Chain.tick(900);
+    Chain.updateHashrate(dt);
+    if(mined)log(`⛏ Mined block #${mined.index} — ${mined.txs.length} tx confirmed on-chain`);
+    // flashes
+    flashes=flashes.filter(fl=>{ fl.t-=dt;
+      if(fl.t<=0){ fl.obj.traverse(o=>{if(o.material&&o.material.emissive)o.material.emissive.setHex(0x000000);}); return false; }
+      return true; });
+    // grace beacon shimmer
+    beam.material.opacity=0.28+Math.sin(now*0.003)*0.1;
+    grace.rotation.y+=dt*0.4;
+    // HUD
+    // apply Great Rune buff if our on-chain holdings changed
+    const grs=Chain.greatRunesOf(player.name);
+    const buff=grs.reduce((m,g)=>Math.max(m,g.buff),0);
+    if(buff!==player.runeBuff){ player.runeBuff=buff; recalcStats(false); }
+    // vitals
+    hpFill.style.width=(player.hp/player.maxHp*100)+'%';
+    staFill.style.width=(player.sta/player.maxSta*100)+'%';
+    elLvl.textContent=player.level;
+    elVgr.textContent=player.vigor; elEnd.textContent=player.endurance;
+    elStr.textContent=player.strength; elDmg.textContent=player.dmg;
+    elRunes.textContent = grs.length ? '⭐ '+grs.map(g=>g.name.split("'")[0]).join(', ') : '';
+    // wallet
+    elBal.textContent=Chain.balanceOf(player.name).toFixed(2);
+    elPend.textContent=Chain.pendingCredit(player.name).toFixed(2);
+    elHeight.textContent=Chain.chain.length-1;
+    elHr.textContent=Chain.hashrate.toLocaleString()+' H/s';
+    // grace prompt + live level-up panel
+    document.getElementById('graceprompt').style.display=(nearGrace()&&!graceOpen&&!player.dead)?'block':'none';
+    if(graceOpen)refreshGrace();
+    renderChain();
+  }
+  renderer.render(scene,camera);
+}
+requestAnimationFrame(loop);
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+renderer.setSize(innerWidth,innerHeight);
+
+/* ---- bootstrap: load the rigged character, then build player + world ---- */
+function onAssetsReady(){
+  initPlayer();
+  initWorld();
+  const go=document.getElementById('go');
+  go.disabled=false; go.textContent='Enter the Lands Between';
+  const rs=document.getElementById('rigstatus');
+  const loaded=Object.keys(ASSETS.models).filter(r=>r!=='default');
+  if(loaded.length){ rs.style.color='#7fd39a';
+    rs.innerHTML='✓ Loaded models: <b>'+loaded.join(', ')+'</b> — skeletal animation active'; }
+  else if(ASSETS.models.default){ rs.style.color='#c8a24a';
+    rs.innerHTML='◐ Using the online placeholder rig. Drop GLBs in <code>models/</code> for the wild mix.'; }
+  else { rs.style.color='#e0a04b';
+    rs.innerHTML='⚠ No models loaded — using the built-in box rig (offline? check console).'; }
+  console.log('[runechain] ready —', loaded.length?('models: '+loaded):'fallback rig');
+}
+loadAssets(onAssetsReady);
+</script>
+</body>
+</html>

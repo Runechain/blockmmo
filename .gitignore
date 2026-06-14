@@ -1,0 +1,20 @@
+# dependencies (there are none, but just in case)
+node_modules/
+npm-debug.log*
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# env / secrets — never commit keys (esp. once Solana/treasury keys exist)
+.env
+.env.*
+*.pem
+*-keypair.json
+
+# large binary model files — keep the repo light.
+# Quaternius models are CC0, so you CAN commit them: just delete the next line.
+models/*.glb

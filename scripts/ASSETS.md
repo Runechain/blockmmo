@@ -91,3 +91,6 @@ asset in, and so Codex / build agents don't have to guess sheet dimensions.
 - `scripts/import_pixellab_character.js` — back-compat shim (`hero` import for `player`).
 - `scripts/generate_pixel_assets.js` — the older deterministic starter-art generator
   (unchanged; could later be ported onto `lib/pixel-png.js`).
+- `scripts/generate_placeholders.js` — deterministic, labeled placeholder strips for
+  every new registry key (manifest `placeholder:true`), so content renders before
+  final PixelLab art lands. Re-run any time; real art supersedes them.

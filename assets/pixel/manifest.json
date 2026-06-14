@@ -1,0 +1,182 @@
+{
+  "audit-wolf": {
+    "name": "audit-wolf",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 32,
+    "frameH": 32,
+    "file": "audit-wolf.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "auditor": {
+    "name": "auditor",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 80,
+    "frameH": 80,
+    "file": "auditor.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "bifurcated": {
+    "name": "bifurcated",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 56,
+    "frameH": 56,
+    "file": "bifurcated.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "canon-auditor": {
+    "name": "canon-auditor",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 24,
+    "frameH": 24,
+    "file": "canon-auditor.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "cascade": {
+    "name": "cascade",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 72,
+    "frameH": 72,
+    "file": "cascade.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "foreman": {
+    "name": "foreman",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 64,
+    "frameH": 64,
+    "file": "foreman.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "hollow-ancestor": {
+    "name": "hollow-ancestor",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 24,
+    "frameH": 24,
+    "file": "hollow-ancestor.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "ledgerbound": {
+    "name": "ledgerbound",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 80,
+    "frameH": 80,
+    "file": "ledgerbound.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "relic-shade": {
+    "name": "relic-shade",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 24,
+    "frameH": 24,
+    "file": "relic-shade.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "schism-shadow": {
+    "name": "schism-shadow",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 24,
+    "frameH": 24,
+    "file": "schism-shadow.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "scrivener": {
+    "name": "scrivener",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 64,
+    "frameH": 64,
+    "file": "scrivener.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  },
+  "tallow-echo": {
+    "name": "tallow-echo",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 24,
+    "frameH": 24,
+    "file": "tallow-echo.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "placeholder": true
+  }
+}

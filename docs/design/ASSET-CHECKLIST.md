@@ -31,10 +31,11 @@ replaces the placeholder.
 - [ ] `relic-shade` — repossessed-relic husk, 2 tints (24px) — **new**
 
 ## Tilesets *(static grabs → `import_assets.js tileset`)*
+- [x] `tiles-rogue` — **Kenney Roguelike/RPG pack (CC0)** imported, 1767 tiles, gap-free 912×496 atlas. Source library for surface + vaults terrain/dungeon/doors/props. (`assets/CREDITS.md`)
 - [ ] `tiles.png` — extend the existing Gracefall atlas in place *(never break existing indices)*
-- [ ] `tiles-vaults` — Area 2
-- [ ] `tiles-archive` — Area 3
-- [ ] `tiles-fx` — shared overlays (ledger-dust, ink-pools, ripples, smoke, redaction bars)
+- [ ] `tiles-vaults` — Area 2 *(can be curated from `tiles-rogue`)*
+- [ ] `tiles-archive` — Area 3 *(Escher/phosphorescent — likely custom)*
+- [ ] `tiles-fx` — shared overlays (ledger-dust, ink-pools, ripples, smoke, redaction bars) *(custom)*
 
 ## Item icons
 - [ ] `sigil-icons` — 3× 32px: Waxen Testament, Contested Will, Amended Record

@@ -45,7 +45,7 @@ try {
     case 'creature': meta = pipe.importCreature(need(name), need(src, 'src'), opts); break;
     case 'prop': meta = pipe.importProp(need(name), files || need(src, 'src'), opts); break;
     case 'projectile': meta = pipe.importProjectile(need(name), files || need(src, 'src'), opts); break;
-    case 'tileset': meta = pipe.importTileset({ name: name || 'tiles', srcFile: need(src, 'src'), tile: +(args.tile || 16), ...(args.out ? { outDir: args.out } : {}) }); break;
+    case 'tileset': meta = pipe.importTileset({ name: name || 'tiles', srcFile: need(src, 'src'), tile: +(args.tile || 16), spacing: +(args.spacing || 0), margin: +(args.margin || 0), ...(args.credit ? { credit: args.credit } : {}), ...(args.out ? { outDir: args.out } : {}) }); break;
     default: console.error(`Unknown type "${type}".`); usage(); process.exit(1);
   }
   console.log(`✓ ${type} "${meta.name}" -> assets/pixel/${meta.file}` +

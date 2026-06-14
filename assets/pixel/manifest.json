@@ -178,5 +178,18 @@
       "hurt"
     ],
     "placeholder": true
+  },
+  "tiles-rogue": {
+    "name": "tiles-rogue",
+    "type": "tileset",
+    "tile": 16,
+    "cols": 57,
+    "rows": 31,
+    "file": "tiles-rogue.png",
+    "source": {
+      "spacing": 1,
+      "margin": 0
+    },
+    "credit": "Kenney Roguelike/RPG pack (CC0) — www.kenney.nl"
   }
 }

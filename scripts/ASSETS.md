@@ -28,7 +28,7 @@ or pass an explicit order with `--files a.png,b.png,c.png`. All exports must be
 
 `--name` `--src` `--out` · `--frame <px>` (square cell) · `--fw` / `--fh` ·
 `--frames idle,walk,attack,hurt` · `--dirs south,east,…` · `--cols <n>` (creature) ·
-`--tile <px>` (tileset) · `--margin <px>` · `--files a.png,b.png`
+`--tile <px>` / `--spacing <px>` / `--margin <px>` (tileset) · `--files a.png,b.png`
 
 ## Examples
 
@@ -44,6 +44,9 @@ node scripts/import_assets.js monster --name hound --src ~/Downloads/hound/frame
 
 # A terrain sheet you grabbed (sliced into a 16px atlas + index)
 node scripts/import_assets.js tileset --name parish-tiles --src ~/Downloads/parish.png
+
+# A pack with gaps between tiles (e.g. Kenney = 1px) — gaps are repacked out
+node scripts/import_assets.js tileset --name tiles-rogue --src ~/Downloads/kenney/Spritesheet/roguelikeSheet_transparent.png --tile 16 --spacing 1
 ```
 
 ## Manifest

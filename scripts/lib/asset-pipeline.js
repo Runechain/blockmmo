@@ -95,15 +95,25 @@ function packGrid({ srcDir, name, outDir = PIXEL_DIR, frameW = 32, frameH = 32, 
 // Normalize an arbitrary terrain/prop sheet (your static map grabs) into a clean
 // RGBA atlas + a tile index. Slices on a `tile`-px grid; emits {id,sx,sy} per cell
 // so drawAtlasTile(id, sx, sy) can address them.
-function importTileset({ srcFile, name = 'tiles', outDir = PIXEL_DIR, tile = 16 }) {
+function importTileset({ srcFile, name = 'tiles', outDir = PIXEL_DIR, tile = 16, spacing = 0, margin = 0, credit = '' }) {
   const img = png.decodePng(srcFile);
-  const cols = Math.floor(img.width / tile);
-  const rows = Math.floor(img.height / tile);
+  const stride = tile + spacing;
+  const cols = Math.floor((img.width - margin * 2 + spacing) / stride);
+  const rows = Math.floor((img.height - margin * 2 + spacing) / stride);
   if (cols < 1 || rows < 1) throw new Error(`Tileset ${srcFile} is smaller than one ${tile}px tile`);
+  // Repack into a clean, gap-free 16px atlas the game indexes by tile*tile. With
+  // spacing/margin=0 this is an identity copy; with packs like Kenney's (1px gaps)
+  // it drops the gaps so drawAtlasTile() addressing stays correct.
+  const atlas = png.newImage(cols * tile, rows * tile);
   const tiles = [];
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) tiles.push({ id: r * cols + c, sx: c * tile, sy: r * tile });
-  const meta = { name, type: 'tileset', tile, cols, rows, file: `${name}.png`, tiles };
-  png.writeImage(img, path.join(outDir, `${name}.png`)); // re-encode to the canonical RGBA PNG
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    png.blitInto(img, { x: margin + c * stride, y: margin + r * stride, w: tile, h: tile },
+      atlas, atlas.width, c * tile, r * tile, tile, tile);
+    tiles.push({ id: r * cols + c, sx: c * tile, sy: r * tile });
+  }
+  const meta = { name, type: 'tileset', tile, cols, rows, file: `${name}.png`,
+    source: { spacing, margin }, ...(credit ? { credit } : {}), tiles };
+  png.writeImage(atlas, path.join(outDir, `${name}.png`));
   recordManifest(outDir, meta);
   fs.writeFileSync(path.join(outDir, `${name}.json`), `${JSON.stringify(meta, null, 2)}\n`);
   return meta;

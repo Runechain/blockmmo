@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>RUNECHAIN engine playground</title>
+<style>
+  :root{--ink:#0d1013;--panel:rgba(16,18,20,.86);--line:#4a463d;--txt:#eee4cb;--muted:#aaa08d;--gold:#d6a84f}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--txt);font:14px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges;background:#101619}
+  .hud{position:fixed;left:12px;top:12px;right:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;pointer-events:none;text-shadow:0 2px 0 #000}
+  .box{background:var(--panel);border:2px solid var(--line);box-shadow:0 0 0 2px #050607;padding:10px;max-width:min(460px,calc(100vw - 24px))}
+  .right{text-align:right;max-width:410px}
+  .title{color:var(--gold);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  .line{color:var(--muted);font-size:12px;margin-top:4px}
+  .logs{position:fixed;left:12px;bottom:12px;width:min(680px,calc(100vw - 24px));max-height:120px;overflow:hidden;pointer-events:none}
+  .log{background:rgba(9,10,11,.72);border-left:3px solid var(--gold);padding:4px 7px;margin-top:4px;color:#ded5c0;font-size:12px}
+  .bar{display:inline-block;width:118px;height:8px;background:#070809;border:1px solid #000;vertical-align:middle;margin-left:6px}
+  .bar i{display:block;height:100%;background:#b94444}
+  .bar.sta i{background:#53a66f}
+  button{pointer-events:auto;background:#1b1e21;border:2px solid #5f5238;color:var(--txt);font:inherit;padding:5px 8px;margin:5px 0 0 5px;cursor:pointer}
+  button:hover{border-color:var(--gold)}
+</style>
+</head>
+<body>
+<canvas id="c" width="960" height="540"></canvas>
+<div class="hud">
+  <div class="box">
+    <div class="title" id="modeTitle">Platformer</div>
+    <div class="line">1 platformer, 2 battlefield, arrows/WASD move, Space jump, J attack, C duel, F forfeit</div>
+    <div class="line">
+      HP <span class="bar"><i id="hpbar"></i></span>
+      ST <span class="bar sta"><i id="stbar"></i></span>
+    </div>
+    <button id="pbtn">Platformer</button><button id="bbtn">Battlefield</button><button id="cbtn">Challenge</button>
+  </div>
+  <div class="box right" id="stats"></div>
+</div>
+<div class="logs" id="logs"></div>
+
+<script type="application/json" id="platformer-level">
+{
+  "id":"a1-parish-road-playground",
+  "name":"Parish Road Receipts",
+  "width":1240,
+  "height":640,
+  "spawn":{"x":64,"y":438},
+  "physics":{"maxRun":220,"jump":455},
+  "platforms":[
+    {"id":"ground-a","x":0,"y":500,"w":360,"h":48,"type":"solid"},
+    {"id":"ground-b","x":360,"y":500,"w":320,"h":48,"type":"solid"},
+    {"id":"ground-c","x":680,"y":500,"w":560,"h":48,"type":"solid"},
+    {"id":"ledge-one-way","x":214,"y":396,"w":150,"h":12,"type":"oneWay"},
+    {"id":"receipt-post","x":420,"y":424,"w":78,"h":14,"type":"solid","vx":48,"minX":420,"maxX":590},
+    {"id":"bell-step","x":740,"y":414,"w":120,"h":16,"type":"solid"},
+    {"id":"boss-step","x":930,"y":392,"w":118,"h":16,"type":"solid"}
+  ],
+  "hazards":[
+    {"id":"mud","type":"slow","x":136,"y":486,"w":112,"h":14,"slow":0.45},
+    {"id":"wax","type":"sticky","x":382,"y":506,"w":120,"h":14,"slow":0.32,"staminaCost":1},
+    {"id":"bell-stun","type":"stun","x":755,"y":382,"w":42,"h":32,"stun":0.55},
+    {"id":"stamp-knock","type":"knockback","x":846,"y":430,"w":42,"h":26,"damage":2,"knockX":-250,"knockY":-210},
+    {"id":"ledger-pages","type":"damage","x":545,"y":500,"w":64,"h":20,"damage":2},
+    {"id":"falling-pages","type":"projectile","x":650,"y":110,"w":36,"h":32,"interval":1.1,"speedY":230,"damage":2}
+  ],
+  "bossTrigger":{"id":"gate-sexton-marrow","x":1010,"y":350,"w":88,"h":150,"lock":{"x":850,"y":250,"w":390,"h":300}},
+  "exit":{"id":"to-mempool-yard","x":1190,"y":430,"w":34,"h":70}
+}
+</script>
+
+<script type="application/json" id="battlefield-level">
+{
+  "id":"a1-mempool-yard-playground",
+  "name":"Mempool Yard",
+  "width":1500,
+  "height":920,
+  "spawn":{"x":230,"y":420},
+  "physics":{"speed":180},
+  "creatures":{
+    "hollow":{"hp":22,"speed":46,"damage":3,"reach":18,"radius":10,"color":"#7c3936"},
+    "hound":{"hp":16,"speed":74,"damage":2,"reach":16,"radius":9,"color":"#c66c34"},
+    "knight":{"hp":36,"speed":35,"damage":5,"reach":20,"radius":12,"color":"#8e969b"},
+    "default":{"hp":18,"speed":42,"damage":2,"reach":16,"radius":10,"color":"#8c7650"}
+  },
+  "zones":[
+    {"id":"west-tablets","x":120,"y":250,"w":380,"h":280,"regen":9,"clearFor":14},
+    {"id":"east-ledger","x":760,"y":220,"w":430,"h":320,"regen":7,"clearFor":16},
+    {"id":"south-well","x":500,"y":590,"w":420,"h":230,"regen":11,"clearFor":12}
+  ],
+  "waves":[
+    {"id":"first-debtors","at":0.4,"zoneId":"west-tablets","spawns":[{"type":"hollow","x":340,"y":330,"count":3},{"type":"hound","x":390,"y":455,"count":1}]},
+    {"id":"ledger-knights","at":5.5,"zoneId":"east-ledger","spawns":[{"type":"knight","x":870,"y":320,"count":2},{"type":"hollow","x":1030,"y":440,"count":3}]},
+    {"id":"well-surge","at":10.5,"zoneId":"south-well","spawns":[{"type":"hound","x":630,"y":690,"count":3},{"type":"hollow","x":760,"y":710,"count":3}]}
+  ]
+}
+</script>
+
+<script type="module">
+import {createModeManager} from './mode.js';
+import {createPlatformerMode} from './platformer.js';
+import {createBattlefieldMode} from './battlefield.js';
+
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const camera={x:0,y:0,w:canvas.width,h:canvas.height};
+const keys={}, pressed={}, released={};
+const logs=document.getElementById('logs'), stats=document.getElementById('stats'), modeTitle=document.getElementById('modeTitle');
+const hpbar=document.getElementById('hpbar'), stbar=document.getElementById('stbar');
+let activeName='platformer', last=performance.now();
+
+const platformerLevel=JSON.parse(document.getElementById('platformer-level').textContent);
+const battlefieldLevel=JSON.parse(document.getElementById('battlefield-level').textContent);
+const platformer=createPlatformerMode(platformerLevel);
+const battlefield=createBattlefieldMode(battlefieldLevel);
+const manager=createModeManager();
+
+function log(msg){
+  const line=document.createElement('div');
+  line.className='log'; line.textContent=String(msg);
+  logs.prepend(line);
+  while(logs.children.length>8)logs.lastChild.remove();
+}
+
+function makeNet(){
+  const handlers={};
+  function emit(type, msg){ for(const fn of handlers[type]||[])fn(msg); }
+  return {
+    id:'local-player',
+    on(type, fn){
+      (handlers[type]||(handlers[type]=[])).push(fn);
+      return ()=>handlers[type]=handlers[type].filter(x=>x!==fn);
+    },
+    send(msg){
+      log('net send '+msg.t);
+      if(msg.t==='rc:pvp:challenge'){
+        setTimeout(()=>emit('rc:pvp:accept', {t:'rc:pvp:accept', duelId:msg.duelId, from:'stub-peer', to:msg.from}), 420);
+        let tick=0;
+        const timer=setInterval(()=>{
+          tick++;
+          emit('rc:pvp:state', {t:'rc:pvp:state', duelId:msg.duelId, from:'stub-peer', to:msg.from, x:820+Math.sin(tick*.7)*38, y:360+Math.cos(tick*.5)*28, hp:80, stamina:70});
+          if(tick>16){ clearInterval(timer); emit('rc:pvp:result', {t:'rc:pvp:result', duelId:msg.duelId, from:'stub-peer', winner:msg.from, loser:'stub-peer', reason:'playground-sim'}); }
+        }, 220);
+      }
+      emit(msg.t, msg);
+    }
+  };
+}
+
+const api={
+  viewW:canvas.width,
+  viewH:canvas.height,
+  camera,
+  player:{
+    id:'local-player', name:'Recorded', x:0, y:0, vx:0, vy:0, dirX:1, dirY:0, moving:false,
+    hp:120, maxHp:120, sta:100, maxSta:100,
+    spendStamina(reason){
+      const cost=reason==='melee'?14:2;
+      if(this.sta<cost){ log('not enough stamina for '+reason); return false; }
+      this.sta=Math.max(0,this.sta-cost);
+      return true;
+    },
+    damage(amount){
+      if(!amount)return;
+      this.hp=Math.max(0,this.hp-amount);
+      log('damage '+amount);
+      if(this.hp<=0){ this.hp=this.maxHp; this.sta=this.maxSta; log('playground reset at Hearthlight'); }
+    },
+    regen(amount, dt){
+      this.hp=Math.min(this.maxHp,this.hp+amount*dt);
+      this.sta=Math.min(this.maxSta,this.sta+amount*dt*1.8);
+    },
+    getMeleeDamage(){ return 18; },
+    onKnockback(){ log('knockback'); }
+  },
+  assets:{ drawSheet(){ return false; } },
+  net:makeNet(),
+  chain:{},
+  log,
+  onBossTrigger(id){ log('boss trigger: '+id); },
+  onExit(id){ log('exit reached: '+id); },
+  onMeleeHit(target, data){ if(data.mode==='platformer')log('platformer melee hook'); },
+  onCreatureDefeated(c){ log('defeated '+c.key); },
+  onWaveSpawn(w){ log('wave '+w.id); },
+  onZoneCleared(id){ log('safe zone opened: '+id); },
+  onDuelAccepted(){ log('duel handshake complete'); },
+  onDuelResult(result){ log('duel result: '+result.reason); }
+};
+
+function setMode(name){
+  activeName=name;
+  api.player.hp=api.player.maxHp; api.player.sta=api.player.maxSta;
+  manager.setMode(name==='battlefield'?battlefield:platformer, ctx, api);
+  modeTitle.textContent=name==='battlefield'?'Battlefield':'Platformer';
+}
+
+document.getElementById('pbtn').onclick=()=>setMode('platformer');
+document.getElementById('bbtn').onclick=()=>setMode('battlefield');
+document.getElementById('cbtn').onclick=()=>battlefield.challengePeer('stub-peer');
+
+addEventListener('keydown', ev=>{
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(ev.code))ev.preventDefault();
+  if(!keys[ev.code])pressed[ev.code]=true;
+  keys[ev.code]=true;
+  if(ev.code==='Digit1')setMode('platformer');
+  if(ev.code==='Digit2')setMode('battlefield');
+});
+addEventListener('keyup', ev=>{ keys[ev.code]=false; released[ev.code]=true; });
+
+function consumeInput(){
+  return {
+    left:keys.ArrowLeft||keys.KeyA,
+    right:keys.ArrowRight||keys.KeyD,
+    up:keys.ArrowUp||keys.KeyW,
+    down:keys.ArrowDown||keys.KeyS,
+    jump:keys.Space||keys.KeyW||keys.ArrowUp,
+    jumpPressed:pressed.Space||pressed.KeyW||pressed.ArrowUp,
+    jumpReleased:released.Space||released.KeyW||released.ArrowUp,
+    attack:keys.KeyJ||keys.KeyZ,
+    attackPressed:pressed.KeyJ||pressed.KeyZ,
+    challenge:keys.KeyC,
+    challengePressed:pressed.KeyC,
+    forfeit:keys.KeyF,
+    forfeitPressed:pressed.KeyF,
+    peerId:'stub-peer'
+  };
+}
+
+function updateHud(){
+  hpbar.style.width=(api.player.hp/api.player.maxHp*100).toFixed(1)+'%';
+  stbar.style.width=(api.player.sta/api.player.maxSta*100).toFixed(1)+'%';
+  const mode=manager.getMode();
+  const s=mode&&mode.getState?mode.getState():{};
+  if(activeName==='platformer'){
+    stats.textContent='x '+Math.round(s.player?.x||0)+' y '+Math.round(s.player?.y||0)+' boss '+(s.bossFired?'triggered':'waiting');
+  }else{
+    const alive=(s.creatures||[]).filter(c=>!c.dead).length;
+    const duel=s.duel?s.duel.status:'none';
+    stats.textContent='waves '+(s.waves||[]).filter(w=>w.done).length+'/'+(s.waves||[]).length+' creatures '+alive+' duel '+duel;
+  }
+}
+
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000); last=now;
+  api.player.sta=Math.min(api.player.maxSta, api.player.sta+18*dt);
+  const input=consumeInput();
+  manager.update(dt, input);
+  manager.render(ctx, camera);
+  updateHud();
+  for(const k in pressed)delete pressed[k];
+  for(const k in released)delete released[k];
+  requestAnimationFrame(frame);
+}
+
+setMode('platformer');
+log('playground ready');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

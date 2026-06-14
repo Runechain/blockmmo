@@ -197,3 +197,51 @@ adapter exposes `net.send` and routes incoming messages to `net.on(type, handler
 The engines never mint, debit, credit, drop, price, or hardcode RUNE/Gold outcomes.
 They surface events (`onCreatureDefeated`, `onZoneCleared`, `onBossTrigger`,
 `onDuelResult`) and the host decides whether anything should happen economically.
+
+## Turn-based RPG battle mode (`turnbased.js`, PRD F2.4)
+
+`createTurnBasedMode(encounter)` returns the same `{enter, exit, update, render, getState}`
+interface. Two combatants, strict alternating turns, a Strike/Guard/Focus/Flee command menu.
+Reads the action-shape input (Up/Down navigate, confirm = attack/jump/confirm) with internal
+rising-edge detection, so the host stays source-agnostic (A3). Damage uses
+`api.player.getMeleeDamage('turnbased')`; Focus is gated by `api.player.spendStamina`.
+Resolution is surfaced through `api.onDuelResult(result)` and `api.onExit(id)`.
+
+```js
+{ id, name,
+  opponent:{ name, hp, attack, defense?, color? },   // scripted/AI foe (boss RPG phase)
+  peerId?, duelId? }                                  // set => resolved from an rc:pvp duel (F2.3)
+```
+
+PvP resolution (F2.3): the real-time battlefield initiates via `rc:pvp:challenge`/`accept`;
+on `api.onDuelAccepted`, the host swaps the mode manager into the turn-based mode with the
+peer as opponent. Server-authoritative turn arbitration over the live relay (Q-S2c) is open;
+the mode resolves locally for boss phases and the solo demo.
+
+## Segment sequencer (`sequencer.js`, PRD F3)
+
+`createSegmentSequencer(script)` sits ABOVE the mode manager (F3.2). A boss is a data-driven
+SCRIPT of ordered segments, each naming a mode + a level/encounter payload + a completion
+event. On completion the sequencer plays a brief diegetic transition beat (F3.3) and advances,
+telling the host to swap the active mode. Segment payloads reuse the platformer/battlefield/
+turnbased formats unchanged (F3.4).
+
+```js
+{ id, name, beat?,
+  segments:[ { mode:'platformer'|'battlefield'|'turnbased', name?, payload, beat?, beatText?,
+               complete:{ event } } ] }
+```
+
+Completion (Q-F3a) reuses the engines' seam events, forwarded by the host via
+`sequencer.segmentEvent(type, payload)`:
+
+- platformer  → `'boss'` (from `onBossTrigger`) or `'exit'` (from `onExit`)
+- battlefield → `'cleared'` (host detects all waves done + creatures dead)
+- turnbased   → `'duel'` (from `onDuelResult`)
+
+When the last segment completes the sequencer calls `api.onBossComplete(script, result)`.
+Carry-over (Q-F3b): HP/stamina persist across segments by default.
+
+Host integration: drive `sequencer.update(dt)` and, when `!sequencer.isBeat()`, the active
+sub-mode through the mode manager; render `sequencer.render(ctx, camera)` during a beat,
+otherwise the sub-mode (see the wiring in `index.html`, debug key `K`).

@@ -108,6 +108,8 @@ Open the PNGs in `assets/pixel/` with Pixelorama or any pixel editor. `tiles.png
 16px terrain atlas; generated monster sheets have four frames in one row: idle, walk,
 attack/cast, and hurt/death. `player-directions.png` is imported from the PixelLab
 eight-direction character export with `node scripts/import_pixellab_character.js`.
+New PixelLab art (heroes, NPCs, monsters, bosses, props, tilesets) imports through
+`node scripts/import_assets.js <type>` — see [`scripts/ASSETS.md`](scripts/ASSETS.md).
 Re-run `node scripts/generate_pixel_assets.js` only when you want to regenerate the
 deterministic starter monster/terrain assets; hand-edited art should be kept as the
 source of truth once approved.

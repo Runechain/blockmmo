@@ -1470,7 +1470,6 @@ function updateEnemies(dt){
 }
 
 function loop(now){
-  requestAnimationFrame(loop);
   const dt=Math.min(0.05,(now-last)/1000); last=now;
   if(started){
     if(!player.dead) updatePlayer(dt); else player.av.drive(0,dt,{dead:true});
@@ -1517,7 +1516,15 @@ function loop(now){
   }
   renderer.render(scene,camera);
 }
-requestAnimationFrame(loop);
+// Drive with rAF while visible; fall back to a timer when the page is hidden/backgrounded
+// (rAF pauses while hidden, which would otherwise freeze the realm — and embedded previews
+// run hidden). `frame` is the only thing that schedules rAF, so no callback pile-up builds
+// up while hidden; the document.hidden guard stops the timer from double-stepping when visible.
+function frame(now){ requestAnimationFrame(frame); loop(now); }
+requestAnimationFrame(frame);
+setInterval(()=>{ if(document.hidden) loop(performance.now()); }, 33);
+// coming back from a background tab: reset the clock so dt doesn't spike (it's also clamped)
+addEventListener('visibilitychange',()=>{ if(!document.hidden) last=performance.now(); });
 
 addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();

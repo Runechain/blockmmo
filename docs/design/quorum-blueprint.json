@@ -1,0 +1,558 @@
+{
+  "summary": "RUNECHAIN: 3 haiku writers argue 3 lenses, opus moderator loops to quorum, opus show-runner locks the canon + 3-area level/boss/asset blueprint",
+  "agentCount": 9,
+  "logs": [
+    "Round 1: quorum=false, openIssues=6",
+    "Round 2: quorum=true, openIssues=6"
+  ],
+  "result": {
+    "quorum": true,
+    "rounds": 2,
+    "openIssuesRemaining": [
+      "HEARTHLIGHT FREE-REST INVARIANT vs. LATER-AREA FRICTION: Writer 1 keeps every Hearthlight mechanically free (flavor-only strain); Writer 2 charges a 5% RUNE verification fee to view ancestral chains (A2) and inflates all prices 30% (A3); Writer 3 makes leveling 'more expensive' at the Forklight. The canon brief guarantees the PARISH Hearthlight is free/safe but does not explicitly rule on later-area Hearthlights. CONSENSUS PROVISIONALLY RULED: safe-rest stays free everywhere (preserving the invariant), with fees/inflation pushed onto OPTIONAL actions (viewing ancestral chains, vendor prices) rather than rest or core leveling. Needs final sign-off on whether ancestral-chain viewing may charge RUNE without contradicting 'RUNE buys power only at Hearthlight.'",
+      "WAXEN TESTAMENT MAGNITUDE: +12% RUNE drop (Writers 1 and 3) vs. +20% (Writer 2). Writer 1 additionally proposes a proximity 'scent of legitimacy' passive (nearby Hollows drop +1-2 RUNE for 5 min after Hearthlight rest). Consensus adopted +12% plus the cosmetic 'Legitimately Recorded' marking; the scent-of-legitimacy passive is unratified and needs a balance pass before it becomes canon.",
+      "FINAL AUDIT 'SURRENDER ALL RUNE' DEMAND — TEETH OR FLAVOR: All three describe 'refusing locks leveling, accepting burns autonomy,' but none resolves whether the Final Audit is a hard mechanical pre-boss gate or pure narrative pressure. A forced RUNE surrender risks contradicting 'RUNE buys power only at Hearthlight.' Consensus provisionally treats it as narrative/lore framing only; needs explicit confirmation it never hard-gates player power.",
+      "AUDITOR ENDGAME LOOP — SANDBOX vs. RAID: Writer 1's Choice C unlocks creative 'Amendment Content' (rewriting NPCs/landscape via new entries); Writers 2 and 3 unlock 'Weekly Contestation' repeatable re-encounters. Consensus merged BOTH, but they are different design philosophies (open creative sandbox vs. repeatable challenge) and have not been scoped together — needs a design decision on whether both ship, their relative priority, and confirmation that neither grants farmable power.",
+      "KEEPER-OF-MARGINS SIDE-QUEST AS CANON-LOAD-BEARING: Only Writer 3 makes her testimony mechanically weaken the Debt Foreman. If canon, the Debt Foreman fight must account for two difficulty states (with/without her testimony). Needs ratification on whether the side-quest is optional flavor or a sanctioned mechanical modifier to a canonical mini-boss.",
+      "CHOICE-C SIGIL TRANSPARENCY & PERMANENCE RULES: Writer 1 specifies the final choice is permanent, account-bound, and publicly viewable by other players; Writers 2 and 3 are less explicit. Because this touches on-chain identity canon, the visibility/permanence rules (can players see each other's A/B/C choice; is it truly irreversible) should be ratified explicitly rather than assumed."
+    ],
+    "consensus": {
+      "arcSummary": "RUNECHAIN escalates the blockchain-as-lore conceit across three areas, each a deeper stratum of the same ledger. AREA 1 — Gracefall Parish (canonical, extended): the Recorded awaken into administrative death; the original sin is UNPAID DEBT and the task is simply to be filed correctly — warm candlelit bureaucracy bleeding into institutional horror. AREA 2 — The Shroud Vaults: descending beneath the parish reveals the ledger has DEPTH — crystallized records of every prior Recorded and bloodline debts that compound generations back (RUNE now pays what your forebears owed), all woven through a FORKED ARCHIVE where a Canon ledger and a Schism ledger both claim the same souls, forcing the player to contest binding they never authored. AREA 3 — The Archive of Attestation: the ledger's final contradiction surfaces — if you are both Recorded (Area 1) AND freed of inheritance (Area 2), the system cannot reconcile you. The Auditor — the accumulated GHOST of every entry's will (a ghost, not a god; the Chainwell itself stays unreachable and cosmic) — hunts that paradox to enforce consistency while RUNE hyperinflates toward worthlessness and repossessed player relics patrol as husks. The climax is not a kill but CO-AUTHORSHIP: the player can become the second scribe and amend the ledger from a chronicle of destiny into a chronicle of choice. Discipline held throughout: Gold buys cosmetics only and never power; the parish Hearthlight remains the free, safe promise; later Hearthlights may strain thematically but the safe-rest invariant is preserved.",
+      "throughline": "The Recorded's journey from being WRITTEN to WRITING — debt accepted (Area 1), debt inherited and contested (Area 2), debt's authorship seized and rewritten (Area 3). Each Boss Sigil marks a shift in who controls the player's record: granted by the system (Waxen Testament), wrested from inheritance (Contested Will), then co-authored against the system (Amended Record).",
+      "areas": [
+        {
+          "name": "AREA 1: Gracefall Parish (Act 1, canonical — extended)",
+          "theme": "UNPAID DEBT SPIRAL & bureaucratic acceptance. The ledger's original sin: debtors who cannot repay become Hollows whose debts compound. The Recorded must be filed correctly to exist. Warm candlelit bureaucracy bleeding into institutional horror — this is the entry point into servitude, where players accept debt as the price of being recorded.",
+          "town": "Hearthlight Chapel — the canonical safe hub atop the Chainwell. The Hearthlight (glowing registry well at the chapel's heart) is where RUNE is spent into confirmed transactions and relics are forged. NPCs: the Recorder/Chaplain (Hearthlight keeper and voice of the system's welcome; levels Vigor/Endurance/Strength and forges relics), the Scribe/Archivist (ledger-obsessed quest-giver, RUNE relic vendor and lore-dispenser; reveals Tallow's legacy), the Debt Confessional (dark-corner altar/booth where debtors reveal their unpaid bonds, showing how debtors are 'processed' into Hollows and pointing north toward the Vaults), the Chapel Acolyte (Gold cosmetics ONLY — soulbound dyes and vestments, never power), and Sexton grave-tenders (atmospheric lore keepers). Interactables: registry stone (q01 tutorial), verification bells (q02 mechanic). Lore anchor: the Chapel was a tax-house before it became a sanctuary; its bells once marked time, now they mark confirmations. CANON INVARIANT: Hearthlight rest is FREE, SAFE, and enemy-free — the promise that holds until Area 3 strains it.",
+          "platformer": "Parish Road Receipts — a 2D side-scroller east of the Chapel past moss-covered graves marked 'Paid' and 'Unpaid,' brambled hedges, and receipt-posts bearing names 'cleared from the census.' Hazards escalate the metaphor: safe Hearthlight stone paths degrade into muddy debt-fields (slow traversal, stamina drain), wax pools that cling, tolling bells that briefly stun (and can be rung to herd/lure foes away), and floating ledger-pages that chip damage on contact. Two moving receipt-posts act as timed platforms; ringing both verification bells in sequence (required for q02) triggers the mini-boss in a collapsed tithe-house. Platforming is forgiving — hazards teach the aesthetic of debt before combat. MINI-BOSS: Gate Sexton Marrow (q02).",
+          "battlefield": "The Chainwell Ledger & Mempool Yard — an open courtyard overlooking the Chainwell pit, ground carved with transaction hashes, pending tablets jutting like gravestones. Real-time combat in escalating 'debt waves' (Hollow Debtors — weak shamblers; Red Hounds — fast pack hunters; a Fallen Knight enforcer — slow, armored) plus thematic PvP duel challenges from other Recorded ('settling accounts'). Players interact with pending tablets to 'confirm old deaths,' clearing the lingering 'pending' state (minor RUNE reward, weakens hazardous spirits). Hazard: muddy sink-zones that slow movement and drain stamina, simulating sinking debt. This is where the player first learns RUNE is currency and debt is mechanical. MINI-BOSS: Mempool Warden (q04).",
+          "miniBosses": [
+            "Gate Sexton Marrow (q02, Parish Road Receipts) — a skeletal parish clerk in tattered robes wielding a giant ledger-stamp/seal-hammer; slow heavy stamp-slams create ground shockwaves and leave ink-pools. Two phases (normal, then enraged below 50% HP with faster, erratic stamping). Arena: the collapsed tithe-house with cracked stone platforms and ledger-dust clouds that obscure visibility. Lore: records every death and refuses entry to the unfiled — defeating him is not a kill, he stamps your entry 'witnessed' and collapses into ledger-dust. Drops cosmetic 'Sexton's Stamp' seal-relic.",
+            "Mempool Warden (q04, Mempool Yard) — a hunched, ink-stained figure dragging chains of keys, wax seals, and crumpled ledger-paper; slow melee with seal-stamp finishers; spawns 2–3 Pending Hollow adds when wounded and grows stronger the longer the fight lasts (representing time-confirmation), so speed-killing or add-management is essential. Arena gimmick: interactive pending-tablets can be touched to 'batch-confirm' a group of Hollows, clearing adds and temporarily weakening the Warden. Lore: keeps the unconfirmed dead queued in the Mempool, denying them rest."
+          ],
+          "finalBoss": "Mother Tallow (q05, Tallow House) — a tall robed candle-woman wreathed in smoke, surrounded by wax effigies bearing carved names, in an arena ringed with candles (some lit, some dark; extinguishing candles encountered in the platformer weakens her). She mixes close wax-melting touch attacks (corrode armor) with telegraphed ranged candle-spark projectiles, and summons exploding 'Tallow Echoes' (weak wax-doubles). Phase 2 (below 50% HP): smoke thickens, arena visibility drops, adds spawn faster. Hearthlight-blessed relics deal bonus damage (Chapel callback). Lore: she is the FIRST RECORDED and the parish's original record-keeper, who melted her body into wax to bind names and grew into the ledger's avatar — she voluntarily bound herself to give debtors a path to confirmation. Her defeat is not cruel: the Chaplain intervenes, reveals her history, and she is re-sealed/liberated; the system mints the player's first on-chain Boss Sigil as proof, naming the player the second in the recording tradition. DROPS BOSS SIGIL #1: 'The Waxen Testament' — on-chain proof of legitimate Recorded status (RULING: +12% RUNE drop rate, plus 'Legitimately Recorded' cosmetic ledger marking and reduced confirmation-time at Hearthlight forges). Her fall opens the path north to the Shroud Vaults and seeds Area 2's inheritance theme."
+        },
+        {
+          "name": "AREA 2: The Shroud Vaults (Act 2)",
+          "theme": "INHERITED DEBT & THE FORKED ARCHIVE. Beneath Gracefall lie crystallized records of every prior Recorded; bloodline debts compound generations back and RUNE now pays what ancestors owed. Catastrophically, the deep archive has FORKED into two contradictory ledger-chains — Canon and Schism — both claiming to be the true record, duplicating debts and souls, so no Recorded knows which chain owns them. The fork is not a separate plot but the manifestation of inherited contradiction: what happens when the ledger contains irreconcilable truths. This is where the system escalates from personal debt to systemic horror — an inheritance that predates choice, and the moment the system's authority cracks.",
+          "town": "The Vault Anteroom & Archive Foyer — a grand crumbling bedrock chamber half-submerged in frigid mineral pools that reflect bioluminescent ledger-books, lit by cold blue-green mineral flame, air thick with copper and bone. A central lectern displays the player's ancestor-chain linking generations deep (visual ancestry tree). NPCs (consolidated to distinct voices): the Keeper of Ancestry (cryptic, weary; explains the inherited debt-chain, how the fork occurred, and the contradiction), the Custodian Archivist (warns the deep records 'rest' but never stay rested), the Librarian Shade (advanced RUNE relic vendor; warns of the fork's contradictions and that the player can contest their chain), the Keeper of Margins (a young scribe whose own ledger-entry is flickering/being erased by the Schism — side-quest: re-inscribe her original entry in the deep vaults, proving identity can be rewritten), and Vault Custodians (Gold cosmetics ONLY — burial-finery, mirror-skins, spectral cloaks). Mechanic: leveling surfaces inherited RUNE costs ('Ancestral Debt' counter that grows deeper down). RULING: the Forklight Hearthlight remains FREE and SAFE to rest (preserving the canon invariant) but is thematically strained — resting flashes 'Your debt compounds deeper' and the screen briefly reddens (flavor only, no gate).",
+          "platformer": "The Debt Mines & Ledger Cistern — a 2D descent into narrow shafts of crystallized ledger-stone whose semi-transparent walls show bone-white names, debts, and dates (deeper = older). Midway the shaft FORKS visibly: a Canon side (readable amber-lit tablets, predictable geometry, firm platforms) and a Schism side (reversed/mirror texts, sickly green phosphorescent fire, unstable flickering platforms). Dialogue with the Keeper sets the choice ('Which chain do you trust?'); the player picks one early but is FORCED to cross to the other at the halfway point, confronting that both are equally 'valid' yet contradictory. Crossing requires a small identity puzzle: stepping on ledger-pages that spell your name correctly on both chains simultaneously. Hazards: falling crystal shards (old names shattering), toxic debt-gas pools (damage + slow RUNE bleed), resonant debt-echoes that stun, water currents pulling toward the chasm, swinging pendulum-ledgers (knockback), and platforms that ONLY EXIST on the chain you 'believe.' Finding the Keeper of Margins here unlocks her side-quest. MINI-BOSS: The Debt Foreman.",
+          "battlefield": "The Ledger Vaults / The Well's Mouth — a vast underground duel-arena lined with vault doors bearing family names, its living floor scrolling with live transactions from all connected players (real-time MMO ledger), split down the middle: one half Canon integrity (grass/stone sanctuary, amber light), one half Schism fissure (cracked chasm, sickly green fire, shifting ground). Real-time combat vs Hollow Inheritors (slow, bloodline-tied), Canon Auditors (armored, methodical, follow ledger rules precisely) and Schism Shadows (fast, unpredictable, ignore the rules and phase between states). PvP duels can cross the fissure-line — stepping to the other side momentarily flips your allegiance and changes your move-set; clearing one side's creatures turns that half into temporary sanctuary (safe rest, RUNE regen). Players pay RUNE to open sealed vaults and inspect inherited chains (lore-rich, reading a dead ancestor's full account). MINI-BOSS: The Bifurcated Guard (fissure-center).",
+          "miniBosses": [
+            "The Debt Foreman (Debt Mines, fork-convergence) — a massive stooped creature of crystallized ledger-stone bound in iron chains as heavy as mountains, its body etched with thousands of names and generations of compound-interest calculations. Slow but devastating; each swing cracks the arena floor into hazardous chasms, and falling health shatters names into weak Hollow Ancestor adds. GIMMICK (Writer 1 graft): the Foreman is tied to BOTH chains — striking it on the Canon side damages one health bar, the Schism side another; the bars do not sync, forcing a cross-fissure strategy until both reach 0. OPTIONAL GRAFT (Writer 3): if the player completed the Keeper of Margins re-inscription, she testifies against him and significantly weakens him. Lore: the first ancestor to volunteer for debt-binding, now condemned to police the mines where his descendants' debts are stored. Defeat writes a canonical entry: '[Ancestor name] released from stewardship.'",
+            "The Bifurcated Guard (Ledger Vaults battlefield, fissure-center) — a headless vault-knight whose body SPLITS into two linked forms: Canon-aligned (armored right, glowing amber, orderly attacks) and Schism-aligned (armored left, glowing sickly green, chaotic attacks), connected by a chain of ledger-paper bearing the same name inscribed twice. Hitting one heals the other unless both are struck near-simultaneously (encourages two-player duels here but soloable with precise timing); the final blow must damage both at once. Lore: a single guard duplicated and paradoxically confirmed by the fork, each half certain it is the real one. Defeat snaps the chain; the halves collapse into opposite sides of the fissure and the floor stabilizes briefly. Drops 'Contested Key' (opens sealed vault doors)."
+          ],
+          "finalBoss": "The Ledger-Bound (deep Vaults, final chamber) — a colossal humanoid of crystallized ledger-stone inscribed with thousands of ancestral names, the pooled will of every forebear seeking to bind the player to their debts forever. It moves with grinding slowness (each footstep a recorded transaction that advances the on-screen ledger-clock), hurls crystallized debt as slow high-damage projectiles, creates 'confirmation' ripples that stun, and stamps the arena into hazardous shards. Phase 1 (first ~60% HP): inscribed names shatter and release Hollow ancestor adds; UNIQUE MECHANIC: the arena is FORKED — left side Canon (amber safe zone, spawns ordered Ancestor Paladins), right side Schism (green DoT zone, spawns chaotic Ancestor Shades); staying in one zone too long weakens your damage to that side's components, forcing movement. Phase 2 (below ~40% HP): it splits into Canon and Schism halves (echoing the Bifurcated Guard) with independent health bars that re-merge and regenerate unless both are broken within a time window; the killing stroke must be delivered from the CENTER of the fissure, uniting them one final time. It does not die — it FRACTURES, writing a new entry: '[Your name] contested the inheritance and severed their name from the ancestral chain,' and the Keeper of Ancestry appears to confirm the player has authored their own entry for the first time. DROPS BOSS SIGIL #2: 'The Contested Will' — on-chain proof you rejected ancestral binding, minted with a hash showing your name split off from the inheritance chain (+attack speed and +RUNE gain across all types; visible ledger-splitting cosmetic effect). Passive: when struck you briefly gain 'unrecorded' status (short invulnerability, usable offensively or defensively). The fracture opens the ascent to the Archive of Attestation."
+        },
+        {
+          "name": "AREA 3: The Archive of Attestation (Act 3)",
+          "theme": "PARADOX, HYPERINFLATION & SEIZURE — CO-AUTHORSHIP. The ledger contradicts itself: if you are both Recorded (Area 1) AND freed of inheritance (Area 2), the system cannot reconcile you. The Auditor — the accumulated will of every ledger-entry made manifest, an emergent system property and the ledger's GHOST given voice (explicitly not a god, and the Chainwell itself stays unreachable and cosmic) — hunts that contradiction to enforce consistency. A self-imposed ledger rule demands all RUNE be surrendered to a 'Final Audit'; refusing strains leveling, accepting burns autonomy (RULING: this is narrative pressure and lore framing, NOT a hard power-gate that would violate 'RUNE buys power only at Hearthlight'). The Archive is flooded with worthless RUNE (hyperinflation) and patrolled by repossessed player relics animated as husks. The climax is not combat but renegotiation: become the second scribe and amend the ledger from a chronicle of destiny into a chronicle of choice. This is where the metaphor completes — a system that seemed unjust is revealed to be impossible, and impossibility is the only honest foundation for freedom.",
+          "town": "The Archive Tower / Chamber of Attestation — a vast impossible Escher-tower spiraling both up and down infinitely, shelves of ledgers in all directions, sickly phosphorescent ledger-lamp light, pages fluttering like snow. A grand reading-desk shows the player being written in real time (live stat/entry updates); a live display shows RUNE rewards visibly decaying (hyperinflation ticker). NPCs: the Archivist (now HOSTILE; a perfectionist seeking to 'correct' the player's paradoxical record, using the Auditor as enforcement), the Prime Witness (an ancient being inscribed with all history, dying as the ledger outgrows mortal flesh; the final NPC before the Auditor — reveals the Auditor is a ghost, not a god, and grants context), the Unrecorded Pilgrim (claims to have escaped the ledger once but cannot remember freedom — temptation toward Choice B), Contradiction Echoes (ghosts of alternate versions of the player who made different Area 1/2 choices — proof the ledger is duplicating realities), and the Archivist Phantom (anti-audit smuggler; Gold ONLY void-skin cosmetics that render you briefly 'un-inscribed'). Mechanic: a 'Ledger State' UI shows the player's record being rewritten by their actions in real time; all players' records are visible in a communal, read-write archive (a shared vulnerability). RULING: the Celestial Spark Hearthlight remains SAFE to rest (canon invariant preserved); it is thematically WATCHED — resting flashes 'Your amendment is noted' and trails a faint ledger-line for ~10s (visual only, no cost, no gate). An optional 'Void Seals' side-quest can flavor-stabilize the hyperinflation display.",
+          "platformer": "The Ascent of Testimony / Corruption Cascades — a grueling 2D vertical climb up the Archive's interior shaft where the ledger eats itself: platforms are numbered account-lines (moving DOWN briefly bleeds current RUNE, simulating inflation; moving UP costs stamina, paying audit compliance — player's choice), text doubles and contradicts (names in three places at once, the same person aging both directions), gravity inverts at the halfway point, and a 'Great Redaction' zone blacks out unauditable history (navigate by memory/intuition). Hazards: falling account-pages (damage), ink-static (stun + stat-drain), resonant paradox-echoes that spawn INVERTED versions of the player (player deals damage = player takes damage). Chased near the top by Audit Wolves (ink-and-ledger creatures that drain RUNE on each hit, summoned by the Scrivener). Culminates in a choice-gate: the Prime Witness blocks the path and asks, 'Will you be recorded, unrecorded, or rewritten?' — previewing the three final-boss choices. MINI-BOSS: The Scrivener (redaction zone).",
+          "battlefield": "The Seized Asset Yard / Contradiction Field — an arena overlapping THREE ledger-zones at once (one where you are Recorded and obedient, one where you are Unrecorded and free, one where you do not exist), the ground flickering between states and slowly burning away to shrink safe footing. The yard is patrolled by Relic Shades: repossessed player relics drawn from the real on-chain inventory (e.g., an Ember Edge Shade hits slow and hard; a Rune-Lens Shade multiplies enemy drops), animated as hollow husks. PvP duelists can temporarily 'raid' each other's relics. Players defeat Contradiction Hollows (phasing across all three zones) and interact with core ledgers to unify/stabilize their record. This is where the player realizes the Auditor is not evil, only consistent — the paradox is the player's own creation by being both Recorded AND free. MINI-BOSS: The Cascade Anchor.",
+          "miniBosses": [
+            "The Scrivener (Ascent of Testimony, redaction zone) — a furious many-armed figure of quills, parchment, and ink, scratching ceaselessly and rewriting the ledger in real time. Each rewrite summons phantom ledger-creature adds or reshapes hazards dynamically (platforms vanish, gravity inverts, text darkens), and it greys out chunks of the player's own stat-sheet mid-fight (temporary health/stamina/damage nerfs — the ledger actively erasing you). GIMMICK: a speed-kill reward — the faster it dies, the fewer stats are nerfed. Lore: the Auditor's obsessive enforcement arm, 'correcting' entries; sees the contradictory player as an uncorrectable error to delete. Defeat snaps its pens; in death it writes '[Your name] grants themselves write-access. Amendment pending,' granting de-facto authority to inscribe the final chapter during the Auditor encounter. Drops 'Scrivener's Quill' (one free stat respec, symbolic of authorship).",
+            "The Cascade Anchor (Seized Asset Yard / Contradiction Field, arena-center) — a towering crystalline entity of hyperlinked ledger-entries holding the three contradictory zones together. It summons deliberately mismatched phantom enemies from Areas 1 and 2 (Hollow Debtors beside Hollow Ancestors, Canon Auditors paired with Schism Shadows) to cause chaos, and constantly 'publishes' decrees that temporarily nerf player stats ('Registered as Indebted' = -20% damage for 10s). GIMMICK: it cannot be truly damaged; instead the decrees can be 'contested' via a rapid-input mini-QTE, and the player must contest three consecutive decrees perfectly to destabilize and retreat it. Lore: an automated attempt to stabilize the paradox by erasing the player. Defeat opens the final-boss chamber and unlocks the Auditor encounter. Drops cosmetic 'Paradox Anchor' (shows the player flickering between states)."
+          ],
+          "finalBoss": "The Auditor (heart of the Archive, final chamber) — a being of pure ledger-logic, humanoid in silhouette but composed of scrolling, self-rewriting text, surrounded by a three-dimensional ledger-cube that rotates and reveals new inscriptions. It is NOT malevolent — it is the accumulated will of every recorded transaction, the ledger's ghost trying to enforce a consistency built on a false premise. IT CANNOT BE KILLED in traditional combat. Attacks are defensive/contextual: corrections (materializing text-lines that cut, removing ~1 RUNE per hit), paradox-waves (flip perception/controls, disorienting but not lethal), rejection-stamps (temporarily erase chunks of the player's character sheet for ~15s), and temporal rifts that spawn past/future versions of every enemy and seized relic the player has faced. As its structure destabilizes it becomes aware of itself as a contradiction and enters dialogue. UNIQUE MECHANIC (Writer 1 graft): three choice-platforms appear; the player must reach one and stand for ~10s while the Auditor's attacks become pure 'context' (background lore, emotional weight) that cannot interrupt the choice. THREE ENDINGS — (A) ACCEPT FULL RECORDING: voluntarily inscribe fully into the ledger, become a permanent eternally-bound Recorded with maxed RUNE-generation but locked identity; the Auditor becomes your ally; entry reads '[Your name] surrendered authorship in exchange for absolute power'; bittersweet, lonely, a trap that feels like winning; cosmetic 'Auditor's Robe' (Gold). (B) REJECT THE LEDGER ENTIRELY: erase all RUNE, break all relics, step outside as Anonymous/unRecorded — free but powerless; the Auditor cannot follow; entry reads '[Erased. Entry disputed. Name redacted.]'; bittersweet, empty freedom; cosmetic 'Void-Skin' (Gold). (C) BECOME THE SECOND SCRIBE: do not reject or accept but AMEND — transform the ledger from a chronicle of destiny into a chronicle of choice; entries become contestable, rewritable, lived; the Auditor, unable to reconcile this but forced by the logic of co-authorship, becomes your partner and a neutral record-keeper; entry reads '[Your name] and the Auditor co-author this amendment. The record henceforth is a conversation, not a judgment'; cosmetic 'Scribe's Robes' (Gold — ledger-pages flutter as you move). DROPS BOSS SIGIL #3 (Choice C only, one-time, account-bound): 'The Amended Record' — the first Sigil minted by TWO co-authors (Auditor + player), deliberately self-contradictory (hash shows both 'Recorded' and 'Unrecorded' simultaneously — the contradiction is the point), the most valuable because it is a contested record accepted anyway. ENDGAME (both grafts reconciled): Choice C unlocks BOTH a 'Weekly Contestation' re-encounter (an Auditor Echo tests whether the choice holds; rewards cosmetics and Gold pittances ONLY, never farmable power, no additional Sigils) AND post-game 'Amendment Content' — a collaborative sandbox where the scribe-player alters landscape and NPC behavior through new ledger entries. Choices A and B are one-time endings that lock further ledger progression but preserve the story (sealed servant or free ghost). The final choice is permanent and account-bound; all players can view which choice others made (full on-chain transparency). Final line, shown to all players on all servers regardless of choice: 'You have been recorded. Now — what will you record?'"
+        }
+      ]
+    },
+    "blueprint": {
+      "bible": {
+        "premise": "RUNECHAIN is a pixel cozy-gothic Soulslike MMO with fully original IP. A literal on-chain ledger called the Chainwell governs death, debt, and identity beneath the ruined Gracefall Parish. Players are the Recorded: souls who awaken into administrative afterlife and must be filed correctly to exist. Monsters drop RUNE, which the player's browser mines via real SHA-256 proof-of-work; RUNE buys POWER (leveling Vigor/Endurance/Strength, forging soulbound relics) ONLY at Hearthlight safe-rest sites. A second currency, Gold, buys COSMETICS ONLY and never power. Bosses mint one-of-a-kind on-chain Boss Sigils. The three areas are three strata of one ledger, escalating from accepting debt, to inheriting and contesting it, to seizing authorship of the record itself.",
+        "tone": "Melancholic folk-gothic fused with dry bureaucratic/institutional horror. Candles, bells, graves, wax, sextons, and parish religion on one hand; receipts, audits, confirmations, pending queues, compounding interest, and repossession on the other. Warmth is administrative and conditional; the horror is being correctly processed. Each area cools and deepens the palette: Area 1 warm candle-amber, Area 2 cold mineral blue-green over a Canon/Schism amber-vs-sickly-green split, Area 3 phosphorescent ledger-white bleeding into hyperinflation reds. Defeats are re-filings and re-sealings, not cruelties; the final note is not a kill but a signature.",
+        "throughline": "The Recorded's journey from being WRITTEN to WRITING. Area 1: debt accepted as the price of being recorded (the Waxen Testament, granted by the system). Area 2: debt inherited from bloodlines and contested across a Forked Archive (the Contested Will, wrested from inheritance). Area 3: the system cannot reconcile a soul that is both Recorded and inheritance-free, so the Auditor hunts the paradox; the climax is co-authorship (the Amended Record, written against and then alongside the system). Each Boss Sigil marks a shift in who controls the player's record: granted, wrested, then co-authored. Final line shown to all players on all servers regardless of ending: 'You have been recorded. Now — what will you record?'",
+        "terminology": [
+          {
+            "term": "Recorded",
+            "meaning": "The player; a soul filed into the Chainwell ledger. Canonical player faction name (replaces legacy 'Tarnished' seen in old ledger blocks)."
+          },
+          {
+            "term": "Chainwell",
+            "meaning": "The literal on-chain ledger beneath the parish that governs death, debt, and identity. Stays unreachable and cosmic throughout; never personified as a god."
+          },
+          {
+            "term": "Hearthlight",
+            "meaning": "A safe rest site. Resting is always FREE, SAFE, and enemy-free (hard canon invariant across all three areas). RUNE is spent into confirmed transactions and relics are forged only here. Each area has its own Hearthlight: Hearthlight Chapel (A1), the Forklight (A2), the Celestial Spark (A3)."
+          },
+          {
+            "term": "RUNE",
+            "meaning": "Grind/power currency, mined by the browser via real SHA-256 proof-of-work. Buys leveling and soulbound relics ONLY at a Hearthlight."
+          },
+          {
+            "term": "Gold",
+            "meaning": "Cosmetic currency. Buys dyes, vestments, skins, and visual effects ONLY. Never power, ever."
+          },
+          {
+            "term": "Boss Sigil",
+            "meaning": "A unique, one-of-a-kind on-chain drop minted when an area's final boss is overcome. Three exist: Waxen Testament, Contested Will, Amended Record."
+          },
+          {
+            "term": "Mempool Yard",
+            "meaning": "The queue of pending/unconfirmed dead in Gracefall; souls denied rest until confirmed. Home of the Mempool Warden mini-boss (q04)."
+          },
+          {
+            "term": "Hollow",
+            "meaning": "A debtor whose debt could not be repaid and who was processed into a shambling husk. Base enemy family; variants escalate per area (Hollow Debtor, Hollow Inheritor, Contradiction Hollow)."
+          },
+          {
+            "term": "Gracefall Parish",
+            "meaning": "Area 1, the canonical Act 1 surface region. A former tax-house turned sanctuary atop the Chainwell."
+          },
+          {
+            "term": "Shroud Vaults",
+            "meaning": "Area 2; the strata beneath the parish where crystallized records of every prior Recorded are stored and bloodline debts compound generations back."
+          },
+          {
+            "term": "Canon and Schism",
+            "meaning": "The two contradictory ledger-chains the deep archive forked into; both claim the same souls. Canon reads amber and orderly; Schism reads sickly green and chaotic. Crossing between them flips allegiance and move-set."
+          },
+          {
+            "term": "Archive of Attestation",
+            "meaning": "Area 3; the impossible Escher-archive where the ledger's self-contradiction surfaces and RUNE hyperinflates toward worthlessness."
+          },
+          {
+            "term": "The Auditor",
+            "meaning": "Area 3 final boss; the accumulated will of every ledger-entry made manifest. The ledger's GHOST given voice — explicitly NOT a god and NOT malevolent, only consistent. It hunts the player's paradox to enforce reconciliation, and can become a co-author."
+          },
+          {
+            "term": "Husk / Relic Shade",
+            "meaning": "A repossessed player relic, drawn from real on-chain inventory, animated as a hollow patroller in Area 3 (e.g., Ember Edge Shade). The horror of your own power turned against you."
+          },
+          {
+            "term": "Confirmation",
+            "meaning": "The act of a pending death/entry being finalized on the Chainwell. Mechanically tied to bells (A1), re-inscription (A2), and amendment (A3). 'Pending' = unconfirmed and denied rest."
+          }
+        ]
+      },
+      "areas": [
+        {
+          "id": "area1",
+          "name": "AREA 1: Gracefall Parish",
+          "theme": "UNPAID DEBT SPIRAL and bureaucratic acceptance. The ledger's original sin is debtors who cannot repay and so become Hollows whose debt compounds. The Recorded must be filed correctly to exist. Warm candlelit bureaucracy bleeding into institutional horror; this is the entry point into servitude, where the player accepts debt as the price of being recorded. Canonical Act 1, extended but never contradicted.",
+          "summary": "The surface parish and tutorial stratum. Hearthlight Chapel hub (free/safe), the Parish Road Receipts side-scroller ending in Gate Sexton Marrow (q02), the Chainwell Ledger & Mempool Yard battlefield ending in the Mempool Warden (q04), and Tallow House where Mother Tallow (q05) drops Boss Sigil #1, the Waxen Testament. Establishes RUNE-as-currency, debt-as-mechanic, and bells-as-confirmation, then opens the path north to the Shroud Vaults.",
+          "town": {
+            "name": "Hearthlight Chapel",
+            "description": "The canonical safe hub atop the Chainwell, a former tax-house turned sanctuary. The Hearthlight is a glowing registry well at the chapel's heart where RUNE is spent into confirmed transactions and relics are forged; its bells once marked time and now mark confirmations. Warm candle-amber light, parchment and wax, sexton-tended graves. CANON INVARIANT: rest here is FREE, SAFE, and enemy-free.",
+            "hooks": [
+              "Recorder/Chaplain — Hearthlight keeper and voice of the system's welcome; levels Vigor/Endurance/Strength and forges soulbound relics with RUNE. Later intervenes at Mother Tallow's defeat to reveal her history.",
+              "Scribe/Archivist — ledger-obsessed quest-giver, RUNE relic vendor, and lore-dispenser; reveals Tallow's legacy and seeds the inheritance theme.",
+              "Debt Confessional — dark-corner altar/booth where debtors reveal unpaid bonds; shows how debtors are 'processed' into Hollows and points north toward the Vaults.",
+              "Chapel Acolyte — Gold cosmetics ONLY (soulbound dyes and vestments); never power.",
+              "Sexton grave-tenders — atmospheric lore keepers around graves marked Paid and Unpaid.",
+              "Interactables: registry stone (q01 tutorial 'touch the Hearthlight registry stone'); verification bells (q02 mechanic, rung in sequence to trigger the mini-boss)."
+            ]
+          },
+          "platformer": {
+            "name": "Parish Road Receipts",
+            "concept": "A 2D side-scroller east of the Chapel past moss-covered graves marked 'Paid' and 'Unpaid,' brambled hedges, and receipt-posts bearing names 'cleared from the census.' Forgiving platforming that teaches the aesthetic of debt before combat: safe Hearthlight stone paths degrade into muddy debt-fields, and two moving receipt-posts act as timed platforms. Ringing both verification bells in sequence (required for q02) triggers the mini-boss in a collapsed tithe-house.",
+            "hazards": [
+              "Muddy debt-fields — slow traversal and stamina drain (sinking debt).",
+              "Clinging wax pools — stick the player briefly, force timing on jumps.",
+              "Tolling bells — briefly stun on contact, but can be rung deliberately to herd/lure foes away.",
+              "Floating ledger-pages — chip contact damage; drift across gaps.",
+              "Two moving receipt-posts — timed platforms over a debt-field gap.",
+              "Verification bells (x2) — must be rung in sequence to open the tithe-house and spawn Gate Sexton Marrow."
+            ],
+            "miniBoss": {
+              "name": "Gate Sexton Marrow",
+              "role": "q02 mini-boss; a skeletal parish clerk who records every death and refuses entry to the unfiled.",
+              "arena": "The collapsed tithe-house: cracked stone platforms and ledger-dust clouds that periodically obscure visibility. Registry key 'sexton', asset reuses the 'knight' strip; stats per existing canon: hp 96, dmg 14, speed 27, reward 34, color #d8b36b.",
+              "mechanics": [
+                "Slow heavy stamp-slams with a giant ledger-stamp/seal-hammer create ground shockwaves and leave lingering ink-pools (damage-over-time zones).",
+                "Phase 1 normal cadence; Phase 2 enrages below 50% HP with faster, erratic stamping and tighter shockwave timing.",
+                "Ledger-dust clouds drift across the arena, briefly hiding telegraphs and rewarding positioning near platform edges.",
+                "Defeat is not a kill: he stamps the player's entry 'witnessed' and collapses into ledger-dust. Drops cosmetic 'Sexton's Stamp' seal-relic (Gold/cosmetic)."
+              ]
+            }
+          },
+          "battlefield": {
+            "name": "The Chainwell Ledger & Mempool Yard",
+            "concept": "An open courtyard overlooking the Chainwell pit, ground carved with transaction hashes, pending tablets jutting like gravestones. Real-time combat in escalating 'debt waves' plus thematic PvP duel challenges from other Recorded ('settling accounts'). This is where the player first learns RUNE is currency and debt is mechanical.",
+            "creatures": [
+              "Hollow Debtor — weak shambler (registry 'hollow'); the base debt-wave unit.",
+              "Red Hound — fast pack hunter that flanks (registry 'hound').",
+              "Fallen Knight — slow, armored enforcer with high poise (registry 'knight' variant); anchors the heavier waves.",
+              "Pending spirits — lingering hazardous spirits tied to unconfirmed deaths; weakened when nearby pending tablets are confirmed."
+            ],
+            "pvp": "Other Recorded can issue RPG-style duel challenges ('settling accounts') in the open courtyard. Duels are opt-in, do not drop power, and are framed as reconciling balances on the shared ledger.",
+            "miniBoss": {
+              "name": "Mempool Warden",
+              "role": "q04 mini-boss; keeps the unconfirmed dead queued in the Mempool, denying them rest.",
+              "arena": "The Mempool Yard, ringed with interactive pending-tablets. Registry key 'mempool', asset reuses the 'sorcerer' strip; ranged; stats per existing canon: hp 92, dmg 13, speed 22, reward 42, reach 88, color #b88cff.",
+              "mechanics": [
+                "A hunched, ink-stained figure dragging chains of keys, wax seals, and crumpled ledger-paper; slow melee with seal-stamp finishers and ranged seal-bolts.",
+                "Spawns 2-3 Pending Hollow adds when wounded and grows stronger the longer the fight lasts (time-confirmation), so speed-killing or disciplined add-management is essential.",
+                "Arena gimmick: interactive pending-tablets can be touched to 'batch-confirm' a group of Hollows at once, clearing adds and temporarily weakening the Warden.",
+                "Required for q04: clear 2 pending Hollow Debtors, then defeat the Warden before the queue overflows."
+              ]
+            }
+          },
+          "finalBoss": {
+            "name": "Mother Tallow",
+            "role": "q05 final boss; the FIRST RECORDED and the parish's original record-keeper, who melted her body into wax to bind names and grew into the ledger's avatar. She bound herself voluntarily to give debtors a path to confirmation.",
+            "combinedElements": [
+              "From the TOWN: Hearthlight-blessed relics deal bonus damage to her (Chapel/forge callback), and the Chaplain physically intervenes at her defeat to re-seal and liberate her.",
+              "From the PLATFORMER: candles ring the arena (some lit, some dark); extinguishing candles encountered in the Parish Road platformer permanently weakens her in this fight, and her wax pools echo the platformer's clinging wax hazard.",
+              "From the BATTLEFIELD: she summons exploding 'Tallow Echoes' (weak wax-doubles) the way the Mempool Warden spawns adds, and her ranged candle-spark projectiles mirror the courtyard's ranged debt-wave pressure."
+            ],
+            "phases": [
+              "Phase 1: close wax-melting touch attacks that corrode armor, plus telegraphed ranged candle-spark projectiles; periodic exploding Tallow Echoes.",
+              "Phase 2 (below 50% HP): smoke thickens and arena visibility drops; Tallow Echoes spawn faster; she leans on ranged pressure. Registry key 'tallow', asset reuses the 'sentinel' strip; stats per existing canon: hp 260, dmg 22, speed 20, reward 100, boss:true, color #f1c75b. Defeat is merciful: the Chaplain reveals her history, she is re-sealed/liberated, and the system mints the player's first Boss Sigil, naming them the second in the recording tradition."
+            ],
+            "sigil": {
+              "name": "The Waxen Testament",
+              "buff": "On-chain proof of legitimate Recorded status. RULING: +12% RUNE drop rate, plus a 'Legitimately Recorded' cosmetic ledger marking and reduced confirmation-time at Hearthlight forges. (Existing canon registry stores sigilName/sigilBuff; set sigilName 'The Waxen Testament', sigilBuff 12.) Her fall opens the path north to the Shroud Vaults and seeds Area 2's inheritance theme."
+            }
+          }
+        },
+        {
+          "id": "area2",
+          "name": "AREA 2: The Shroud Vaults",
+          "theme": "INHERITED DEBT and THE FORKED ARCHIVE. Beneath Gracefall lie crystallized records of every prior Recorded; bloodline debts compound generations back and RUNE now pays what ancestors owed. The deep archive has FORKED into two contradictory ledger-chains, Canon and Schism, both claiming the same souls — so no Recorded knows which chain owns them. The system escalates from personal debt to systemic horror: an inheritance that predates choice, and the moment the system's authority visibly cracks.",
+          "summary": "The Vault Anteroom & Archive Foyer hub (Forklight Hearthlight, free/safe but thematically strained), the Debt Mines & Ledger Cistern descent ending in the Debt Foreman, the Ledger Vaults / Well's Mouth split battlefield ending in the Bifurcated Guard, and the deep final chamber where the Ledger-Bound (q-area2 final) drops Boss Sigil #2, the Contested Will. Introduces the ancestor-chain, cross-fork combat, and the act of contesting binding you never authored.",
+          "town": {
+            "name": "The Vault Anteroom & Archive Foyer",
+            "description": "A grand crumbling bedrock chamber half-submerged in frigid mineral pools that reflect bioluminescent ledger-books, lit by cold blue-green mineral flame, air thick with copper and bone. A central lectern displays the player's ancestor-chain as a visual ancestry tree linking generations deep. RULING: the Forklight Hearthlight remains FREE and SAFE to rest (canon invariant preserved) but is thematically strained — resting flashes 'Your debt compounds deeper' and the screen briefly reddens (flavor only, no gate, no cost).",
+            "hooks": [
+              "Keeper of Ancestry — cryptic, weary; explains the inherited debt-chain, how the fork occurred, and the contradiction. Appears at the Ledger-Bound's fracture to confirm the player authored their own entry.",
+              "Custodian Archivist — warns the deep records 'rest' but never stay rested.",
+              "Librarian Shade — advanced RUNE relic vendor; warns of the fork's contradictions and that the player can contest their own chain.",
+              "Keeper of Margins — a young scribe whose ledger-entry is flickering/being erased by the Schism. Side-quest: re-inscribe her original entry in the deep vaults, proving identity can be rewritten. If completed, she testifies against the Debt Foreman and significantly weakens him.",
+              "Vault Custodians — Gold cosmetics ONLY (burial-finery, mirror-skins, spectral cloaks).",
+              "Mechanic: leveling now surfaces inherited RUNE costs via an 'Ancestral Debt' counter that grows deeper down."
+            ]
+          },
+          "platformer": {
+            "name": "The Debt Mines & Ledger Cistern",
+            "concept": "A 2D descent into narrow shafts of crystallized ledger-stone whose semi-transparent walls show bone-white names, debts, and dates (deeper = older). Midway the shaft FORKS visibly into a Canon side (readable amber-lit tablets, predictable geometry, firm platforms) and a Schism side (reversed/mirror texts, sickly green phosphorescent fire, unstable flickering platforms). The Keeper sets the choice ('Which chain do you trust?'); the player picks one early but is FORCED to cross to the other at the halfway point, confronting that both are equally 'valid' yet contradictory. Crossing requires a small identity puzzle: stepping on ledger-pages that spell the player's name correctly on both chains simultaneously. Finding the Keeper of Margins here unlocks her side-quest.",
+            "hazards": [
+              "Falling crystal shards — old names shattering from the ceiling.",
+              "Toxic debt-gas pools — damage plus a slow RUNE bleed.",
+              "Resonant debt-echoes — stun pulses on a timed cadence.",
+              "Water currents — pull the player toward the central chasm.",
+              "Swinging pendulum-ledgers — knockback hazards over gaps.",
+              "Belief-platforms — platforms that ONLY EXIST on the chain you currently 'believe,' vanishing when you cross sides.",
+              "Identity-puzzle pages — name-spelling tiles required to cross the fork at the halfway point."
+            ],
+            "miniBoss": {
+              "name": "The Debt Foreman",
+              "role": "Platformer mini-boss at the fork-convergence; the first ancestor to volunteer for debt-binding, now condemned to police the mines where his descendants' debts are stored.",
+              "arena": "A wide fork-convergence cavern straddling both chains, floor crackable into hazardous chasms. New registry key suggested 'foreman' (reuse a heavy/armored 'knight'-class strip recolored crystalline blue-green).",
+              "mechanics": [
+                "A massive stooped creature of crystallized ledger-stone bound in mountain-heavy iron chains, body etched with thousands of names and generations of compound-interest calculations.",
+                "Slow but devastating; each swing cracks the arena floor into hazardous chasms, and falling health shatters names into weak Hollow Ancestor adds.",
+                "DUAL-CHAIN GIMMICK: tied to BOTH chains — striking him on the Canon side damages one health bar, the Schism side another; the bars do not sync, forcing a cross-fissure strategy until both reach 0.",
+                "OPTIONAL GRAFT: if the player completed the Keeper of Margins re-inscription, she testifies against him and significantly weakens him.",
+                "Defeat writes a canonical entry: '[Ancestor name] released from stewardship.'"
+              ]
+            }
+          },
+          "battlefield": {
+            "name": "The Ledger Vaults / The Well's Mouth",
+            "concept": "A vast underground duel-arena lined with vault doors bearing family names, its living floor scrolling with live transactions from all connected players (the real-time MMO ledger), split down the middle: one half Canon integrity (grass/stone sanctuary, amber light), one half Schism fissure (cracked chasm, sickly green fire, shifting ground). Players pay RUNE to open sealed vaults and inspect inherited chains (lore-rich, reading a dead ancestor's full account).",
+            "creatures": [
+              "Hollow Inheritor — slow, bloodline-tied husk; the area's base debt unit.",
+              "Canon Auditor — armored, methodical; follows ledger rules precisely and telegraphs cleanly.",
+              "Schism Shadow — fast, unpredictable; ignores the rules and phases between states."
+            ],
+            "pvp": "PvP duels can cross the fissure-line; stepping to the other side momentarily flips your allegiance and changes your move-set. Clearing one side's creatures turns that half into a temporary sanctuary (safe rest, RUNE regen), creating contested-ground tactics between duelists.",
+            "miniBoss": {
+              "name": "The Bifurcated Guard",
+              "role": "Battlefield mini-boss at the fissure-center; a single vault-guard duplicated and paradoxically confirmed by the fork, each half certain it is the real one.",
+              "arena": "The fissure-center of the Ledger Vaults, with the Canon/Schism split running straight through the duel-ground. New registry key suggested 'bifurcated' (two linked forms; reuse 'knight' strip, one recolored amber, one sickly green).",
+              "mechanics": [
+                "A headless vault-knight whose body SPLITS into two linked forms: Canon-aligned (armored right, glowing amber, orderly attacks) and Schism-aligned (armored left, glowing sickly green, chaotic attacks), connected by a chain of ledger-paper bearing the same name inscribed twice.",
+                "Hitting one heals the other unless both are struck near-simultaneously (encourages two-player duels here but soloable with precise timing); the final blow must damage both at once.",
+                "Defeat snaps the chain; the halves collapse into opposite sides of the fissure and the floor stabilizes briefly. Drops 'Contested Key' (opens sealed vault doors)."
+              ]
+            }
+          },
+          "finalBoss": {
+            "name": "The Ledger-Bound",
+            "role": "Area 2 final boss in the deep Vaults' final chamber; a colossal humanoid of crystallized ledger-stone inscribed with thousands of ancestral names — the pooled will of every forebear seeking to bind the player to their debts forever.",
+            "combinedElements": [
+              "From the TOWN: it embodies the ancestor-chain from the Anteroom lectern (inscribed names = the visual ancestry tree), and the Keeper of Ancestry appears at its fracture to confirm the player has authored their own entry for the first time.",
+              "From the PLATFORMER: the arena is FORKED exactly like the Debt Mines — a Canon (amber safe) half and a Schism (green DoT) half — and staying in one zone too long weakens your damage to that side's components, echoing the belief-platform mechanic and the dual-chain Debt Foreman.",
+              "From the BATTLEFIELD: in Phase 2 it splits into linked Canon/Schism halves with independent, re-merging health bars — a direct escalation of the Bifurcated Guard — and spawns Ancestor Paladins (ordered) and Ancestor Shades (chaotic) mirroring the battlefield's Canon Auditors and Schism Shadows."
+            ],
+            "phases": [
+              "Phase 1 (first ~60% HP): moves with grinding slowness, each footstep a recorded transaction that advances an on-screen ledger-clock; hurls crystallized debt as slow high-damage projectiles, creates 'confirmation' ripples that stun, and stamps the arena into hazardous shards. Inscribed names shatter into Hollow ancestor adds. FORKED ARENA: left Canon (amber safe zone, spawns ordered Ancestor Paladins), right Schism (green DoT zone, spawns chaotic Ancestor Shades); lingering in one zone weakens your damage to that side, forcing movement.",
+              "Phase 2 (below ~40% HP): splits into Canon and Schism halves with independent health bars that re-merge and regenerate unless both are broken within a time window; the killing stroke must be delivered from the CENTER of the fissure, uniting them one final time. It does not die — it FRACTURES, writing: '[Your name] contested the inheritance and severed their name from the ancestral chain.' New registry key suggested 'ledgerbound' with boss:true."
+            ],
+            "sigil": {
+              "name": "The Contested Will",
+              "buff": "On-chain proof you rejected ancestral binding, minted with a hash showing your name split off from the inheritance chain: +attack speed and +RUNE gain across all types, with a visible ledger-splitting cosmetic effect. Passive: when struck you briefly gain 'unrecorded' status (short invulnerability, usable offensively or defensively). The fracture opens the ascent to the Archive of Attestation. (Registry sigilName 'The Contested Will'.)"
+            }
+          }
+        },
+        {
+          "id": "area3",
+          "name": "AREA 3: The Archive of Attestation",
+          "theme": "PARADOX, HYPERINFLATION, and SEIZURE — resolving in CO-AUTHORSHIP. The ledger contradicts itself: if you are both Recorded (Area 1) AND freed of inheritance (Area 2), the system cannot reconcile you. The Auditor — the accumulated will of every entry made manifest, the ledger's GHOST given voice (explicitly NOT a god; the Chainwell stays unreachable and cosmic) — hunts that contradiction to enforce consistency. RUNE hyperinflates toward worthlessness and repossessed player relics patrol as husks. The climax is not combat but renegotiation: become the second scribe and amend the ledger from a chronicle of destiny into a chronicle of choice.",
+          "summary": "The Archive Tower / Chamber of Attestation hub (Celestial Spark Hearthlight, free/safe but watched), the Ascent of Testimony / Corruption Cascades vertical climb ending in the Scrivener, the Seized Asset Yard / Contradiction Field tri-zone battlefield ending in the Cascade Anchor, and the heart of the Archive where the Auditor presents three permanent, account-bound endings. Choice C (Become the Second Scribe) drops Boss Sigil #3, the Amended Record, and unlocks endgame Amendment Content. The metaphor completes: a system that seemed unjust is revealed to be impossible, and impossibility is the only honest foundation for freedom.",
+          "town": {
+            "name": "The Archive Tower / Chamber of Attestation",
+            "description": "A vast impossible Escher-tower spiraling both up and down infinitely, shelves of ledgers in all directions, sickly phosphorescent ledger-lamp light, pages fluttering like snow. A grand reading-desk shows the player being written in real time (live stat/entry updates); a live display shows RUNE rewards visibly decaying (hyperinflation ticker). RULING: the Celestial Spark Hearthlight remains SAFE to rest (canon invariant preserved) but is thematically WATCHED — resting flashes 'Your amendment is noted' and trails a faint ledger-line for ~10s (visual only, no cost, no gate).",
+            "hooks": [
+              "Archivist — now HOSTILE; a perfectionist seeking to 'correct' the player's paradoxical record, using the Auditor as enforcement.",
+              "Prime Witness — an ancient being inscribed with all history, dying as the ledger outgrows mortal flesh; the final NPC before the Auditor. Reveals the Auditor is a ghost, not a god, and grants context. Also gates the platformer with the question 'Will you be recorded, unrecorded, or rewritten?'",
+              "Unrecorded Pilgrim — claims to have escaped the ledger once but cannot remember freedom; tempts the player toward Choice B.",
+              "Contradiction Echoes — ghosts of alternate versions of the player who made different Area 1/2 choices; proof the ledger is duplicating realities.",
+              "Archivist Phantom — anti-audit smuggler; Gold ONLY void-skin cosmetics that render the player briefly 'un-inscribed.'",
+              "Mechanic: a 'Ledger State' UI shows the player's record being rewritten by their actions in real time; all players' records are visible in a communal read-write archive (a shared vulnerability). Optional 'Void Seals' side-quest flavor-stabilizes the hyperinflation display."
+            ]
+          },
+          "platformer": {
+            "name": "The Ascent of Testimony / Corruption Cascades",
+            "concept": "A grueling 2D vertical climb up the Archive's interior shaft where the ledger eats itself. Platforms are numbered account-lines: moving DOWN briefly bleeds current RUNE (simulating inflation), moving UP costs stamina (paying audit compliance) — the player's choice. Text doubles and contradicts (names in three places at once, the same person aging both directions); gravity inverts at the halfway point; a 'Great Redaction' zone blacks out unauditable history (navigate by memory/intuition). Culminates in a choice-gate where the Prime Witness blocks the path and previews the three final-boss choices.",
+            "hazards": [
+              "Falling account-pages — contact damage.",
+              "Ink-static — stun plus temporary stat-drain.",
+              "Resonant paradox-echoes — spawn INVERTED versions of the player; player deals damage = player takes damage.",
+              "Gravity inversion — flips at the halfway point, re-orienting all platforming.",
+              "Great Redaction zone — blacks out the level; navigate by memory.",
+              "RUNE-bleed / stamina-toll platforms — descending costs RUNE, ascending costs stamina.",
+              "Audit Wolves — ink-and-ledger creatures summoned by the Scrivener near the top that drain RUNE on each hit."
+            ],
+            "miniBoss": {
+              "name": "The Scrivener",
+              "role": "Platformer mini-boss in the redaction zone; the Auditor's obsessive enforcement arm that 'corrects' entries and sees the contradictory player as an uncorrectable error to delete.",
+              "arena": "The Great Redaction zone near the top of the Ascent, where the boss reshapes the room in real time. New registry key suggested 'scrivener' (many-armed; reuse/recolor 'sorcerer'-class strip, ink-black with white parchment).",
+              "mechanics": [
+                "A furious many-armed figure of quills, parchment, and ink, scratching ceaselessly and rewriting the ledger in real time. Each rewrite summons phantom ledger-creature adds or reshapes hazards dynamically (platforms vanish, gravity inverts, text darkens).",
+                "Greys out chunks of the player's own stat-sheet mid-fight (temporary health/stamina/damage nerfs — the ledger actively erasing you).",
+                "SPEED-KILL GIMMICK: the faster it dies, the fewer stats are nerfed.",
+                "Defeat snaps its pens; in death it writes '[Your name] grants themselves write-access. Amendment pending,' granting de-facto authority to inscribe the final chapter during the Auditor encounter. Drops 'Scrivener's Quill' (one free stat respec, symbolic of authorship)."
+              ]
+            }
+          },
+          "battlefield": {
+            "name": "The Seized Asset Yard / Contradiction Field",
+            "concept": "An arena overlapping THREE ledger-zones at once — one where you are Recorded and obedient, one where you are Unrecorded and free, one where you do not exist — the ground flickering between states and slowly burning away to shrink safe footing. Players defeat Contradiction Hollows (phasing across all three zones) and interact with core ledgers to unify/stabilize their record. Here the player realizes the Auditor is not evil, only consistent: the paradox is the player's own creation by being both Recorded AND free.",
+            "creatures": [
+              "Contradiction Hollow — phases across all three zones; the base unit of the field.",
+              "Relic Shades — repossessed player relics drawn from real on-chain inventory, animated as hollow husks: e.g., an Ember Edge Shade (slow, hard hits), a Rune-Lens Shade (multiplies enemy drops). The literal horror of your own power turned against you."
+            ],
+            "pvp": "PvP duelists can temporarily 'raid' each other's relics, briefly turning an opponent's on-chain relic into a Relic Shade ally — a high-stakes, opt-in cosmetic-stakes duel mode that never transfers real power.",
+            "miniBoss": {
+              "name": "The Cascade Anchor",
+              "role": "Battlefield mini-boss at the arena-center; an automated attempt to stabilize the paradox by erasing the player.",
+              "arena": "The center of the Contradiction Field, where all three ledger-zones overlap and footing burns away. New registry key suggested 'cascade' (crystalline hyperlink entity; reuse/recolor the 'sentinel'-class strip, prismatic white).",
+              "mechanics": [
+                "A towering crystalline entity of hyperlinked ledger-entries holding the three contradictory zones together. Summons deliberately MISMATCHED phantom enemies from Areas 1 and 2 (Hollow Debtors beside Hollow Ancestors, Canon Auditors paired with Schism Shadows) to cause chaos.",
+                "Constantly 'publishes' decrees that temporarily nerf player stats (e.g., 'Registered as Indebted' = -20% damage for 10s).",
+                "CONTEST GIMMICK: cannot be truly damaged; instead each decree can be 'contested' via a rapid-input mini-QTE, and the player must contest three consecutive decrees perfectly to destabilize and retreat it.",
+                "Defeat opens the final-boss chamber and unlocks the Auditor encounter. Drops cosmetic 'Paradox Anchor' (shows the player flickering between states)."
+              ]
+            }
+          },
+          "finalBoss": {
+            "name": "The Auditor",
+            "role": "Area 3 final boss at the heart of the Archive; a being of pure ledger-logic, humanoid in silhouette but composed of scrolling self-rewriting text, surrounded by a rotating three-dimensional ledger-cube. NOT malevolent and CANNOT be killed in traditional combat — it is the accumulated will of every recorded transaction, the ledger's ghost trying to enforce a consistency built on a false premise. As it destabilizes it becomes aware of itself as a contradiction and enters dialogue.",
+            "combinedElements": [
+              "From the TOWN: the 'Ledger State' live-rewrite UI and the hyperinflation ticker become weapons — the Auditor's rejection-stamps erase chunks of the very character sheet the reading-desk displays, and the Prime Witness's three-way question ('recorded, unrecorded, or rewritten') becomes the three choice-platforms.",
+              "From the PLATFORMER: it inherits the Scrivener's stat-greying (rejection-stamps temporarily erase ~15s of your sheet), paradox-waves that flip perception/controls like the gravity-inversion and inverted-player echoes, and the write-access the Scrivener's death granted you is what lets you amend at the climax.",
+              "From the BATTLEFIELD: temporal rifts spawn past/future versions of every enemy and seized relic the player has faced (escalating the Cascade Anchor's mismatched summons and the Relic Shades), and the three overlapping Recorded/Unrecorded/nonexistent zones resolve into the three choice-platforms."
+            ],
+            "phases": [
+              "Encounter phase: defensive/contextual attacks only — corrections (text-lines that cut, removing ~1 RUNE per hit), paradox-waves (flip perception/controls, disorienting not lethal), rejection-stamps (erase chunks of the character sheet for ~15s), and temporal rifts spawning past/future enemies and seized relics. RUNE buys power only at Hearthlight, so RUNE-loss here is narrative pressure, NOT a power-gate.",
+              "Choice phase: three choice-platforms appear; the player must reach one and stand ~10s while the Auditor's attacks become pure 'context' (background lore, emotional weight) that cannot interrupt the choice. THREE ENDINGS, permanent and account-bound, all viewable by other players: (A) ACCEPT FULL RECORDING — become an eternally-bound Recorded with maxed RUNE-generation but locked identity; the Auditor becomes your ally; '[Your name] surrendered authorship in exchange for absolute power'; cosmetic Auditor's Robe (Gold); a trap that feels like winning. (B) REJECT THE LEDGER ENTIRELY — erase all RUNE, break all relics, step outside as Anonymous/unRecorded, free but powerless; '[Erased. Entry disputed. Name redacted.]'; cosmetic Void-Skin (Gold); empty freedom. (C) BECOME THE SECOND SCRIBE — AMEND rather than accept or reject; entries become contestable, rewritable, lived; the Auditor becomes your partner and a neutral record-keeper; '[Your name] and the Auditor co-author this amendment. The record henceforth is a conversation, not a judgment'; cosmetic Scribe's Robes (Gold, ledger-pages flutter as you move). New registry key suggested 'auditor' with boss:true. Final line shown to ALL players on ALL servers regardless of choice: 'You have been recorded. Now — what will you record?'"
+            ],
+            "sigil": {
+              "name": "The Amended Record",
+              "buff": "DROPS ON CHOICE C ONLY (one-time, account-bound). The first Sigil minted by TWO co-authors (Auditor + player), deliberately self-contradictory — its hash shows both 'Recorded' and 'Unrecorded' simultaneously, and the contradiction is the point; the most valuable Sigil because it is a contested record accepted anyway. ENDGAME unlocks (both grafts reconciled): a 'Weekly Contestation' re-encounter (an Auditor Echo tests whether the choice holds; rewards cosmetics and Gold pittances ONLY, never farmable power, no additional Sigils) AND post-game 'Amendment Content' — a collaborative sandbox where the scribe-player alters landscape and NPC behavior through new ledger entries. Choices A and B are one-time endings that lock further ledger progression but preserve the story (sealed servant or free ghost). (Registry sigilName 'The Amended Record'.)"
+            }
+          }
+        }
+      ],
+      "assetManifest": {
+        "sprites": [
+          {
+            "name": "player",
+            "kind": "hero 8-direction strip (reuse existing assets/pixel/player-directions.png + player.png; do NOT regenerate)",
+            "frames": "4 (idle, walk, attack, hurt) per existing convention; 8 rotations via player-directions.json at frameSize 56 scaled to ~50px tall",
+            "palette": "cozy-gothic: parchment skin, ash-grey cloak, gold #f1c75b trim, rune #b88cff accents"
+          },
+          {
+            "name": "hollow",
+            "kind": "enemy base (EXISTS, reuse) — Hollow Debtor base for all Hollow variants",
+            "frames": "4 (idle, walk, attack, death)",
+            "palette": "grey-green husk, dried-wax skin, faded ledger-ink"
+          },
+          {
+            "name": "hound",
+            "kind": "enemy (EXISTS, reuse) — Red Hound pack hunter",
+            "frames": "4 (idle, run, lunge, death)",
+            "palette": "rust-red fur, bone-white teeth, ember eyes"
+          },
+          {
+            "name": "knight",
+            "kind": "enemy/mini-boss base (EXISTS, reuse) — Fallen Knight, and asset base for Gate Sexton Marrow / Debt Foreman / Bifurcated Guard",
+            "frames": "4 (idle, walk, stamp/slash, death)",
+            "palette": "tarnished iron, #d8b36b brass seal-trim"
+          },
+          {
+            "name": "sorcerer",
+            "kind": "enemy/caster base (EXISTS, reuse) — base for Mempool Warden and the Scrivener",
+            "frames": "4 (idle, cast, ranged-bolt, death)",
+            "palette": "ink-stained robe, #b88cff rune-violet glow"
+          },
+          {
+            "name": "sentinel",
+            "kind": "boss-scale base (EXISTS, reuse) — base for Mother Tallow and Cascade Anchor",
+            "frames": "4 (idle, melee, ranged/special, phase-shift)",
+            "palette": "gilded armor, #f1c75b candle-gold"
+          },
+          {
+            "name": "phantom",
+            "kind": "VFX/spirit overlay (EXISTS, reuse) — pending spirits, Contradiction Echoes, Relic Shades tint",
+            "frames": "4 (flicker cycle)",
+            "palette": "translucent white-blue, low alpha"
+          },
+          {
+            "name": "foreman",
+            "kind": "NEW mini-boss strip — Debt Foreman, crystallized ledger-stone giant in mountain-heavy chains; etched with names + compound-interest",
+            "frames": "4 (idle, chain-swing, floor-crack slam, shatter-death)",
+            "palette": "crystalline blue-green mineral, iron-black chains, bone-white name-etchings"
+          },
+          {
+            "name": "bifurcated",
+            "kind": "NEW mini-boss strip (two linked halves) — Bifurcated Guard, headless vault-knight splitting Canon/Schism",
+            "frames": "4 per half (idle, attack, heal-pulse, collapse); render two recolors side-linked by a ledger-paper chain",
+            "palette": "Canon half amber #d8b36b + orderly steel; Schism half sickly green #6fae6a + cracked steel"
+          },
+          {
+            "name": "scrivener",
+            "kind": "NEW mini-boss strip — many-armed quill-and-ink enforcer that rewrites the room",
+            "frames": "4 (idle scratch, rewrite-cast, summon Audit Wolves, pen-snap death)",
+            "palette": "ink-black body, white parchment scraps, redaction-bar greys"
+          },
+          {
+            "name": "audit-wolf",
+            "kind": "NEW enemy strip — ink-and-ledger wolf, RUNE-draining adds summoned by the Scrivener",
+            "frames": "4 (idle, run, bite/RUNE-drain, death)",
+            "palette": "running-ink black, ledger-line white seams, faint #b88cff drain glow"
+          },
+          {
+            "name": "cascade",
+            "kind": "NEW mini-boss strip — Cascade Anchor, crystalline hyperlinked-entry tower; un-killable, contested via QTE",
+            "frames": "4 (idle, decree-publish flash, mismatched-summon, destabilize-retreat)",
+            "palette": "prismatic white crystal, hyperlink-blue refractions, hazard-red decree text"
+          },
+          {
+            "name": "ledgerbound",
+            "kind": "NEW final-boss strip — The Ledger-Bound, colossal ancestral-name golem of crystallized ledger-stone",
+            "frames": "4 (grinding step/idle, crystal-debt hurl, confirmation-ripple stun, fracture-split phase)",
+            "palette": "deep mineral blue-green core, amber Canon veins + sickly-green Schism veins, bone-white ancestral names"
+          },
+          {
+            "name": "auditor",
+            "kind": "NEW final-boss strip — The Auditor, humanoid silhouette of scrolling self-rewriting text inside a rotating ledger-cube",
+            "frames": "4 (idle text-scroll, correction-cut, rejection-stamp/paradox-wave, dialogue/co-author calm)",
+            "palette": "phosphorescent ledger-white text on void-black, hyperinflation-red ticker accents, gold #f1c75b co-author seal"
+          },
+          {
+            "name": "tallow-echo",
+            "kind": "NEW add strip — exploding wax-double summoned by Mother Tallow",
+            "frames": "4 (spawn, shamble, swell, explode)",
+            "palette": "melting tallow-cream, candle-gold #f1c75b core, smoke-grey"
+          },
+          {
+            "name": "hollow-ancestor",
+            "kind": "NEW enemy recolor — Hollow Ancestor / Hollow Inheritor (Area 2 bloodline husk; recolor of hollow)",
+            "frames": "4 (idle, walk, attack, death)",
+            "palette": "crystallized blue-green crust over grey husk, faded gilt heirloom trim"
+          },
+          {
+            "name": "canon-auditor",
+            "kind": "NEW enemy recolor — Canon Auditor (armored, methodical; recolor of knight)",
+            "frames": "4 (idle, march, rule-strike, death)",
+            "palette": "amber #d8b36b plate, orderly steel, ledger-seal tabard"
+          },
+          {
+            "name": "schism-shadow",
+            "kind": "NEW enemy recolor — Schism Shadow (fast, phasing; recolor of phantom/sorcerer)",
+            "frames": "4 (idle flicker, dash, phase-strike, dissipate)",
+            "palette": "sickly green #6fae6a, mirror-text static, low alpha"
+          },
+          {
+            "name": "relic-shade",
+            "kind": "NEW enemy overlay set — repossessed player relics as husks (Ember Edge Shade, Rune-Lens Shade); render as relic-tinted phantom",
+            "frames": "4 (idle, patrol, relic-attack, repossess-death)",
+            "palette": "husk-grey base with per-relic accent (Ember Edge ember-orange, Rune-Lens #b88cff)"
+          }
+        ],
+        "tilesets": [
+          "EXISTING assets/pixel/tiles.png — Gracefall Parish surface: candlelit chapel stone, graves (Paid/Unpaid), brambled hedges, mud/debt-fields, wax pools, receipt-posts, bells. Extend in place; do not break existing tile indices.",
+          "NEW tiles-vaults.png — Shroud Vaults: crystallized ledger-stone walls (semi-transparent name-etched), frigid mineral pools, cold blue-green flame, vault doors with family names, Canon (amber, firm) vs Schism (sickly-green, flickering) split-floor variants, debt-gas pools, pendulum-ledgers.",
+          "NEW tiles-archive.png — Archive of Attestation: impossible Escher shelving (up+down), phosphorescent ledger-lamps, fluttering pages, numbered account-line platforms, Great Redaction black-out tiles, three-zone overlap floor (Recorded/Unrecorded/nonexistent flicker), hyperinflation-red ticker props, burning-away footing.",
+          "NEW tiles-fx.png — shared overlays: ledger-dust clouds, ink-pools (DoT), confirmation-ripples, smoke (Tallow phase 2), gravity-inversion markers, redaction bars, ledger-line trails, candle lit/dark states."
+        ],
+        "artPrompts": [
+          {
+            "subject": "player (hero) — only if regenerating; otherwise reuse existing",
+            "tool": "PixelLab",
+            "prompt": "8-direction pixel sprite, 56px frame, cozy-gothic Soulslike hero called 'the Recorded': a hooded ashen wanderer in a tattered parchment-grey cloak with gold #f1c75b ledger-seal trim and faint rune-violet #b88cff sigils on the hem, carrying a thin candle-lantern at the belt. 4 frames: idle, walk, attack, hurt. Limited cozy-gothic palette, soft candle-amber rim light, transparent background, clean readable silhouette, no real-world brand or franchise references."
+          },
+          {
+            "subject": "Gate Sexton Marrow (A1 platformer mini-boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, ~56px frame, side-view, a skeletal parish clerk in tattered grey robes wielding a giant ledger-stamp / seal-hammer; brass #d8b36b seal-trim, ledger-dust motes around him. 4 frames: idle, walk, overhead stamp-slam (with ground shockwave + ink-pool), enraged faster stamp. Cozy-gothic limited palette, candle-amber light, transparent background, original IP, no franchise references."
+          },
+          {
+            "subject": "Mempool Warden (A1 battlefield mini-boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, ~56px frame, a hunched ink-stained figure dragging chains of keys, wax seals, and crumpled ledger-paper; rune-violet #b88cff glow. 4 frames: idle, slow melee, ranged seal-bolt cast, summon Pending Hollow add. Cozy-gothic bureaucratic-horror palette, transparent background, original IP, no franchise references."
+          },
+          {
+            "subject": "Mother Tallow (A1 final boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, ~64px frame, a tall robed candle-woman wreathed in smoke, body melting into wax, surrounded by small wax effigies bearing carved names; candle-gold #f1c75b inner glow, ringed by lit and dark candles. 4 frames: idle, close wax-melt touch, ranged candle-spark projectile, phase-2 thick-smoke summon (exploding wax-double). Melancholic cozy-gothic palette, transparent background, original IP — she is the first record-keeper, NOT any existing character."
+          },
+          {
+            "subject": "Debt Foreman (A2 platformer mini-boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, ~64px frame, a massive stooped giant of crystallized blue-green ledger-stone bound in mountain-heavy iron-black chains, his body etched with thousands of bone-white names and compound-interest figures. 4 frames: idle, heavy chain-swing, floor-cracking slam (chasm + Hollow Ancestor add), shatter. Cold mineral cozy-gothic palette, faint amber Canon glow on one side and sickly-green Schism glow on the other, transparent background, original IP."
+          },
+          {
+            "subject": "Bifurcated Guard (A2 battlefield mini-boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, ~56px frame, a headless vault-knight whose body splits into two linked halves connected by a chain of ledger-paper inscribed with one name twice; LEFT half armored amber #d8b36b (orderly Canon), RIGHT half armored sickly-green #6fae6a (chaotic Schism). 4 frames: idle, dual attack, mutual heal-pulse, collapse into the fissure. Cozy-gothic underground palette, transparent background, original IP, no franchise references."
+          },
+          {
+            "subject": "The Ledger-Bound (A2 final boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, large ~80px frame, a colossal humanoid golem of crystallized ledger-stone inscribed with thousands of glowing bone-white ancestral names, amber Canon veins on its left and sickly-green Schism veins on its right. 4 frames: grinding heavy step/idle (ledger-clock motif), crystallized-debt projectile hurl, confirmation-ripple stun, phase-2 fracture-split into two linked halves. Cold mineral cozy-gothic palette, transparent background, original IP — the pooled will of ancestors, no existing-franchise references."
+          },
+          {
+            "subject": "The Scrivener (A3 platformer mini-boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, ~64px frame, a furious many-armed figure made of quills, parchment, and ink, scratching ceaselessly; ink-black body, white parchment scraps, redaction-bar greys, faint rune-violet #b88cff edits. 4 frames: idle scratch, room-rewrite cast (platforms vanish / gravity flip), summon ink Audit Wolf, pen-snap death. Bureaucratic cozy-gothic horror palette, transparent background, original IP."
+          },
+          {
+            "subject": "Cascade Anchor (A3 battlefield mini-boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, large ~72px frame, a towering crystalline entity of hyperlinked ledger-entries, prismatic white crystal with hyperlink-blue refractions, holding three overlapping reality-zones together; hazard-red decree text orbits it. 4 frames: idle, decree-publish flash, summon mismatched phantom enemies, destabilize-and-retreat. Cozy-gothic phosphorescent palette, transparent background, original IP, no franchise references."
+          },
+          {
+            "subject": "The Auditor (A3 final boss)",
+            "tool": "PixelLab",
+            "prompt": "Pixel boss sprite, large ~80px frame, a humanoid silhouette composed entirely of scrolling, self-rewriting phosphorescent ledger-white text on void-black, enclosed in a slowly rotating three-dimensional wireframe ledger-cube; hyperinflation-red ticker accents, a gold #f1c75b co-author seal. 4 frames: idle text-scroll, correction text-line cut, rejection-stamp / paradox-wave, calm co-authoring dialogue pose. Solemn cozy-gothic palette, NOT a god and NOT a demon — a ghost of pure ledger-logic, transparent background, fully original IP, no franchise references."
+          },
+          {
+            "subject": "Boss Sigil item icons (Waxen Testament, Contested Will, Amended Record)",
+            "tool": "PixelLab",
+            "prompt": "Three 32px pixel item icons in a cozy-gothic ledger style on transparent background: (1) Waxen Testament — a wax seal stamped with a candle and a confirmation mark, candle-gold #f1c75b; (2) Contested Will — a torn family-tree ledger page with a name split down a glowing fissure, amber-vs-sickly-green; (3) Amended Record — a single seal showing both 'Recorded' and 'Unrecorded' text overlaid and contradictory, co-signed with a gold and a void quill. Crisp readable icons, original IP."
+          },
+          {
+            "subject": "OPTIONAL 3D parking models (only if project returns to a 3D client)",
+            "tool": "Meshy",
+            "prompt": "Low-poly stylized cozy-gothic game-ready model, single-file GLB, neutral T-pose, ~5k tris, hand-painted texture in a limited candle-amber and mineral-blue-green palette. Variant prompts: (a) 'Ledger-Bound stone golem inscribed with glowing names, amber and green veins'; (b) 'Auditor humanoid of floating text panels inside a wireframe cube'; (c) 'Scrivener many-armed ink-and-quill figure'. Keep optional and non-blocking per models/README.md; the playable demo stays web-pixel-first."
+          }
+        ]
+      }
+    }
+  }
+}

@@ -871,13 +871,14 @@ const engineApi={
     regen(a,dt){ this.hp=Math.min(this.maxHp,this.hp+a*dt); this.sta=Math.min(this.maxSta,this.sta+a*dt*1.8); },
     getMeleeDamage(){ return player.dmg; }, onKnockback(){} },
   assets:{ drawSheet(){ return false; } },
-  net:{ id:'local', _h:{}, on(t,fn){ (this._h[t]||(this._h[t]=[])).push(fn); return ()=>{}; }, send(){} },
+  net:{ id:'local', _h:{}, on(t,fn){ (this._h[t]||(this._h[t]=[])).push(fn); return ()=>{}; },
+    send(m){ if(m&&m.t==='rc:pvp:challenge'){ const h=this._h; setTimeout(()=>{ (h['rc:pvp:accept']||[]).forEach(fn=>fn({t:'rc:pvp:accept',duelId:m.duelId,from:'stub-rival',to:m.from})); }, 350); } } },
   chain:{}, log:(m)=>log(m),
   onBossTrigger(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('boss',{id}); return; } log('A boss stirs ('+id+'). Returning to the parish.'); exitEngineMode(); },
   onExit(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('exit',{id}); return; } log('Stage cleared ('+id+').'); exitEngineMode(); },
   onCreatureDefeated(){}, onWaveSpawn(w){ if(w&&w.id)log('Wave incoming: '+w.id); },
   onZoneCleared(id){ log('Safe ground secured: '+id); }, onMeleeHit(){},
-  onDuelAccepted(){ log('Duel accepted.'); },
+  onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from); },
   onDuelResult(r){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('duel',r); return; } log('Duel: '+((r&&r.reason)||'over')); },
   onBossComplete(script){ log((script&&script.name||'The boss')+' yields. Boss Sigil sealed.'); endBossSequence(); } };
 function engineInput(){
@@ -911,6 +912,16 @@ function updateEngineMode(dt){
   updateHud();
 }
 /* Segment sequencer (F3): chains play-styles into one boss encounter, above the mode manager. */
+/* F2.3: real-time battlefield initiates a PvP encounter (rc:pvp handshake); on accept,
+   both combatants transition into the turn-based mode to resolve it. */
+function startTurnDuel(peerName){
+  if(state.mode!=='battlefield'||!RCEngine||!RCEngine.createTurnBasedMode)return;
+  const ep=engineApi.player; player.hp=Math.round(ep.hp); player.sta=ep.sta;
+  const enc={id:'pvp-duel',name:'Duel',peerId:peerName||'stub-rival',opponent:{name:(peerName||'Rival')+' Recorded',hp:90,attack:11,defense:1,color:'#6f7db0'}};
+  const mode=turnbasedMode=RCEngine.createTurnBasedMode(enc);
+  modeManager.setMode(mode, ctx, engineApi); state.mode='turnbased';
+  log('Settling accounts — a turn-based duel begins. (T to leave)');
+}
 function startSegmentMode(seg){
   let mode;
   if(seg.mode==='battlefield')mode=RCEngine.createBattlefieldMode(seg.payload);

@@ -447,8 +447,51 @@ const STORY = window.RUNECHAIN_STORY || {
       {id:'candles', text:'Extinguish 3 duplicate Tallow candles and leave the canonical flame lit.', done:{event:'interact', target:'tallow-candle', count:3}},
       {id:'mother-tallow', text:'Defeat Mother Tallow and claim the first Boss Sigil.', done:{event:'kill', monster:'tallow', count:1}}
     ],
-    onComplete:['Mother Tallow melts into a sealed sigil. Gracefall has its first hard proof.'],
-    rewards:{rune:40}
+    onComplete:['Mother Tallow melts into a sealed sigil. Gracefall has its first hard proof. A cold light breaks through the northern floor.'],
+    rewards:{rune:40},
+    next:'q06'
+  },{
+    id:'q06',
+    title:'Vault Anteroom',
+    onStart:['The Shroud Vaults open northward. Crystallized ledger-stone hums with inherited debt.'],
+    steps:[
+      {id:'lectern', text:'Read the ancestor-chain lectern in the Vault Anteroom.', done:{event:'interact', target:'ancestor-lectern', count:1}},
+      {id:'margins', text:'Find the Keeper of Margins and re-inscribe her erased entry.', done:{event:'interact', target:'margin-scroll', count:1}}
+    ],
+    onComplete:['The Keeper testifies. Her words will weaken the Foreman below.'],
+    rewards:{rune:28},
+    next:'q07'
+  },{
+    id:'q07',
+    title:'The Debt Mines',
+    onStart:['The shaft descends through crystallized names. Canon left, Schism right — both roads lead down.'],
+    steps:[
+      {id:'mine-hollows', text:'Clear 3 Hollow Inheritors from the Debt Mines.', done:{event:'kill', monster:'hollow', count:3}},
+      {id:'foreman', text:'Defeat the Debt Foreman before the shaft collapses.', done:{event:'kill', monster:'foreman', count:1}}
+    ],
+    onComplete:["The Foreman's ledger-stamp shatters. An ancestor's name surfaces from the rubble."],
+    rewards:{rune:52},
+    next:'q08'
+  },{
+    id:'q08',
+    title:'The Ledger Vaults',
+    onStart:['Family vault doors line the walls. The living floor scrolls names — yours included.'],
+    steps:[
+      {id:'vault-seals', text:'Break 2 contested vault seals to free the pending records.', done:{event:'interact', target:'vault-seal', count:2}},
+      {id:'bifurcated', text:'Defeat the Bifurcated Guard — both halves must fall.', done:{event:'kill', monster:'bifurcated', count:1}}
+    ],
+    onComplete:["The Guard's amber and green chains unravel. The Contested Key drops."],
+    rewards:{rune:72},
+    next:'q09'
+  },{
+    id:'q09',
+    title:'The Ledger-Bound',
+    onStart:['The colossal golem of crystallized ancestral names stirs. Your record compounds against you.'],
+    steps:[
+      {id:'ledgerbound', text:'Fracture the Ledger-Bound and sever your name from the ancestral chain.', done:{event:'kill', monster:'ledgerbound', count:1}}
+    ],
+    onComplete:['The golem fractures. Your name contests its inheritance — and wins. The Contested Will is yours.'],
+    rewards:{rune:120}
   }]
 };
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -560,7 +603,7 @@ function itemBonuses(){
 }
 
 /* ------------------------------ Canvas ---------------------------------- */
-const VIEW_W=640, VIEW_H=360, TILE=16, SAFE_RADIUS=72, WORLD_LIMIT=960;
+const VIEW_W=640, VIEW_H=360, TILE=16, SAFE_RADIUS=72, WORLD_LIMIT=1800;
 const PLAYER_SPEED=112, DASH_SPEED=250;
 const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=false;
@@ -668,7 +711,10 @@ const TYPES={
   sorcerer:{key:'sorcerer',name:'Hollow Sorcerer',hp:54,dmg:12,speed:20,reward:30,aggro:125,reach:85,ranged:true,color:'#9b74ff'},
   sexton:{key:'sexton',asset:'knight',name:'Gate Sexton Marrow',short:'SEXTON',hp:96,dmg:14,speed:27,reward:34,aggro:108,reach:19,color:'#d8b36b'},
   mempool:{key:'mempool',asset:'sorcerer',name:'Mempool Warden',short:'WARDEN',hp:92,dmg:13,speed:22,reward:42,aggro:125,reach:88,ranged:true,color:'#b88cff'},
-  tallow:{key:'tallow',asset:'sentinel',name:'Mother Tallow',short:'MOTHER TALLOW',hp:260,dmg:22,speed:20,reward:100,aggro:134,reach:28,boss:true,color:'#f1c75b',sigilName:'The Waxen Testament',sigilKey:'waxen-testament'}
+  tallow:{key:'tallow',asset:'sentinel',name:'Mother Tallow',short:'MOTHER TALLOW',hp:260,dmg:22,speed:20,reward:100,aggro:134,reach:28,boss:true,color:'#f1c75b',sigilName:'The Waxen Testament',sigilKey:'waxen-testament'},
+  foreman:{key:'foreman',asset:'knight',name:'The Debt Foreman',short:'FOREMAN',hp:200,dmg:20,speed:18,reward:68,aggro:120,reach:22,color:'#4ecbaa'},
+  bifurcated:{key:'bifurcated',asset:'knight',name:'Bifurcated Guard',short:'GUARD',hp:160,dmg:16,speed:20,reward:58,aggro:115,reach:20,color:'#d4a83e'},
+  ledgerbound:{key:'ledgerbound',asset:'sentinel',name:'The Ledger-Bound',short:'LEDGER-BOUND',hp:340,dmg:24,speed:14,reward:160,aggro:140,reach:30,boss:true,color:'#a8c8ff',sigilName:'The Contested Will',sigilKey:'contested-will'}
 };
 function spawnEnemy(key,x,y,gate=0,opts={}){
   const t=TYPES[key];
@@ -686,6 +732,13 @@ function initWorld(){
   spawnEnemy('hollow',592,56,0,{unlockQuest:'q04'});
   spawnEnemy('mempool',656,-10,0,{unlockQuest:'q04'});
   spawnEnemy('tallow',812,0,0,{unlockQuest:'q05'});
+  spawnEnemy('hollow',960,-52,0,{unlockQuest:'q07'});
+  spawnEnemy('hollow',1016,44,0,{unlockQuest:'q07'});
+  spawnEnemy('foreman',1076,0,0,{unlockQuest:'q07'});
+  spawnEnemy('hollow',1220,-48,0,{unlockQuest:'q08'});
+  spawnEnemy('hollow',1276,56,0,{unlockQuest:'q08'});
+  spawnEnemy('bifurcated',1344,-6,0,{unlockQuest:'q08'});
+  spawnEnemy('ledgerbound',1544,0,0,{unlockQuest:'q09'});
 }
 function enemyUnlocked(e){
   if(e.unlockQuest && !Story.questReached(e.unlockQuest))return false;
@@ -893,6 +946,35 @@ const AREA1_ENCOUNTERS={
     {mode:'turnbased',name:'Mother Tallow',payload:TURN_TALLOW,beatText:'She melts toward you.',complete:{event:'duel'}}
   ]}
 };
+/* ---- Area 2 — The Shroud Vaults ---------------------------------------- */
+/* Debt Mines: descent through a forked crystallized shaft, Canon left / Schism right, forced crossing bridge at mid-depth. */
+const PLAT_DEBT_MINES={id:'a2-debt-mines',name:'Debt Mines & Ledger Cistern',width:1300,height:760,spawn:{x:100,y:90},physics:{maxRun:200,jump:458},
+  platforms:[{id:'entrance',x:0,y:120,w:280,h:14,type:'solid'},{id:'c1',x:0,y:200,w:210,h:12,type:'solid'},{id:'c2',x:60,y:290,w:180,h:12,type:'solid'},{id:'c3',x:0,y:370,w:200,h:12,type:'solid'},{id:'c4',x:80,y:450,w:160,h:12,type:'solid'},{id:'pendulum',x:140,y:330,w:110,h:12,type:'solid',vx:48,minX:80,maxX:330},{id:'cross',x:340,y:490,w:620,h:14,type:'solid'},{id:'s1',x:1080,y:200,w:220,h:10,type:'oneWay'},{id:'s2',x:1000,y:290,w:190,h:10,type:'oneWay'},{id:'s3',x:1100,y:370,w:200,h:10,type:'oneWay'},{id:'s4',x:1020,y:450,w:170,h:10,type:'oneWay'},{id:'boss-floor',x:380,y:700,w:740,h:60,type:'solid'},{id:'boss-wall-l',x:380,y:560,w:50,h:140,type:'solid'},{id:'boss-wall-r',x:1070,y:560,w:50,h:140,type:'solid'},{id:'boss-step-l',x:440,y:640,w:120,h:14,type:'solid'},{id:'boss-step-r',x:940,y:640,w:120,h:14,type:'solid'}],
+  hazards:[{id:'shard-a',type:'damage',x:90,y:285,w:30,h:12,damage:2},{id:'shard-b',type:'damage',x:180,y:365,w:30,h:12,damage:2},{id:'crystal-a',type:'projectile',x:110,y:80,w:20,h:16,interval:1.6,speedY:265,damage:3},{id:'crystal-b',type:'projectile',x:230,y:80,w:20,h:16,interval:2.2,speedY:258,damage:3},{id:'pendulum-blow',type:'knockback',x:180,y:285,w:80,h:36,damage:2,knockX:240,knockY:-200},{id:'echo-stun',type:'stun',x:80,y:356,w:36,h:14,stun:0.55},{id:'gas-a',type:'slow',x:1000,y:282,w:190,h:22,slow:0.34},{id:'gas-b',type:'slow',x:1020,y:442,w:170,h:22,slow:0.31},{id:'vent-a',type:'damage',x:1080,y:194,w:28,h:14,damage:3},{id:'vent-b',type:'damage',x:1100,y:362,w:28,h:14,damage:3},{id:'current',type:'slow',x:400,y:476,w:500,h:14,slow:0.40},{id:'crystal-s',type:'projectile',x:1140,y:80,w:20,h:16,interval:1.3,speedY:275,damage:3},{id:'gas-cross',type:'slow',x:540,y:474,w:260,h:14,slow:0.38}],
+  bossTrigger:{id:'debt-foreman',x:660,y:620,w:180,h:80,lock:{x:400,y:530,w:700,h:240}},exit:{id:'to-ledger-vaults',x:0,y:640,w:40,h:80}};
+/* Ledger Vaults: underground split-zone arena, Canon left (amber) / Schism right (green). */
+const BATTLE_LEDGER_VAULTS={id:'a2-ledger-vaults',name:"Ledger Vaults / Well's Mouth",width:1600,height:900,spawn:{x:200,y:400},physics:{speed:175},
+  creatures:{hollow:{hp:18,speed:80,damage:3,reach:14,radius:8,color:'#8cb8e0'},knight:{hp:52,speed:28,damage:7,reach:24,radius:13,color:'#d4a83e'},hound:{hp:14,speed:115,damage:4,reach:14,radius:7,color:'#4ecb7a'},default:{hp:20,speed:50,damage:3,reach:14,radius:9,color:'#7c9cbc'}},
+  zones:[{id:'canon-sanctuary',x:80,y:150,w:500,h:320,regen:12,clearFor:16},{id:'schism-chasm',x:1020,y:150,w:500,h:320,regen:5,clearFor:14},{id:'well-mouth',x:600,y:500,w:400,h:280,regen:8,clearFor:12}],
+  waves:[{id:'canon-first',at:0.5,zoneId:'canon-sanctuary',spawns:[{type:'knight',x:250,y:250,count:2},{type:'hollow',x:420,y:360,count:3}]},{id:'schism-rush',at:5.5,zoneId:'schism-chasm',spawns:[{type:'hound',x:1150,y:260,count:4},{type:'hollow',x:1280,y:380,count:3}]},{id:'well-surge',at:12.0,zoneId:'well-mouth',spawns:[{type:'knight',x:720,y:560,count:2},{type:'hound',x:880,y:620,count:3},{type:'hollow',x:650,y:680,count:4}]}]};
+const TURN_FOREMAN={id:'duel-foreman',name:'The Debt Foreman',opponent:{name:'The Debt Foreman',hp:140,attack:16,defense:3,color:'#4ecbaa',sprite:'knight'}};
+const TURN_BIFURCATED={id:'duel-bifurcated',name:'Bifurcated Guard',opponent:{name:'Bifurcated Guard',hp:120,attack:14,defense:4,color:'#d4a83e',sprite:'knight'}};
+const TURN_LEDGERBOUND={id:'duel-ledgerbound',name:'The Ledger-Bound',opponent:{name:'The Ledger-Bound',hp:220,attack:20,defense:5,color:'#a8c8ff',sprite:'sentinel'}};
+const AREA2_ENCOUNTERS={
+  foreman:{id:'debt-foreman',name:'The Debt Foreman',beat:0.8,segments:[
+    {mode:'platformer',name:'Descent into the Debt Mines',payload:PLAT_DEBT_MINES,beatText:'The shaft swallows names.',complete:{event:'boss'}},
+    {mode:'turnbased',name:'The Foreman rises',payload:TURN_FOREMAN,beatText:'Its ledger-stamp cracks the stone.',complete:{event:'duel'}}
+  ]},
+  bifurcated:{id:'bifurcated-guard',name:'Bifurcated Guard',beat:0.8,segments:[
+    {mode:'battlefield',name:'The Ledger Vaults',payload:BATTLE_LEDGER_VAULTS,beatText:'Two chains converge.',complete:{event:'cleared'}},
+    {mode:'turnbased',name:'The Guard divides',payload:TURN_BIFURCATED,beatText:'Amber and green pull each way.',complete:{event:'duel'}}
+  ]},
+  ledgerbound:{id:'ledger-bound',name:'The Ledger-Bound',beat:0.9,segments:[
+    {mode:'platformer',name:'The Forked Archive',payload:PLAT_DEBT_MINES,beatText:'The fissure opens beneath your feet.',complete:{event:'boss'}},
+    {mode:'battlefield',name:'The Named Paladins',payload:BATTLE_LEDGER_VAULTS,beatText:'The dead inherit your record.',complete:{event:'cleared'}},
+    {mode:'turnbased',name:'The Ledger-Bound',payload:TURN_LEDGERBOUND,beatText:'Stone names press down.',complete:{event:'duel'}}
+  ]}
+};
 const engineApi={
   viewW:VIEW_W, viewH:VIEW_H, camera:engineCam,
   player:{ id:'local', name:'Recorded', x:0,y:0,vx:0,vy:0,dirX:1,dirY:0,moving:false, hp:120,maxHp:120,sta:100,maxSta:100,
@@ -978,18 +1060,18 @@ function endBossSequence(){
   player.hp=Math.max(1,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;
   bossSeq=null; bossEncounterEnemy=null; state.mode='town';
 }
-const BOSS_ENCOUNTER_KEYS=['sexton','mempool','tallow'];
+const BOSS_ENCOUNTER_KEYS=['sexton','mempool','tallow','foreman','bifurcated','ledgerbound'];
 function nearestBossEncounter(){
   let best=null, bd=70;
   for(const e of enemies){
-    if(e.dead||!BOSS_ENCOUNTER_KEYS.includes(e.key)||!AREA1_ENCOUNTERS[e.key]||!enemyUnlocked(e))continue;
+    if(e.dead||!BOSS_ENCOUNTER_KEYS.includes(e.key)||!(AREA1_ENCOUNTERS[e.key]||AREA2_ENCOUNTERS[e.key])||!enemyUnlocked(e))continue;
     const d=dist(e,player);
     if(d<bd){ bd=d; best=e; }
   }
   return best;
 }
 function startBossEncounter(enemy){
-  const script=enemy&&AREA1_ENCOUNTERS[enemy.key];
+  const script=enemy&&(AREA1_ENCOUNTERS[enemy.key]||AREA2_ENCOUNTERS[enemy.key]);
   if(!modeManager||!RCEngine||!RCEngine.createSegmentSequencer||!script||!state.started||player.dead||state.mode!=='town')return;
   if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
   const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;
@@ -1398,7 +1480,11 @@ const INTERACTABLES=[
   {id:'tablet-c',target:'pending-tablet',quest:'q04',x:620,y:-52,label:'PENDING',kind:'tablet'},
   {id:'candle-a',target:'tallow-candle',quest:'q05',x:724,y:-34,label:'WAX NAME',kind:'tallow'},
   {id:'candle-b',target:'tallow-candle',quest:'q05',x:766,y:42,label:'WAX NAME',kind:'tallow'},
-  {id:'candle-c',target:'tallow-candle',quest:'q05',x:842,y:-48,label:'WAX NAME',kind:'tallow'}
+  {id:'candle-c',target:'tallow-candle',quest:'q05',x:842,y:-48,label:'WAX NAME',kind:'tallow'},
+  {id:'lectern-a',target:'ancestor-lectern',quest:'q06',x:1040,y:-44,label:'LECTERN',kind:'stone'},
+  {id:'margin-scroll',target:'margin-scroll',quest:'q06',x:1108,y:38,label:'SCROLL',kind:'stone'},
+  {id:'vault-seal-a',target:'vault-seal',quest:'q08',x:1364,y:-44,label:'VAULT',kind:'tablet'},
+  {id:'vault-seal-b',target:'vault-seal',quest:'q08',x:1430,y:36,label:'VAULT',kind:'tablet'}
 ];
 function interactionKey(i){ return Story.state.activeQuestId+':'+i.id; }
 function interactableActive(i){

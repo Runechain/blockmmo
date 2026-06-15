@@ -838,6 +838,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyO'&&!e.repeat)enterEngineMode('battlefield');
   if(e.code==='KeyU'&&!e.repeat)enterEngineMode('turnbased');
   if(e.code==='KeyK'&&!e.repeat)enterBossSequence();
+  if(e.code==='KeyF'&&!e.repeat&&state.mode==='town'){ const b=nearestBossEncounter(); if(b)startBossEncounter(b); }
   if(e.code==='KeyT'&&!e.repeat)exitEngineMode();
   if(e.code==='Escape'&&!e.repeat){ if(state.graceOpen)closeGrace(); else if(state.wardrobeOpen)closeWardrobe(); else player.lock=null; }
 });
@@ -847,7 +848,7 @@ addEventListener('keyup',e=>{ keys[e.code]=false; released[e.code]=true; });
 /* Codex's standalone engine modules (engine/*.js) loaded dynamically and driven
    through a host adapter. Town stays the existing top-down game; P enters the
    demo platformer, O the battlefield, T returns to Hearthlight. */
-let modeManager=null, platformerMode=null, battlefieldMode=null, turnbasedMode=null, bossSeq=null, RCEngine=null;
+let modeManager=null, platformerMode=null, battlefieldMode=null, turnbasedMode=null, bossSeq=null, bossEncounterEnemy=null, RCEngine=null;
 const engineCam={x:0,y:0,w:VIEW_W,h:VIEW_H};
 const PLAT_LEVEL={id:'a1-parish-road',name:'Parish Road Receipts',width:1240,height:640,spawn:{x:64,y:438},physics:{maxRun:220,jump:455},
   platforms:[{id:'ground-a',x:0,y:500,w:360,h:48,type:'solid'},{id:'ground-b',x:360,y:500,w:320,h:48,type:'solid'},{id:'ground-c',x:680,y:500,w:560,h:48,type:'solid'},{id:'ledge',x:214,y:396,w:150,h:12,type:'oneWay'},{id:'receipt-post',x:420,y:424,w:78,h:14,type:'solid',vx:48,minX:420,maxX:590},{id:'bell-step',x:740,y:414,w:120,h:16,type:'solid'},{id:'boss-step',x:930,y:392,w:118,h:16,type:'solid'}],
@@ -863,6 +864,25 @@ const BOSS_SCRIPT={id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,se
   {mode:'battlefield',name:'Tithe-house yard',payload:BATTLE_LEVEL,beatText:'The Sexton stamps the dead awake.',complete:{event:'cleared'}},
   {mode:'turnbased',name:'Marrow, face to face',payload:TURN_ENCOUNTER,beatText:'He raises the ledger-stamp.',complete:{event:'duel'}}
 ]};
+/* Area 1 bosses as story-gated, multi-play-style encounters (bible: Gracefall Parish). */
+const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b'}};
+const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff'}};
+const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:150,attack:18,defense:3,color:'#f1c75b'}};
+const AREA1_ENCOUNTERS={
+  sexton:{id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,segments:[
+    {mode:'platformer',name:'Parish Road approach',payload:PLAT_LEVEL,beatText:'The tithe-house gate looms...',complete:{event:'boss'}},
+    {mode:'turnbased',name:'Marrow, face to face',payload:TURN_SEXTON,beatText:'He raises the ledger-stamp.',complete:{event:'duel'}}
+  ]},
+  mempool:{id:'mempool-warden',name:'Mempool Warden',beat:0.8,segments:[
+    {mode:'battlefield',name:'The Mempool Yard',payload:BATTLE_LEVEL,beatText:'The pending dead stir.',complete:{event:'cleared'}},
+    {mode:'turnbased',name:'The Warden',payload:TURN_WARDEN,beatText:'It drags its chains forward.',complete:{event:'duel'}}
+  ]},
+  tallow:{id:'mother-tallow',name:'Mother Tallow',beat:0.9,segments:[
+    {mode:'platformer',name:'Tallow House',payload:PLAT_LEVEL,beatText:'Wax names burn in the dark.',complete:{event:'boss'}},
+    {mode:'battlefield',name:'Tallow Echoes',payload:BATTLE_LEVEL,beatText:'The echoes swarm.',complete:{event:'cleared'}},
+    {mode:'turnbased',name:'Mother Tallow',payload:TURN_TALLOW,beatText:'She melts toward you.',complete:{event:'duel'}}
+  ]}
+};
 const engineApi={
   viewW:VIEW_W, viewH:VIEW_H, camera:engineCam,
   player:{ id:'local', name:'Recorded', x:0,y:0,vx:0,vy:0,dirX:1,dirY:0,moving:false, hp:120,maxHp:120,sta:100,maxSta:100,
@@ -880,7 +900,7 @@ const engineApi={
   onZoneCleared(id){ log('Safe ground secured: '+id); }, onMeleeHit(){},
   onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from); },
   onDuelResult(r){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('duel',r); return; } log('Duel: '+((r&&r.reason)||'over')); },
-  onBossComplete(script){ log((script&&script.name||'The boss')+' yields. Boss Sigil sealed.'); endBossSequence(); } };
+  onBossComplete(script){ const e=bossEncounterEnemy; log((script&&script.name||'The boss')+' is overcome.'); endBossSequence(); if(e&&!e.dead)killEnemy(e); } };
 function engineInput(){
   return { left:keys.KeyA||keys.ArrowLeft, right:keys.KeyD||keys.ArrowRight, up:keys.KeyW||keys.ArrowUp, down:keys.KeyS||keys.ArrowDown,
     moveLeft:keys.KeyA||keys.ArrowLeft, moveRight:keys.KeyD||keys.ArrowRight, moveUp:keys.KeyW||keys.ArrowUp, moveDown:keys.KeyS||keys.ArrowDown,
@@ -941,7 +961,28 @@ function enterBossSequence(){
 function endBossSequence(){
   if(modeManager)modeManager.setMode(null, ctx, engineApi);
   player.hp=Math.max(1,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;
-  bossSeq=null; state.mode='town';
+  bossSeq=null; bossEncounterEnemy=null; state.mode='town';
+}
+const BOSS_ENCOUNTER_KEYS=['sexton','mempool','tallow'];
+function nearestBossEncounter(){
+  let best=null, bd=70;
+  for(const e of enemies){
+    if(e.dead||!BOSS_ENCOUNTER_KEYS.includes(e.key)||!AREA1_ENCOUNTERS[e.key]||!enemyUnlocked(e))continue;
+    const d=dist(e,player);
+    if(d<bd){ bd=d; best=e; }
+  }
+  return best;
+}
+function startBossEncounter(enemy){
+  const script=enemy&&AREA1_ENCOUNTERS[enemy.key];
+  if(!modeManager||!RCEngine||!RCEngine.createSegmentSequencer||!script||!state.started||player.dead||state.mode!=='town')return;
+  if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
+  const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;
+  bossEncounterEnemy=enemy;
+  bossSeq=RCEngine.createSegmentSequencer(script);
+  bossSeq.enter(engineApi, { startMode:startSegmentMode, exitMode(){ if(modeManager)modeManager.setMode(null, ctx, engineApi); }, log:(m)=>log(m) });
+  state.mode='sequencer';
+  log('Encounter: '+script.name+'. (T to retreat)');
 }
 function updateBossSequence(dt){
   bossSeq.update(dt);
@@ -1526,8 +1567,10 @@ function updateHud(){
   Story.updateHud();
   updateWallet();
   const prompt=document.getElementById('prompt');
+  const bossEnc=state.mode==='town'?nearestBossEncounter():null;
   const near=nearestInteractable();
-  if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
+  if(bossEnc){ prompt.style.display='block'; prompt.innerHTML='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>'; }
+  else if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
   else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
   else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }
   else prompt.style.display='none';

@@ -868,6 +868,16 @@ const BOSS_SCRIPT={id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,se
 const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b',sprite:'knight'}};
 const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff',sprite:'sorcerer'}};
 const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:150,attack:18,defense:3,color:'#f1c75b',sprite:'sentinel'}};
+/* Tallow House: vertical wax-choked interior, rising lift, dripping-wax hazards — distinct from the Parish Road climb. */
+const PLAT_TALLOW_HOUSE={id:'a1-tallow-house',name:'Tallow House',width:1080,height:720,spawn:{x:60,y:616},physics:{maxRun:195,jump:445},
+  platforms:[{id:'ground',x:0,y:660,w:1080,h:60,type:'solid'},{id:'shelf-a',x:90,y:580,w:130,h:12,type:'oneWay'},{id:'mid-floor',x:320,y:560,w:260,h:14,type:'solid'},{id:'wax-lift',x:510,y:510,w:110,h:14,type:'solid',vy:32,minY:400,maxY:520},{id:'shelf-b',x:120,y:460,w:160,h:12,type:'oneWay'},{id:'walkway',x:650,y:430,w:200,h:14,type:'solid'},{id:'step-a',x:200,y:360,w:120,h:14,type:'solid'},{id:'step-b',x:750,y:340,w:140,h:12,type:'oneWay'},{id:'upper',x:380,y:270,w:260,h:14,type:'solid'},{id:'altar',x:700,y:190,w:230,h:14,type:'solid'}],
+  hazards:[{id:'wax-pool-a',type:'slow',x:130,y:646,w:180,h:14,slow:0.45},{id:'wax-pool-b',type:'slow',x:380,y:545,w:190,h:14,slow:0.42},{id:'drip-a',type:'damage',x:275,y:545,w:28,h:14,damage:2},{id:'drip-b',type:'damage',x:655,y:415,w:28,h:14,damage:2},{id:'wax-fall-a',type:'projectile',x:360,y:60,w:24,h:20,interval:1.2,speedY:250,damage:3},{id:'wax-fall-b',type:'projectile',x:640,y:80,w:24,h:20,interval:1.8,speedY:240,damage:3},{id:'wax-seal',type:'sticky',x:395,y:255,w:240,h:14,slow:0.3,staminaCost:2},{id:'flame-pillar',type:'stun',x:560,y:250,w:46,h:20,stun:0.65},{id:'wax-burst',type:'knockback',x:780,y:170,w:44,h:20,damage:2,knockX:-240,knockY:-200}],
+  bossTrigger:{id:'mother-tallow',x:740,y:120,w:160,h:70,lock:{x:580,y:80,w:470,h:220}},exit:{id:'tallow-echoes',x:1040,y:580,w:34,h:80}};
+/* Tallow Echoes: fast hollow rush + wax-knight golems — distinct creature tuning vs the Mempool Yard pending dead. */
+const BATTLE_TALLOW_ECHOES={id:'a1-tallow-echoes',name:'Tallow Echoes',width:1200,height:800,spawn:{x:190,y:360},physics:{speed:170},
+  creatures:{hollow:{hp:10,speed:100,damage:2,reach:14,radius:8,color:'#f5e8d0'},knight:{hp:48,speed:28,damage:7,reach:22,radius:13,color:'#d4b85a'},hound:{hp:18,speed:65,damage:3,reach:16,radius:9,color:'#e87d3e'},default:{hp:14,speed:55,damage:2,reach:14,radius:9,color:'#b8a870'}},
+  zones:[{id:'wax-antechamber',x:80,y:160,w:360,h:300,regen:8,clearFor:10},{id:'tallow-chapel',x:520,y:150,w:400,h:360,regen:6,clearFor:14},{id:'candle-ring',x:300,y:520,w:580,h:220,regen:10,clearFor:11}],
+  waves:[{id:'echo-rush',at:0.3,zoneId:'wax-antechamber',spawns:[{type:'hollow',x:280,y:280,count:5},{type:'hollow',x:360,y:360,count:3}]},{id:'wax-sentries',at:5.0,zoneId:'tallow-chapel',spawns:[{type:'knight',x:650,y:260,count:2},{type:'hollow',x:820,y:380,count:4}]},{id:'candle-surge',at:11.0,zoneId:'candle-ring',spawns:[{type:'hound',x:440,y:580,count:3},{type:'hollow',x:600,y:620,count:5},{type:'knight',x:760,y:560,count:1}]}]};
 const AREA1_ENCOUNTERS={
   sexton:{id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,segments:[
     {mode:'platformer',name:'Parish Road approach',payload:PLAT_LEVEL,beatText:'The tithe-house gate looms...',complete:{event:'boss'}},
@@ -878,8 +888,8 @@ const AREA1_ENCOUNTERS={
     {mode:'turnbased',name:'The Warden',payload:TURN_WARDEN,beatText:'It drags its chains forward.',complete:{event:'duel'}}
   ]},
   tallow:{id:'mother-tallow',name:'Mother Tallow',beat:0.9,segments:[
-    {mode:'platformer',name:'Tallow House',payload:PLAT_LEVEL,beatText:'Wax names burn in the dark.',complete:{event:'boss'}},
-    {mode:'battlefield',name:'Tallow Echoes',payload:BATTLE_LEVEL,beatText:'The echoes swarm.',complete:{event:'cleared'}},
+    {mode:'platformer',name:'Tallow House',payload:PLAT_TALLOW_HOUSE,beatText:'Wax names burn in the dark.',complete:{event:'boss'}},
+    {mode:'battlefield',name:'Tallow Echoes',payload:BATTLE_TALLOW_ECHOES,beatText:'The echoes swarm.',complete:{event:'cleared'}},
     {mode:'turnbased',name:'Mother Tallow',payload:TURN_TALLOW,beatText:'She melts toward you.',complete:{event:'duel'}}
   ]}
 };

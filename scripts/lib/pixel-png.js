@@ -114,10 +114,14 @@ function color(hex) {
 }
 
 // Tight bounding box of pixels above an alpha threshold, expanded by `margin`.
-function alphaBounds(img, { threshold = 12, margin = 0 } = {}) {
-  let minX = img.width, minY = img.height, maxX = -1, maxY = -1;
-  for (let y = 0; y < img.height; y++) {
-    for (let x = 0; x < img.width; x++) {
+function alphaBounds(img, { threshold = 12, margin = 0, region = null } = {}) {
+  const rx = region ? region.x : 0;
+  const ry = region ? region.y : 0;
+  const rw = region ? region.w : img.width;
+  const rh = region ? region.h : img.height;
+  let minX = rx + rw, minY = ry + rh, maxX = -1, maxY = -1;
+  for (let y = ry; y < ry + rh; y++) {
+    for (let x = rx; x < rx + rw; x++) {
       if (img.pixels[(y * img.width + x) * 4 + 3] > threshold) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
@@ -126,11 +130,11 @@ function alphaBounds(img, { threshold = 12, margin = 0 } = {}) {
       }
     }
   }
-  if (maxX < minX || maxY < minY) return { x: 0, y: 0, w: img.width, h: img.height };
-  minX = Math.max(0, minX - margin);
-  minY = Math.max(0, minY - margin);
-  maxX = Math.min(img.width - 1, maxX + margin);
-  maxY = Math.min(img.height - 1, maxY + margin);
+  if (maxX < minX || maxY < minY) return { x: rx, y: ry, w: rw, h: rh };
+  minX = Math.max(rx, minX - margin);
+  minY = Math.max(ry, minY - margin);
+  maxX = Math.min(rx + rw - 1, maxX + margin);
+  maxY = Math.min(ry + rh - 1, maxY + margin);
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
 }
 

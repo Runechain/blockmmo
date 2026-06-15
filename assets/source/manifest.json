@@ -1,0 +1,26 @@
+[
+  {
+    "id": "kenney-roguelike",
+    "source": "/Users/angusdurrie/Downloads/kenney_roguelike-rpg-pack",
+    "copiedTo": "assets/source/kenney-roguelike",
+    "credit": "Kenney Roguelike/RPG pack (CC0)"
+  },
+  {
+    "id": "free-knight",
+    "source": "/Users/angusdurrie/Downloads/FreeKnight_v1",
+    "copiedTo": "assets/source/free-knight",
+    "credit": "FreeKnight_v1, user-supplied local asset drop"
+  },
+  {
+    "id": "monster-creatures-fantasy",
+    "source": "/Users/angusdurrie/Downloads/Monster_Creatures_Fantasy(Version 1.3)",
+    "copiedTo": "assets/source/monster-creatures-fantasy",
+    "credit": "Monster Creatures Fantasy v1.3, user-confirmed licensed"
+  },
+  {
+    "id": "items",
+    "source": "/Users/angusdurrie/Downloads/Existing Folders/items",
+    "copiedTo": "assets/source/items",
+    "credit": "Items icon pack, user-supplied local asset drop"
+  }
+]

@@ -21,7 +21,8 @@ const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
 const server = http.createServer((req, res) => {
   // health check for AWS load balancers / App Runner
   if (req.url === '/healthz') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
-  let file = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  const route = req.url.split('?')[0];
+  let file = route === '/' ? '/index.html' : route;
   const full = path.join(__dirname, path.normalize(file).replace(/^(\.\.[/\\])+/, ''));
   fs.readFile(full, (err, data) => {
     if (err) { res.writeHead(404); return res.end('not found'); }

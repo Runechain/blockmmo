@@ -103,6 +103,7 @@ export function createBattlefieldMode(level={}){
     const t=(level.creatures&&level.creatures[typeKey])||level.creatures&&level.creatures.default||{};
     creatures.push({
       id:'c'+nextId++, key:typeKey, zoneId, x, y, r:t.radius||10,
+      asset:t.asset||typeKey, scale:t.scale||1,
       hp:t.hp||12, maxHp:t.hp||12, speed:t.speed||42, damage:t.damage||1, reach:t.reach||17,
       color:t.color||'#9b6f50', attackCd:.2+Math.random()*.4, hitFlash:0, dead:false
     });
@@ -348,7 +349,7 @@ export function createBattlefieldMode(level={}){
     }
     for(const cr of creatures){
       drawCircle(c, cam, cr.x, cr.y, cr.r+4, 'rgba(0,0,0,.32)');
-      if(!(spr&&spr(cr.key, cr.x, cr.y+cr.r, cr.hitFlash>0?3:1, 1)))
+      if(!(spr&&spr(cr.asset||cr.key, cr.x, cr.y+cr.r, cr.hitFlash>0?3:1, cr.scale||1)))
         drawCircle(c, cam, cr.x, cr.y, cr.r, cr.hitFlash>0?'#f4eee0':cr.color);
       const w=cr.r*2+8, x=Math.round(cr.x-cam.x-w/2), y=Math.round(cr.y-cam.y-cr.r-10);
       c.fillStyle='#08090a'; c.fillRect(x,y,w,3);

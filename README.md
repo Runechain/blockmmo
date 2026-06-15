@@ -6,8 +6,9 @@ mines it into a genuine SHA-256 proof-of-work chain, and you spend it (recorded 
 on-chain transactions) to level up at **Hearthlight**. Bosses mint deterministic
 **Boss Sigils** as one-of-a-kind on-chain assets.
 
-It's a single HTML file for the client and one zero-dependency Node file for the
-realm server. No build step, no framework, no `npm install`.
+It's a tiny no-build browser client (`index.html` plus plain scripts in `game/` and
+`engine/`) and one zero-dependency Node file for the realm server. No framework, no
+`npm install`.
 
 > Research/prototype project. The "crypto" is an in-game proof-of-work mechanic only —
 > no wallet, no token of value, no real money.
@@ -65,7 +66,7 @@ Two one-way on-ramps fill Gold (there is **no cash-out**):
 Because real money can only ever buy *looks*, the free grind always reaches every power
 tier (just slower than a payer would gear cosmetically), and there's no pay-to-win and no
 chance-based spending. Every lever — rates, the split, skin prices, and RUNE relics —
-lives in the `ECON`, `SKINS`, and `RELICS` tables in [`index.html`](index.html).
+lives in the `ECON`, `SKINS`, and `RELICS` tables in [`game/content.js`](game/content.js).
 
 > The wrapped-SOL purchase is currently a **devnet mock** — it mints Gold and records the
 > split on-chain locally, with **no real funds**. Swapping `Econ.buyGoldWithSol()` for a real
@@ -123,7 +124,9 @@ behind any host/port.
 ## Project layout
 
 ```
-index.html      # the whole game client; pixel renderer, story, relics, combat
+index.html      # browser shell, HUD, town loop, renderer, and gameplay wiring
+game/           # no-build browser runtime: SHA-256, Chainwell, content tables
+engine/         # modular platformer, battlefield, turn-based, and sequencer modes
 server.js       # zero-dependency Node MMO relay + static server
 assets/pixel/   # editable Pixelorama-ready tile atlas and sprite strips
 scripts/        # deterministic local pixel asset generator

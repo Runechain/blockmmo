@@ -74,6 +74,21 @@
     ],
     "placeholder": true
   },
+  "flying-eye": {
+    "name": "flying-eye",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 24,
+    "frameH": 24,
+    "file": "flying-eye.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "source": "Monster Creatures Fantasy v1.3 — Flying eye"
+  },
   "foreman": {
     "name": "foreman",
     "type": "strip",
@@ -88,6 +103,131 @@
       "hurt"
     ],
     "placeholder": true
+  },
+  "free-knight-attack": {
+    "name": "free-knight-attack",
+    "type": "strip",
+    "role": "platformer-hero",
+    "layout": "row",
+    "frameW": 120,
+    "frameH": 80,
+    "file": "free-knight-attack.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3"
+    ],
+    "source": "free-knight/Colour1/Outline/120x80_PNGSheets/_Attack.png"
+  },
+  "free-knight-death": {
+    "name": "free-knight-death",
+    "type": "strip",
+    "role": "platformer-hero",
+    "layout": "row",
+    "frameW": 120,
+    "frameH": 80,
+    "file": "free-knight-death.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7",
+      "frame8",
+      "frame9"
+    ],
+    "source": "free-knight/Colour1/Outline/120x80_PNGSheets/_Death.png"
+  },
+  "free-knight-fall": {
+    "name": "free-knight-fall",
+    "type": "strip",
+    "role": "platformer-hero",
+    "layout": "row",
+    "frameW": 120,
+    "frameH": 80,
+    "file": "free-knight-fall.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2"
+    ],
+    "source": "free-knight/Colour1/Outline/120x80_PNGSheets/_Fall.png"
+  },
+  "free-knight-hit": {
+    "name": "free-knight-hit",
+    "type": "strip",
+    "role": "platformer-hero",
+    "layout": "row",
+    "frameW": 120,
+    "frameH": 80,
+    "file": "free-knight-hit.png",
+    "frames": [
+      "frame0"
+    ],
+    "source": "free-knight/Colour1/Outline/120x80_PNGSheets/_Hit.png"
+  },
+  "free-knight-idle": {
+    "name": "free-knight-idle",
+    "type": "strip",
+    "role": "platformer-hero",
+    "layout": "row",
+    "frameW": 120,
+    "frameH": 80,
+    "file": "free-knight-idle.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7",
+      "frame8",
+      "frame9"
+    ],
+    "source": "free-knight/Colour1/Outline/120x80_PNGSheets/_Idle.png"
+  },
+  "free-knight-jump": {
+    "name": "free-knight-jump",
+    "type": "strip",
+    "role": "platformer-hero",
+    "layout": "row",
+    "frameW": 120,
+    "frameH": 80,
+    "file": "free-knight-jump.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2"
+    ],
+    "source": "free-knight/Colour1/Outline/120x80_PNGSheets/_Jump.png"
+  },
+  "free-knight-run": {
+    "name": "free-knight-run",
+    "type": "strip",
+    "role": "platformer-hero",
+    "layout": "row",
+    "frameW": 120,
+    "frameH": 80,
+    "file": "free-knight-run.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7",
+      "frame8",
+      "frame9"
+    ],
+    "source": "free-knight/Colour1/Outline/120x80_PNGSheets/_Run.png"
   },
   "hollow-ancestor": {
     "name": "hollow-ancestor",
@@ -119,6 +259,225 @@
     ],
     "placeholder": true
   },
+  "mushroom": {
+    "name": "mushroom",
+    "type": "strip",
+    "layout": "row",
+    "frameW": 24,
+    "frameH": 24,
+    "file": "mushroom.png",
+    "frames": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt"
+    ],
+    "source": "Monster Creatures Fantasy v1.3 — Mushroom"
+  },
+  "pf-flying-eye": {
+    "name": "pf-flying-eye",
+    "type": "strip",
+    "role": "platformer-enemy",
+    "layout": "row",
+    "frameW": 64,
+    "frameH": 64,
+    "file": "pf-flying-eye.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5"
+    ],
+    "source": "monster-creatures-fantasy/Flying eye/Attack3.png"
+  },
+  "pf-flying-eye-projectile": {
+    "name": "pf-flying-eye-projectile",
+    "type": "strip",
+    "role": "platformer-projectile",
+    "layout": "row",
+    "frameW": 48,
+    "frameH": 48,
+    "file": "pf-flying-eye-projectile.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7"
+    ],
+    "source": "monster-creatures-fantasy/Flying eye/projectile_sprite.png"
+  },
+  "pf-goblin": {
+    "name": "pf-goblin",
+    "type": "strip",
+    "role": "platformer-enemy",
+    "layout": "row",
+    "frameW": 64,
+    "frameH": 64,
+    "file": "pf-goblin.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7",
+      "frame8",
+      "frame9",
+      "frame10",
+      "frame11"
+    ],
+    "source": "monster-creatures-fantasy/Goblin/Attack3.png"
+  },
+  "pf-goblin-bomb": {
+    "name": "pf-goblin-bomb",
+    "type": "strip",
+    "role": "platformer-projectile",
+    "layout": "row",
+    "frameW": 100,
+    "frameH": 100,
+    "file": "pf-goblin-bomb.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7",
+      "frame8",
+      "frame9",
+      "frame10",
+      "frame11",
+      "frame12",
+      "frame13",
+      "frame14",
+      "frame15",
+      "frame16",
+      "frame17",
+      "frame18"
+    ],
+    "source": "monster-creatures-fantasy/Goblin/Bomb_sprite.png"
+  },
+  "pf-mushroom": {
+    "name": "pf-mushroom",
+    "type": "strip",
+    "role": "platformer-enemy",
+    "layout": "row",
+    "frameW": 64,
+    "frameH": 64,
+    "file": "pf-mushroom.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7",
+      "frame8",
+      "frame9",
+      "frame10"
+    ],
+    "source": "monster-creatures-fantasy/Mushroom/Attack3.png"
+  },
+  "pf-mushroom-projectile": {
+    "name": "pf-mushroom-projectile",
+    "type": "strip",
+    "role": "platformer-projectile",
+    "layout": "row",
+    "frameW": 50,
+    "frameH": 50,
+    "file": "pf-mushroom-projectile.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7"
+    ],
+    "source": "monster-creatures-fantasy/Mushroom/Projectile_sprite.png"
+  },
+  "pf-skeleton": {
+    "name": "pf-skeleton",
+    "type": "strip",
+    "role": "platformer-enemy",
+    "layout": "row",
+    "frameW": 64,
+    "frameH": 64,
+    "file": "pf-skeleton.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5"
+    ],
+    "source": "monster-creatures-fantasy/Skeleton/Attack3.png"
+  },
+  "pf-skeleton-sword": {
+    "name": "pf-skeleton-sword",
+    "type": "strip",
+    "role": "platformer-projectile",
+    "layout": "row",
+    "frameW": 92,
+    "frameH": 102,
+    "file": "pf-skeleton-sword.png",
+    "frames": [
+      "frame0",
+      "frame1",
+      "frame2",
+      "frame3",
+      "frame4",
+      "frame5",
+      "frame6",
+      "frame7"
+    ],
+    "source": "monster-creatures-fantasy/Skeleton/Sword_sprite.png"
+  },
+  "relic-ember-edge": {
+    "name": "relic-ember-edge",
+    "type": "icon",
+    "role": "relic-ui",
+    "layout": "single",
+    "frameW": 16,
+    "frameH": 16,
+    "file": "relic-ember-edge.png",
+    "source": "items/item17.png"
+  },
+  "relic-green-knot": {
+    "name": "relic-green-knot",
+    "type": "icon",
+    "role": "relic-ui",
+    "layout": "single",
+    "frameW": 16,
+    "frameH": 16,
+    "file": "relic-green-knot.png",
+    "source": "items/item30.png"
+  },
+  "relic-rune-lens": {
+    "name": "relic-rune-lens",
+    "type": "icon",
+    "role": "relic-ui",
+    "layout": "single",
+    "frameW": 16,
+    "frameH": 16,
+    "file": "relic-rune-lens.png",
+    "source": "items/item135.png"
+  },
   "relic-shade": {
     "name": "relic-shade",
     "type": "strip",
@@ -133,6 +492,26 @@
       "hurt"
     ],
     "placeholder": true
+  },
+  "relic-tallow-brand": {
+    "name": "relic-tallow-brand",
+    "type": "icon",
+    "role": "relic-ui",
+    "layout": "single",
+    "frameW": 16,
+    "frameH": 16,
+    "file": "relic-tallow-brand.png",
+    "source": "items/item149.png"
+  },
+  "relic-warden-sigil": {
+    "name": "relic-warden-sigil",
+    "type": "icon",
+    "role": "relic-ui",
+    "layout": "single",
+    "frameW": 16,
+    "frameH": 16,
+    "file": "relic-warden-sigil.png",
+    "source": "items/item152.png"
   },
   "schism-shadow": {
     "name": "schism-shadow",

@@ -14,7 +14,7 @@ assert.strictEqual(content.ASSETS.heroKnightDir.h, 56, 'heroKnightDir frame heig
 assert(fs.existsSync(heroPath), 'hero-knight-directions.png should exist');
 
 const img = decodePng(heroPath);
-assert.strictEqual(img.width, 56 * 8, 'hero knight direction sheet should have 8 frames');
+assert.strictEqual(img.width, 56 * 8 * 4, 'hero knight direction sheet should have 8 directions with 4 walk frames each');
 assert.strictEqual(img.height, 56, 'hero knight direction sheet should use 56px frames');
 
 let opaque = 0;
@@ -22,6 +22,7 @@ for (let i = 3; i < img.pixels.length; i += 4) if (img.pixels[i] > 0) opaque++;
 assert(opaque > 1000, 'hero knight direction sheet should contain visible sprites');
 
 assert(index.includes('function drawHeroKnightPlayer'), 'town renderer should have a hero knight draw path');
+assert(index.includes('walkFrame=p.moving?Math.floor(state.time*8)%4:0'), 'hero knight should animate walk phases while moving');
 assert(index.includes("drawHeroKnightPlayer(p)"), 'local player should use the hero knight draw path');
 
 console.log('hero knight verification passed');

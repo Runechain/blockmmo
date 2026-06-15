@@ -725,7 +725,11 @@ function exitEngineMode(){
 }
 function updateEngineMode(dt){
   modeManager.update(dt, engineInput());
-  player.hp=Math.max(0,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;
+  const ep=engineApi.player;
+  // Stamina (AP) regenerates during engine modes too — not just in town — so a full gauntlet of
+  // monsters is actually sustainable. HP is intentionally NOT regenerated here (heal at Hearthlight).
+  if(ep.sta<ep.maxSta) ep.sta=Math.min(ep.maxSta, ep.sta+34*dt);
+  player.hp=Math.max(0,Math.round(ep.hp)); player.sta=ep.sta;
   updateHud();
 }
 /* Segment sequencer (F3): chains play-styles into one boss encounter, above the mode manager. */
@@ -1255,7 +1259,9 @@ function drawHeroKnightPlayer(p){
   const a=ASSETS.heroKnightDir, img=a&&a.img;
   if(!img)return false;
   const dir=directionName(p.dirX||1,p.dirY||0);
-  const frame=Math.max(0,PLAYER_DIR_ORDER.indexOf(dir));
+  const dirFrame=Math.max(0,PLAYER_DIR_ORDER.indexOf(dir));
+  const walkFrame=p.moving?Math.floor(state.time*8)%4:0;
+  const frame=walkFrame*PLAYER_DIR_ORDER.length+dirFrame;
   const s=worldToScreen(p.x,p.y);
   const bob=p.moving?Math.sin(state.time*14)*1:0;
   ctx.drawImage(img,frame*a.w,0,a.w,a.h,Math.round(s.x-a.w/2),Math.round(s.y-a.h+10+bob),a.w,a.h);

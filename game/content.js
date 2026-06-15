@@ -236,7 +236,12 @@ const ASSETS={
   'gl-cloud3':{src:'assets/pixel/gl-cloud3.png',w:96,h:32,img:null},
   'gl-tree':{src:'assets/pixel/gl-tree.png',w:64,h:80,img:null},
   'gl-bush':{src:'assets/pixel/gl-bush.png',w:16,h:16,img:null},
-  'gl-stone':{src:'assets/pixel/gl-stone.png',w:16,h:16,img:null}
+  'gl-stone':{src:'assets/pixel/gl-stone.png',w:16,h:16,img:null},
+  'gl-tallgrass1':{src:'assets/pixel/gl-tallgrass1.png',w:16,h:16,img:null},
+  'gl-tallgrass2':{src:'assets/pixel/gl-tallgrass2.png',w:16,h:16,img:null},
+  'gl-stone2':{src:'assets/pixel/gl-stone2.png',w:16,h:16,img:null},
+  'gl-stone3':{src:'assets/pixel/gl-stone3.png',w:32,h:16,img:null},
+  'gl-choppedtree':{src:'assets/pixel/gl-choppedtree.png',w:32,h:16,img:null}
 };
 
 const PLAT_LEVEL={id:'a1-parish-road',name:'Parish Road Receipts',width:2000,height:640,
@@ -254,40 +259,39 @@ const PLAT_LEVEL={id:'a1-parish-road',name:'Parish Road Receipts',width:2000,hei
     {key:'gl-tree',x:1168,y:496},{key:'gl-bush',x:1440,y:496},{key:'gl-tree',x:1760,y:336}
   ],
   platforms:[
-    {id:'ground-a',x:0,y:560,w:496,h:80},
+    {id:'ground-a',x:0,y:560,w:512,h:80},
     {id:'shelf-a',x:80,y:496,w:96,h:16,type:'oneWay'},
     {id:'ledge-a',x:224,y:432,w:80,h:16,type:'oneWay'},
     {id:'scout-post',x:336,y:368,w:64,h:16,type:'oneWay'},
     {id:'mover-a',x:462,y:512,w:80,h:16,type:'solid',vx:36,minX:444,maxX:596},
-    {id:'island-a',x:544,y:560,w:176,h:80},
-    {id:'upper-a',x:560,y:432,w:128,h:16},
-    {id:'mover-b',x:724,y:496,w:64,h:16,type:'solid',vy:-38,minY:416,maxY:512},
-    {id:'island-b',x:820,y:560,w:208,h:80},
+    {id:'island-a',x:544,y:560,w:200,h:80},
+    {id:'upper-a',x:576,y:496,w:112,h:16,type:'oneWay'},
+    {id:'island-b',x:792,y:560,w:236,h:80},
     {id:'step-b',x:840,y:496,w:80,h:16,type:'oneWay'},
     {id:'bridge-c',x:972,y:528,w:64,h:16,type:'oneWay'},
     {id:'bridge-d',x:1020,y:480,w:64,h:16,type:'oneWay'},
-    {id:'raised-c',x:1056,y:496,w:608,h:144},
+    {id:'raised-c',x:1056,y:496,w:688,h:144},
     {id:'wall-c',x:1264,y:448,w:72,h:48},
     {id:'ledge-c',x:1376,y:432,w:112,h:16,type:'oneWay'},
-    {id:'boss-step1',x:1648,y:464,w:80,h:16,type:'oneWay'},
-    {id:'boss-step2',x:1696,y:400,w:96,h:16},
+    {id:'mover-b',x:1472,y:451,w:72,h:16,type:'solid',vy:-40,minY:392,maxY:451},
+    {id:'boss-step1',x:1592,y:448,w:104,h:16,type:'oneWay'},
+    {id:'boss-step2',x:1672,y:400,w:104,h:16,type:'oneWay'},
     {id:'boss-arena',x:1744,y:336,w:256,h:80}
   ],
   hazards:[
-    {id:'mud',type:'slow',x:180,y:544,w:160,h:16,slow:0.45},
-    {id:'wax-a',type:'sticky',x:556,y:544,w:128,h:16,slow:0.3,staminaCost:1},
+    {id:'mud',type:'slow',x:150,y:544,w:130,h:16,slow:0.45},
+    {id:'wax-a',type:'sticky',x:300,y:544,w:120,h:16,slow:0.35,staminaCost:1},
     {id:'pages-a',type:'projectile',x:718,y:80,w:32,h:32,interval:1.2,speedY:225,damage:2},
-    {id:'kb-island',type:'knockback',x:804,y:544,w:48,h:16,damage:2,knockX:-240,knockY:-200},
     {id:'stun-bell',type:'stun',x:1088,y:480,w:48,h:16,stun:0.6},
     {id:'spikes-wall',type:'damage',x:1192,y:480,w:48,h:16,damage:3},
-    {id:'kb-boss',type:'knockback',x:1664,y:448,w:48,h:16,damage:1,knockX:200,knockY:-200}
+    {id:'kb-boss',type:'knockback',x:1420,y:480,w:48,h:16,damage:1,knockX:200,knockY:-200}
   ],
   enemies:[
     {id:'road-goblin',type:'goblin',sprite:'pf-goblin',x:280,y:560,w:24,h:38,hp:44,damage:2,speed:38,patrolMin:200,patrolMax:450,frameCount:12,scale:.88},
-    {id:'shelf-spore',type:'mushroom',sprite:'pf-mushroom',x:100,y:496,w:28,h:34,hp:38,damage:2,speed:16,patrolMin:80,patrolMax:176,frameCount:11,scale:.86},
     {id:'gap-eye',type:'flying-eye',sprite:'pf-flying-eye',x:630,y:430,w:26,h:30,hp:34,damage:2,speed:30,patrolMin:530,patrolMax:720,frameCount:6,scale:.8,flying:true,baseY:430},
-    {id:'island-goblin',type:'goblin',sprite:'pf-goblin',x:870,y:560,w:24,h:38,hp:44,damage:2,speed:36,patrolMin:830,patrolMax:1010,frameCount:12,scale:.88},
-    {id:'raised-spore',type:'mushroom',sprite:'pf-mushroom',x:1130,y:496,w:28,h:34,hp:38,damage:2,speed:20,patrolMin:1070,patrolMax:1250,frameCount:11,scale:.86},
+    {id:'spore-tyrant',type:'mushroom',sprite:'pf-mushroom',name:'The Spore Tyrant',boss:true,x:912,y:560,w:52,h:58,hp:140,damage:3,speed:24,aggro:210,patrolMin:828,patrolMax:1004,frameCount:7,animRate:6,scale:2.0,burstFrame:9,
+      ranged:{interval:1.9,speed:165,damage:3,range:380,rangeY:240,delay:0.9,sprite:'pf-mushroom-projectile',frameCount:8,animRate:14,scale:.5,w:20,h:20,color:'#9f3e45'}},
+    {id:'raised-goblin',type:'goblin',sprite:'pf-goblin',x:1150,y:496,w:24,h:38,hp:44,damage:2,speed:34,patrolMin:1072,patrolMax:1250,frameCount:12,scale:.88},
     {id:'wall-skeleton',type:'skeleton',sprite:'pf-skeleton',x:1430,y:432,w:24,h:40,hp:52,damage:3,speed:28,patrolMin:1376,patrolMax:1480,frameCount:6,scale:.9},
     {id:'approach-eye',type:'flying-eye',sprite:'pf-flying-eye',x:1700,y:380,w:26,h:30,hp:34,damage:2,speed:28,patrolMin:1660,patrolMax:1790,frameCount:6,scale:.8,flying:true,baseY:380},
     {id:'gate-skeleton',type:'skeleton',sprite:'pf-skeleton',x:1800,y:336,w:24,h:40,hp:52,damage:3,speed:30,patrolMin:1752,patrolMax:1940,frameCount:6,scale:.9}

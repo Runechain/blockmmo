@@ -24,7 +24,7 @@ export function createPlatformerMode(level={}){
     const spawn=level.spawn||{x:32,y:32};
     player={
       x:spawn.x, y:spawn.y, vx:0, vy:0, w:cfg.w, h:cfg.h, facing:1,
-      onGround:false, coyote:0, jumpBuffer:0, jumpHeld:false, stun:0,
+      onGround:false, coyote:0, jumpBuffer:0, jumpHeld:false, stun:0, stunImmune:0,
       hurtCd:0, attackCd:0, stand:null, moving:false, animT:0
     };
     enemies=(level.enemies||[]).map((e,i)=>({
@@ -33,7 +33,9 @@ export function createPlatformerMode(level={}){
       hp:e.hp||24, maxHp:e.hp||24, damage:e.damage||1, speed:e.speed||34,
       aggro:e.aggro||170, patrolMin:e.patrolMin, patrolMax:e.patrolMax,
       facing:e.facing||-1, flying:!!e.flying, scale:e.scale||1, frameCount:e.frameCount||4,
-      animRate:e.animRate||8, phase:Math.random()*10, hitFlash:0, dead:false
+      animRate:e.animRate||8, phase:Math.random()*10, hitFlash:0, dead:false,
+      boss:!!e.boss, name:e.name||null, ranged:e.ranged||null, fireCd:(e.ranged&&e.ranged.delay)||0,
+      burstFrame:(e.burstFrame!=null?e.burstFrame:null), attackFlash:0
     }));
     camera={x:0,y:0,w:640,h:360};
     bossFired=false; bossLocked=false; cameraLock=null; exitFired=false; attackBox=null; lastJump=false;
@@ -214,6 +216,21 @@ export function createPlatformerMode(level={}){
     if(e.flying)e.y=e.baseY+Math.sin(e.animT*2.4+e.phase)*8;
   }
 
+  function fireEnemyProjectile(e){
+    const r=e.ranged;
+    const ox=e.x, oy=e.y-e.h*0.62;
+    const dx=player.x-ox, dy=(player.y-player.h/2)-oy;
+    const n=Math.max(1, Math.hypot(dx,dy));
+    const sp=r.speed||175, pw=r.w||20, ph=r.h||20;
+    e.facing=dx>0?1:-1;
+    projectiles.push({
+      x:ox-pw/2, y:oy-ph/2, w:pw, h:ph,
+      vx:dx/n*sp, vy:dy/n*sp, damage:r.damage||2, life:r.life||3.4,
+      color:r.color||'#9f3e45', sprite:r.sprite||null, scale:r.scale||1,
+      frameCount:r.frameCount||1, animRate:r.animRate||10, t:0
+    });
+  }
+
   function updateEnemies(dt){
     const pb=body(player);
     for(const e of enemies){
@@ -221,8 +238,16 @@ export function createPlatformerMode(level={}){
       if(e.hitFlash>0)e.hitFlash=Math.max(0,e.hitFlash-dt);
       if(e.dead)continue;
       updateEnemyMotion(e, dt);
-      if(hit(pb, enemyBody(e))){
-        player.vx+=(player.x<e.x?-1:1)*85;
+      if(e.ranged){
+        e.fireCd-=dt;
+        const inRange=Math.abs(player.x-e.x)<(e.ranged.range||400)&&Math.abs(player.y-e.y)<(e.ranged.rangeY||260);
+        if(e.fireCd<=0&&inRange){ e.fireCd=e.ranged.interval||2; e.attackFlash=.2; fireEnemyProjectile(e); }
+      }
+      if(e.attackFlash>0)e.attackFlash=Math.max(0,e.attackFlash-dt);
+      // Contact damage + knockback only fire on the hit frame (gated by hurtCd), not every frame —
+      // otherwise a multi-hit enemy shoves you away continuously and you can never melee it.
+      if(player.hurtCd<=0&&hit(pb, enemyBody(e))){
+        player.vx+=(player.x<e.x?-1:1)*(e.boss?95:85);
         if(player.vy>0)player.vy=-110;
         hurt(e.damage, e);
       }
@@ -247,8 +272,12 @@ export function createPlatformerMode(level={}){
       if(!hit(b,h))continue;
       if(h.type==='damage')hurt(h.damage||1, h);
       if(h.type==='stun'){
-        player.stun=Math.max(player.stun, h.stun||.45);
-        hurt(h.damage||0, h);
+        // Edge-triggered with a recovery window so you can never get stun-locked standing on it.
+        if(player.stun<=0&&player.stunImmune<=0){
+          player.stun=h.stun||.45;
+          player.stunImmune=(h.stun||.45)+0.55;
+          hurt(h.damage||0, h);
+        }
       }
       if(h.type==='knockback'){
         player.vx=h.knockX||(player.x<h.x+h.w/2?-220:220);
@@ -259,7 +288,7 @@ export function createPlatformerMode(level={}){
       if(h.type==='sticky'&&h.staminaCost)spend('sticky', {mode:'platformer', hazard:h});
     }
     for(const p of projectiles){
-      p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; p.t=(p.t||0)+dt;
       if(hit(body(player), p)){ hurt(p.damage||1, p); p.life=0; }
     }
     projectiles=projectiles.filter(p=>p.life>0&&p.y<(level.height||900)+80);
@@ -296,6 +325,7 @@ export function createPlatformerMode(level={}){
     dt=Math.min(dt||0, .05);
     updatePlatforms(dt);
     if(player.stun>0)player.stun=Math.max(0, player.stun-dt);
+    if(player.stunImmune>0)player.stunImmune=Math.max(0, player.stunImmune-dt);
     if(player.attackCd>0)player.attackCd=Math.max(0, player.attackCd-dt);
     if(attackBox){ attackBox.t-=dt; if(attackBox.t<=0)attackBox=null; }
     const dir=(inputDown(input,'right','moveRight')?1:0)-(inputDown(input,'left','moveLeft')?1:0);
@@ -360,12 +390,12 @@ export function createPlatformerMode(level={}){
   }
 
   function playerAnim(){
-    if(player.stun>0||player.hurtCd>0)return {key:'free-knight-hit', frame:0, scale:.86};
-    if(player.attackCd>.05)return {key:'free-knight-attack', frame:Math.min(3, Math.floor((.28-player.attackCd)*18)), scale:.86};
-    if(!player.onGround&&player.vy<0)return {key:'free-knight-jump', frame:Math.min(2, Math.floor(player.animT*8)%3), scale:.86};
-    if(!player.onGround)return {key:'free-knight-fall', frame:Math.min(2, Math.floor(player.animT*8)%3), scale:.86};
-    if(player.moving)return {key:'free-knight-run', frame:Math.floor(player.animT*12)%10, scale:.86};
-    return {key:'free-knight-idle', frame:Math.floor(player.animT*7)%10, scale:.86};
+    if(player.stun>0||player.hurtCd>0)return {key:'free-knight-hit', frame:0, scale:1.18};
+    if(player.attackCd>.05)return {key:'free-knight-attack', frame:Math.min(3, Math.floor((.28-player.attackCd)*18)), scale:1.18};
+    if(!player.onGround&&player.vy<0)return {key:'free-knight-jump', frame:Math.min(2, Math.floor(player.animT*8)%3), scale:1.18};
+    if(!player.onGround)return {key:'free-knight-fall', frame:Math.min(2, Math.floor(player.animT*8)%3), scale:1.18};
+    if(player.moving)return {key:'free-knight-run', frame:Math.floor(player.animT*12)%10, scale:1.18};
+    return {key:'free-knight-idle', frame:Math.floor(player.animT*7)%10, scale:1.18};
   }
 
   function drawEnemy(c, cam, e){
@@ -374,16 +404,47 @@ export function createPlatformerMode(level={}){
     const eb=enemyBody(e);
     c.fillStyle='rgba(0,0,0,.36)';
     c.fillRect(Math.round(e.x-cam.x-e.w*.65), Math.round(e.y-cam.y-4), Math.round(e.w*1.3), 5);
-    const frame=e.hitFlash>0?Math.max(0,e.frameCount-1):Math.floor((e.animT||0)*(e.animRate||8))%Math.max(1,e.frameCount||1);
+    const fc=Math.max(1,e.frameCount||1);
+    let frame=Math.floor((e.animT||0)*(e.animRate||8))%fc;
+    if(e.attackFlash>0&&e.burstFrame!=null)frame=e.burstFrame;
+    else if(e.hitFlash>0)frame=fc-1;
     if(!(spr&&spr(e.sprite, e.x, e.y+2, frame, e.scale||1, {flipX:e.facing<0}))){
       c.fillStyle=e.hitFlash>0?'#f4eee0':'#9b6f50';
       c.fillRect(Math.round(eb.x-cam.x), Math.round(eb.y-cam.y), eb.w, eb.h);
     }
-    if(e.hp<e.maxHp&&!e.dead){
-      const w=Math.max(24,e.w+10), x=Math.round(e.x-cam.x-w/2), y=Math.round(eb.y-cam.y-8);
-      c.fillStyle='#08090a'; c.fillRect(x,y,w,3);
-      c.fillStyle='#c95b52'; c.fillRect(x+1,y+1,(w-2)*Math.max(0,e.hp/e.maxHp),1);
+    if((e.hp<e.maxHp||e.boss)&&!e.dead){
+      const big=e.boss;
+      const w=big?Math.max(72,Math.round(e.w*1.7)):Math.max(24,e.w+10);
+      const x=Math.round(e.x-cam.x-w/2), y=Math.round(eb.y-cam.y-(big?18:8));
+      c.fillStyle='#08090a'; c.fillRect(x,y,w,big?5:3);
+      c.fillStyle=big?'#d24b46':'#c95b52'; c.fillRect(x+1,y+1,Math.max(0,(w-2)*Math.max(0,e.hp/e.maxHp)),big?3:1);
+      if(big&&e.name){ c.fillStyle='#ecd9a8'; c.font='bold 9px monospace'; c.textAlign='center'; c.fillText(e.name, Math.round(e.x-cam.x), y-4); c.textAlign='left'; }
     }
+  }
+
+  const HAZARD_DECOR={
+    slow:['gl-tallgrass1','gl-tallgrass2','gl-tallgrass1'],
+    sticky:['gl-bush','gl-bush','gl-tallgrass2'],
+    damage:['gl-stone2','gl-stone','gl-stone2'],
+    stun:['gl-tallgrass2','gl-bush','gl-tallgrass1'],
+    knockback:['gl-stone','gl-stone2','gl-stone']
+  };
+  const HAZARD_TINT={ damage:'rgba(150,40,40,.26)', stun:'rgba(125,95,180,.26)', knockback:'rgba(192,91,63,.24)' };
+
+  function drawHazard(c, cam, h){
+    const draw=api&&(api.drawSheet||(api.assets&&api.assets.drawSheet));
+    if(h.type==='projectile'){ drawRect(c, cam, h, 'rgba(215,208,162,.14)'); return; }
+    const tint=HAZARD_TINT[h.type];
+    if(tint) drawRect(c, cam, h, tint);
+    const set=h.decor||HAZARD_DECOR[h.type]||['gl-bush'];
+    const baseY=h.y+(h.h||16)+1;
+    let drew=false, i=0;
+    if(draw){
+      for(let x=h.x+7; x<h.x+h.w-1; x+=15, i++){
+        if(draw(set[i%set.length], x, baseY, 0, 1, {})) drew=true;
+      }
+    }
+    if(!drew&&!tint) drawRect(c, cam, h, 'rgba(83,104,75,.55)');
   }
 
   function render(nextCtx=ctx, nextCamera){
@@ -420,17 +481,16 @@ export function createPlatformerMode(level={}){
     // Platforms with tile rendering
     for(const p of platforms) drawPlatformTiled(c, cam, p);
 
-    // Hazards
-    for(const h of hazards){
-      if(h.type==='projectile'){ drawRect(c, cam, h, 'rgba(215,208,162,.15)'); continue; }
-      const color=h.type==='slow'||h.type==='sticky'?'rgba(83,104,75,.72)':h.type==='stun'?'rgba(125,95,180,.68)':h.type==='knockback'?'rgba(192,91,63,.68)':'rgba(148,36,42,.75)';
-      drawRect(c, cam, h, color);
-    }
+    // Hazards rendered as obstacle props (hedges, grass, rocks) keyed by type
+    for(const h of hazards) drawHazard(c, cam, h);
 
     if(level.exit)drawRect(c, cam, level.exit, 'rgba(104,166,118,.55)');
     if(level.bossTrigger&&!bossFired)drawRect(c, cam, level.bossTrigger, 'rgba(201,164,78,.34)');
     for(const e of enemies)drawEnemy(c, cam, e);
-    for(const p of projectiles)drawRect(c, cam, p, p.color||'#d7d0a2');
+    for(const p of projectiles){
+      const fr=p.frameCount>1?Math.floor((p.t||0)*(p.animRate||10))%p.frameCount:0;
+      if(!(p.sprite&&drawSheet&&drawSheet(p.sprite, p.x+p.w/2, p.y+p.h, fr, p.scale||1, {}))) drawRect(c, cam, p, p.color||'#d7d0a2');
+    }
     if(attackBox)drawRect(c, cam, attackBox, 'rgba(241,230,200,.72)');
     drawPlayer(c, cam);
     if(bossLocked&&cameraLock){

@@ -1,0 +1,17 @@
+[toolchain]
+anchor_version = "0.31.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+runechain_settlement = "A7A2G4qnQaKBZiCqUPtuNbeDrvdPGK4gE9wip61dXPpN"
+runechain_character = "FAidaRiKduPztNQmKK1C1T4ikmmqAXpiWwMzXbnJhNN3"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "echo 'TODO: anchor tests'"

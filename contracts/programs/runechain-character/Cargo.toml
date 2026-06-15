@@ -1,0 +1,21 @@
+[package]
+name = "runechain-character"
+version = "0.1.0"
+description = "RUNECHAIN character lifecycle (PRD F7): season-gated, conditionally-transferable character with one cash-out"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "runechain_character"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+anchor-spl = "0.31.1"

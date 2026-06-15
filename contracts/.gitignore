@@ -1,0 +1,7 @@
+target/
+.anchor/
+**/*.rs.bk
+node_modules/
+test-ledger/
+# program keypairs are deploy secrets — never commit
+keys/*.json

@@ -422,9 +422,9 @@ Consolidated. Each is referenced inline above.
 
 ## Conflict Register (PRD vs. ratified DESIGN-BIBLE)
 
-Per the decision to **keep both**: the bible stays canon; the PRD records these as a
-**proposed economy/gameplay revision** pending explicit reconciliation. Until reconciled,
-**the bible wins** on these points and the PRD items are **[TENSION]**, not canon.
+**RECONCILED 2026-06-14.** C1–C4 were ruled and promoted into `DESIGN-BIBLE.md` (rulings 7–10),
+which is now canon on these points. The original conflicts are kept below for traceability;
+the resolution follows the table.
 
 | ID | PRD proposal | Conflicts with bible | Bible's standing rule |
 |---|---|---|---|
@@ -433,11 +433,14 @@ Per the decision to **keep both**: the bible stays canon; the PRD records these 
 | **C3** | **Real item/currency loss on death**, RUNE-recoverable (F4) | Stakes are ruled **cosmetic only, no power transfer / no farmable power** | A3 PvP: "cosmetic stakes only, no power transfer"; Ruling 4: endgame grants "no farmable power" |
 | **C4** | **Real money in + real value out** as first-class (F6, F7, U5) | The bible's entire economy assumes no real-money power and no cash-out | Premise + Rulings 1–6 are built on grind-only power and cosmetic-only spend |
 
-**Reconciliation path (not yet done).** To promote any C-item to canon, update
-`DESIGN-BIBLE.md`'s Terminology and Economy Rulings explicitly (e.g. redefine Gold to
-"cosmetics + capped, seasonal, non-exclusive QOL acceleration"; add a ratified ruling for
-the conditional-transfer/sale lifecycle and its legal precondition; add a ruling on death
-stakes). Until then, builders follow the bible on C1–C4.
+**Resolution (ratified 2026-06-14 → `DESIGN-BIBLE.md` rulings 7–10).**
+
+- **C1 — kept bible.** Gold stays cosmetics-only; the capped grind-acceleration (F5.1) is **rejected**. PRD U3/U4 are inapplicable — there is no paid power lever.
+- **C2 — ratified.** Conditionally-transferable character; selling a season-complete character is the single value-exit; production go-live legal-gated.
+- **C3 — modified (supersedes F4's death-loss).** No item/currency loss on death. Instead a character's **collection — items + cosmetics, some rare — persists and transfers; stats reset to zero** on sale/season-restart. Power is never inherited, only re-earned. *(Open: whether power-granting relics/Sigils transfer with the collection or reset with stats.)*
+- **C4 — ratified.** Real money in (Solana settlement) + out (character sale) is canon as a designed system; production go-live legal-gated.
+
+Builders now follow the bible's updated rulings 7–10 on these points.
 
 ---
 

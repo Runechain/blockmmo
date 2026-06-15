@@ -51,7 +51,7 @@ Final line, shown to all players on all servers regardless of ending:
 - **Chainwell** — the literal on-chain ledger beneath the parish. Stays unreachable and cosmic; never a god.
 - **Hearthlight** — a safe rest site. Rest is always FREE, SAFE, enemy-free (hard invariant). RUNE→power and relic-forging happen only here. Per area: Hearthlight Chapel (A1), the Forklight (A2), the Celestial Spark (A3).
 - **RUNE** — grind/power currency, browser-mined via SHA-256 PoW. Power only, only at a Hearthlight.
-- **Gold** — cosmetic currency. Dyes/vestments/skins/VFX only. Never power.
+- **Gold** — cosmetic currency. Dyes/vestments/skins/VFX only. **Never power** (re-affirmed over the PRD's acceleration proposal — see ruling 7 / C1).
 - **Boss Sigil** — unique on-chain final-boss drop. Three: Waxen Testament, Contested Will, Amended Record.
 - **Mempool Yard** — the queue of pending/unconfirmed dead in Gracefall.
 - **Hollow** — a debtor processed into a husk. Base enemy family; per-area variants (Debtor, Inheritor, Contradiction).
@@ -59,6 +59,10 @@ Final line, shown to all players on all servers regardless of ending:
 - **The Auditor** — A3 final boss; the accumulated will of every entry, the ledger's GHOST. Not a god, not malevolent — only consistent. Can become a co-author.
 - **Husk / Relic Shade** — a repossessed player relic (from real on-chain inventory) animated as a hollow patroller in A3.
 - **Confirmation** — a pending death/entry being finalized. Tied to bells (A1), re-inscription (A2), amendment (A3).
+- **Character** — the player's account-character: a conditionally-transferable on-chain asset. Transfer-locked while a season is open; unlocks on season-completion. On sale/season-restart its **collection (items + cosmetics) carries; stats reset to zero** (C2/C3).
+- **Season** — a shared real-world window. A character is "season-complete" (sale-eligible) only if it finished the mandatory tasks while the window was open.
+- **Sale (cash-out)** — the single way value leaves the system: selling a season-complete character. Seller restarts at zero next season. Production go-live is gated on legal sign-off (C2/C4).
+- **Rare item** — collected items vary in rarity; since stats reset on transfer, a character's **collection** (rare items + cosmetics) is its durable, tradeable value (C3).
 
 ## Economy rulings — RATIFIED
 
@@ -68,6 +72,17 @@ Final line, shown to all players on all servers regardless of ending:
 4. **Auditor endgame ships BOTH** the repeatable "Weekly Contestation" Echo *and* the creative "Amendment Content" sandbox. **Neither grants farmable power** (cosmetics/Gold pittances only, no extra Sigils).
 5. **Area 2's Keeper-of-Margins side-quest is canonical and mechanical** — completing it weakens the Debt Foreman, so that fight has two difficulty states.
 6. **The A/B/C final ending is permanent, account-bound, and publicly viewable** by other players (on-chain identity).
+
+### Real-money & character lifecycle — RECONCILED (PRD C1–C4, ratified 2026-06-14)
+
+These resolve the PRD Conflict Register; the bible is updated, so they are now canon.
+
+7. **C1 — Gold stays cosmetics-only.** The PRD's capped grind-acceleration is **rejected**. Gold buys dyes/vestments/skins/VFX only and never touches progression speed; RUNE stays the sole power currency (no pay-to-win, no paid acceleration). PRD U3/U4 (paid-acceleration cap, seasonal QOL reset) are therefore **inapplicable** — there is no paid power lever.
+8. **C3 — Items and cosmetics persist; stats reset only on transfer.** Death never drops items or currency (the PRD's death-loss is **rejected**) — dying just returns you to Hearthlight. A character's durable value is its **collection**: items (some **rare**) and cosmetics. On a **sale or season-restart** the collection carries to the new owner / next season, but **stats (levels) reset to zero**. Power is never inherited, only re-earned. *[OPEN] whether power-granting RUNE relics / Boss Sigils transfer with the collection or reset with stats — needs a call, since it decides whether a sale can convey any power.*
+9. **C2 — The character is a conditionally-transferable asset with one cash-out.** Transfer-locked while a season is open / tasks unfinished; unlocks on season-completion. Selling a season-complete character is the **single value-exit**; buyer inherits the collection, not stats; seller restarts at zero; one character per account per season. *Production go-live is gated on legal/compliance sign-off — a hard precondition.*
+10. **C4 — Real money in and out is a designed, canon system.** Gold is purchased via Solana settlement (wrapped-SOL, 50/35/15 split, true SPL burn); value exits only via the character sale. The **Chainwell** stays the permanent ledger of record; Solana lives only at the real-money edge and the sale boundary. *Go-live gated on legal sign-off (ties to ruling 9).*
+
+> These supersede the bible's prior soulbound / no-cash-out framing on exactly these points. RUNE-power-only, the safe-rest invariant (ruling 1), and Gold-cosmetics-only (ruling 7) are unchanged. Balance values remain placeholders. Full design: `PRD.md` F4–F7, U1–U8.
 
 ---
 

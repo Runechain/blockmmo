@@ -333,6 +333,7 @@ export function createBattlefieldMode(level={}){
     const c=nextCtx||ctx; if(!c||!player)return;
     if(nextCamera){ nextCamera.x=camera.x; nextCamera.y=camera.y; nextCamera.w=camera.w; nextCamera.h=camera.h; }
     const cam=nextCamera||camera;
+    const spr=api&&api.assets&&api.assets.drawSheet;
     c.save();
     c.imageSmoothingEnabled=false;
     c.fillStyle='#101619'; c.fillRect(0,0,cam.w,cam.h);
@@ -347,7 +348,8 @@ export function createBattlefieldMode(level={}){
     }
     for(const cr of creatures){
       drawCircle(c, cam, cr.x, cr.y, cr.r+4, 'rgba(0,0,0,.32)');
-      drawCircle(c, cam, cr.x, cr.y, cr.r, cr.hitFlash>0?'#f4eee0':cr.color);
+      if(!(spr&&spr(cr.key, cr.x, cr.y+cr.r, cr.hitFlash>0?3:1, 1)))
+        drawCircle(c, cam, cr.x, cr.y, cr.r, cr.hitFlash>0?'#f4eee0':cr.color);
       const w=cr.r*2+8, x=Math.round(cr.x-cam.x-w/2), y=Math.round(cr.y-cam.y-cr.r-10);
       c.fillStyle='#08090a'; c.fillRect(x,y,w,3);
       c.fillStyle='#c95b52'; c.fillRect(x+1,y+1,(w-2)*Math.max(0,cr.hp/cr.maxHp),1);
@@ -358,10 +360,12 @@ export function createBattlefieldMode(level={}){
       drawCircle(c, cam, duel.peer.x, duel.peer.y, 8, '#9eb4ff');
     }
     drawCircle(c, cam, player.x, player.y+5, 13, 'rgba(0,0,0,.35)');
-    drawCircle(c, cam, player.x, player.y, player.r, '#7187d6');
-    c.fillStyle='#e4cdae'; c.fillRect(Math.round(player.x-cam.x-5), Math.round(player.y-cam.y-17), 10, 8);
-    c.fillStyle='#f2d37f';
-    c.fillRect(Math.round(player.x-cam.x+player.dirX*11-2), Math.round(player.y-cam.y+player.dirY*11-2), 4, 4);
+    if(!(spr&&spr('player', player.x, player.y+player.r+2, player.moving?1:0, 1))){
+      drawCircle(c, cam, player.x, player.y, player.r, '#7187d6');
+      c.fillStyle='#e4cdae'; c.fillRect(Math.round(player.x-cam.x-5), Math.round(player.y-cam.y-17), 10, 8);
+      c.fillStyle='#f2d37f';
+      c.fillRect(Math.round(player.x-cam.x+player.dirX*11-2), Math.round(player.y-cam.y+player.dirY*11-2), 4, 4);
+    }
     c.fillStyle='#e8dfc8'; c.font='12px monospace';
     const duelText=duel?'duel: '+duel.status:'duel: none';
     c.fillText('waves '+waves.filter(w=>w.done).length+'/'+waves.length+'  creatures '+creatures.filter(cr=>!cr.dead).length+'  '+duelText, 12, 20);

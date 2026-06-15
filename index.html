@@ -890,7 +890,12 @@ const engineApi={
     damage(a){ if(!a)return; this.hp=Math.max(0,this.hp-a); if(this.hp<=0){ this.hp=this.maxHp; this.sta=this.maxSta; engineApi.log('You fall. Hearthlight reforms you.'); } },
     regen(a,dt){ this.hp=Math.min(this.maxHp,this.hp+a*dt); this.sta=Math.min(this.maxSta,this.sta+a*dt*1.8); },
     getMeleeDamage(){ return player.dmg; }, onKnockback(){} },
-  assets:{ drawSheet(){ return false; } },
+  assets:{ drawSheet(key,wx,wy,frame,scale){
+    const a=ASSETS[key]; if(!a||!a.img)return false;
+    const s=scale||1, sx=Math.round(wx-engineCam.x), sy=Math.round(wy-engineCam.y);
+    ctx.drawImage(a.img, (frame||0)*a.w,0,a.w,a.h, Math.round(sx-a.w*s/2), Math.round(sy-a.h*s), a.w*s, a.h*s);
+    return true;
+  } },
   net:{ id:'local', _h:{}, on(t,fn){ (this._h[t]||(this._h[t]=[])).push(fn); return ()=>{}; },
     send(m){ if(m&&m.t==='rc:pvp:challenge'){ const h=this._h; setTimeout(()=>{ (h['rc:pvp:accept']||[]).forEach(fn=>fn({t:'rc:pvp:accept',duelId:m.duelId,from:'stub-rival',to:m.from})); }, 350); } } },
   chain:{}, log:(m)=>log(m),

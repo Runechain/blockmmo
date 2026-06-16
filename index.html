@@ -789,7 +789,19 @@ function startBossEncounter(enemy){
   if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
   const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;
   bossEncounterEnemy=enemy;
-  bossSeq=RCEngine.createSegmentSequencer(script);
+  // Keeper-of-Margins side-quest: re-inscribing the margin-scroll (optional q06 interaction)
+  // weakens the Debt Foreman => two difficulty states. Shallow-clone the script; never mutate AREA2_ENCOUNTERS.
+  let useScript=script;
+  if(enemy.key==='foreman'){
+    const weak=progress.interactions.has('q06:margin-scroll');
+    const full={a:{hp:70,label:'CANON',color:'#d4a83e'},b:{hp:70,label:'SCHISM',color:'#4ecb7a'},crossHeal:false};
+    const weakened={a:{hp:50,label:'CANON',color:'#d4a83e'},b:{hp:50,label:'SCHISM',color:'#4ecb7a'},crossHeal:false};
+    useScript=Object.assign({},script,{segments:script.segments.map(s=> s.mode==='turnbased'
+      ? Object.assign({},s,{payload:Object.assign({},s.payload,{dualChain:weak?weakened:full,opponent:Object.assign({},s.payload.opponent,{attack:weak?12:16})})})
+      : s)});
+    log(weak?'The Keeper of Margins has testified — the Foreman is weakened.':'The Foreman stands at full strength.');
+  }
+  bossSeq=RCEngine.createSegmentSequencer(useScript);
   bossSeq.enter(engineApi, { startMode:startSegmentMode, exitMode(){ if(modeManager)modeManager.setMode(null, ctx, engineApi); }, log:(m)=>log(m) });
   state.mode='sequencer';
   log('Encounter: '+script.name+'. (T to retreat)');
@@ -1272,8 +1284,13 @@ const INTERACTABLES=[
   {id:'ledger-core-a',target:'ledger-core',quest:'q12',x:1944,y:-44,label:'CORE',kind:'tablet'},
   {id:'ledger-core-b',target:'ledger-core',quest:'q12',x:2000,y:38,label:'CORE',kind:'tablet'}
 ];
-function interactionKey(i){ return Story.state.activeQuestId+':'+i.id; }
+// margin-scroll (Keeper of Margins) is an OPTIONAL side-interaction, not a quest step, so its
+// key is fixed ('q06:margin-scroll') — deterministic regardless of the active quest at inscribe time,
+// which the foreman weakening gate in startBossEncounter() reads.
+function interactionKey(i){ return i.id==='margin-scroll' ? 'q06:margin-scroll' : (Story.state.activeQuestId+':'+i.id); }
 function interactableActive(i){
+  // Optional side-interaction: light up whenever q06 is reached and not yet inscribed.
+  if(i.id==='margin-scroll') return Story.questReached('q06') && !progress.interactions.has(interactionKey(i));
   const st=Story.currentStep();
   return !!(st && st.done && st.done.event==='interact' && st.done.target===i.target && Story.questReached(i.quest) && !progress.interactions.has(interactionKey(i)));
 }

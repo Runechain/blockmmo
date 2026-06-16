@@ -62,8 +62,11 @@ These hold across every feature below. They exist once, here, so they cannot dri
 - **U5 — One real-value exit only. [DECIDED]** The single way value leaves the system to
   a player is **selling a completed character**. RUNE, Gold, relics, and sigils never
   individually cash out.
-- **U6 — One character per account per season. [DECIDED]** A hard cap of one. *(What
-  "account" binds to — wallet, game account, or verified identity — is [OPEN]; see Q-A1.)*
+- **U6 — One character per account per season. [DECIDED]** A hard cap of one. For the
+  prototype, "account" binds to a browser-local P-256 game-account credential verified
+  by a server challenge. This is a low-friction pseudonymous cap, not proof of one human.
+  Stronger sybil resistance and production compliance remain gated by legal/compliance
+  work before any real-money character-sale market.
 - **U7 — Server is authoritative for all value. [DECIDED]** Clients propose; the server
   disposes. The "trust the client" relay posture is retired for anything touching the
   ledger or PvP outcomes (see [Server Authority](#system--server-authority--anti-cheat)).
@@ -117,7 +120,7 @@ The defining feature: one game, four modes, all sharing one player record and on
   the same `enter/exit/update/render` interface as the others, so it slots into the existing
   mode manager and can also serve as a boss segment (see F3).
 
-**Open.**
+**Remaining open questions.**
 - **Q-F2a [OPEN]** What carries from the real-time engagement into the turn-based battle —
   just the two combatants, or also positioning/initiative/HP-state at the moment of
   engagement (an ambush advantage)?
@@ -313,11 +316,12 @@ to F6.3). *Not legal advice; flagged so it is not a silent omission.*
   Carried as "failed"? (Needs an explicit rule; the gate must handle this state.)
 - **Q-F7b [OPEN]** `NonTransferable` is unusable for F7.2 — confirm transfer-hook vs.
   escrow-program as the gating mechanism.
-- **Q-A1 [OPEN]** (also U6) What does "account" bind to for the one-per-season cap —
-  **wallet** (circumventable via many wallets), **game account**, or **verified identity**
-  (real but adds friction + its own compliance surface)? How is sybil/multi-wallet
-  circumvention handled? The repo currently has no account system beyond an in-game name +
-  peer id, so this is genuinely undefined.
+- **Q-A1 [DECIDED FOR PROTOTYPE][LEGAL OPEN]** (also U6) The one-per-season cap binds
+  to a browser-local P-256 game account credential. The server owns the binding, issues a
+  challenge, verifies the signature, and keys Chainwell value to the season character id
+  instead of a display name. This is deliberately soft sybil resistance for prototype
+  playtests; verified identity, wallet linkage, or sale-boundary controls remain a
+  separate compliance decision before production cash-out.
 
 ---
 
@@ -425,7 +429,6 @@ Consolidated. Each is referenced inline above.
 | Q-F6b | Which wrapped-SOL mint to settle in | Architecture |
 | Q-F7a | Status of a character whose window closed with tasks unfinished | Design (gate) |
 | Q-F7b | Transfer-gating mechanism: transfer-hook vs. escrow-program | Architecture |
-| Q-A1 | What "account" binds to for U6; sybil/multi-wallet handling | Design/Compliance |
 | Q-S2a | Block-validation rules for the authoritative Chainwell | Architecture |
 | Q-S2c | Turn-arbitration protocol for turn-based PvP | Architecture |
 

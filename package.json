@@ -5,7 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "test": "node scripts/verify_core_runtime.js && node scripts/verify_chainwell_authority.js"
+    "test": "node scripts/verify_core_runtime.js && node scripts/verify_chainwell_authority.js && node scripts/verify_account_binding.js"
   },
   "engines": {
     "node": ">=16"

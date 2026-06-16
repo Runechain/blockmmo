@@ -1,4 +1,5 @@
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -178,11 +179,63 @@ function readMessages(client) {
   return messages;
 }
 
+function base64url(buf) {
+  return Buffer.from(buf)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function makeCredential() {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  return {
+    publicKey: publicKey.export({ format: 'jwk' }),
+    sign(message) {
+      return base64url(crypto.sign('sha256', Buffer.from(message), {
+        key: privateKey,
+        dsaEncoding: 'ieee-p1363',
+      }));
+    },
+  };
+}
+
+function authenticateClient(realm, client, credential, { peerId, name, chain } = {}) {
+  const challenge = realm.handleParsedMessage(client, {
+    t: 'account:challenge',
+    credential: { type: 'browser-p256-v1', publicKey: credential.publicKey },
+  });
+  assert.strictEqual(challenge.ok, true, 'account challenge should succeed');
+  const challengeMessage = readMessages(client)[0];
+  assert.strictEqual(challengeMessage.t, 'account:challenge');
+
+  const join = realm.handleParsedMessage(client, {
+    t: 'join',
+    id: peerId || client.id,
+    name: name || client.name,
+    chain,
+    credential: {
+      type: 'browser-p256-v1',
+      publicKey: credential.publicKey,
+      challengeId: challengeMessage.challengeId,
+      signature: credential.sign(challengeMessage.message),
+    },
+  });
+  assert.strictEqual(join.ok, true, 'authenticated join should succeed');
+  const messages = readMessages(client);
+  assert.strictEqual(messages[0].t, 'account');
+  assert.strictEqual(messages[1].t, 'chain');
+  return { join, account: messages[0], chain: messages[1] };
+}
+
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chainwell-authority-'));
 const ledgerFile = path.join(tempDir, 'ledger.json');
+const accountsFile = path.join(tempDir, 'accounts.json');
 let nowMs = 2000;
 const realm = serverApi.createRealmServer({
   ledgerFile,
+  accountsFile,
+  seasonId: 'test-season',
   difficulty: 1,
   now: () => nowMs,
   saveDelayMs: 0,
@@ -201,21 +254,36 @@ const forgedLongerChain = [
   { index: 2, prev: 'f'.repeat(64), time: 2001, txs: [], nonce: 0, hash: 'e'.repeat(64) },
 ];
 
-realm.handleParsedMessage(submitter, { t: 'join', id: 'submitter', name: 'Recorder', chain: forgedLongerChain });
+const submitterJoin = authenticateClient(realm, submitter, makeCredential(), {
+  peerId: 'submitter',
+  name: 'Recorder',
+  chain: forgedLongerChain,
+});
 assert.strictEqual(realm.getChain().length, 1, 'join should not adopt a longer client-supplied chain');
-assert.deepStrictEqual(readMessages(submitter)[0], { t: 'chain', chain: [serverGenesis] });
+assert.deepStrictEqual(submitterJoin.chain, { t: 'chain', chain: [serverGenesis] });
+
+const peerJoin = authenticateClient(realm, peer, makeCredential(), {
+  peerId: 'peer',
+  name: 'Witness',
+});
+assert.deepStrictEqual(peerJoin.chain, { t: 'chain', chain: [serverGenesis] });
+
+function assertClientBlockDisabled(block, label) {
+  const before = realm.getChain();
+  const result = realm.handleParsedMessage(submitter, { t: 'block', block });
+  assertRejected(result, 'client_block_submission_disabled');
+  assert.deepStrictEqual(realm.getChain(), before, `${label} should not append`);
+  assert.strictEqual(fs.existsSync(ledgerFile), false, `${label} should not save the ledger`);
+  assert.strictEqual(readMessages(peer).length, 0, `${label} should not broadcast to peers`);
+  const message = readMessages(submitter)[0];
+  assert.strictEqual(message.t, 'block:error');
+  assert.strictEqual(message.error.code, 'client_block_submission_disabled');
+  assert.deepStrictEqual(message.chain, before);
+}
 
 const forgedBlock = mineNextBlock(serverGenesis, [{ to: 'Recorded', amt: 5, note: 'forged', cur: 'RUNE', id: 'tx-forged' }], 1, 2000);
 forgedBlock.txs[0].amt = 5000;
-const rejected = realm.handleParsedMessage(submitter, { t: 'block', block: forgedBlock });
-assertRejected(rejected, 'invalid_block_hash');
-assert.strictEqual(realm.getChain().length, 1, 'rejected block should not append');
-assert.strictEqual(fs.existsSync(ledgerFile), false, 'rejected block should not save the ledger');
-assert.strictEqual(readMessages(peer).length, 0, 'rejected block should not broadcast to peers');
-const rejectionMessage = readMessages(submitter)[0];
-assert.strictEqual(rejectionMessage.t, 'block:error');
-assert.strictEqual(rejectionMessage.error.code, 'invalid_block_hash');
-assert.deepStrictEqual(rejectionMessage.chain, [serverGenesis]);
+assertClientBlockDisabled(forgedBlock, 'tampered client block');
 
 nowMs = 3000;
 const unauthorizedRuneCredit = mineNextBlock(
@@ -224,11 +292,7 @@ const unauthorizedRuneCredit = mineNextBlock(
   1,
   3000
 );
-const rejectedUnauthorizedCredit = realm.handleParsedMessage(submitter, { t: 'block', block: unauthorizedRuneCredit });
-assertRejected(rejectedUnauthorizedCredit, 'unauthorized_rune_credit');
-assert.strictEqual(realm.getChain().length, 1, 'unauthorized RUNE credit should not append even with valid PoW');
-assert.strictEqual(readMessages(peer).length, 0, 'unauthorized RUNE credit should not broadcast');
-assert.strictEqual(readMessages(submitter)[0].error.code, 'unauthorized_rune_credit');
+assertClientBlockDisabled(unauthorizedRuneCredit, 'client-authored RUNE credit');
 
 const forgedRuneTransfer = mineNextBlock(
   serverGenesis,
@@ -236,25 +300,24 @@ const forgedRuneTransfer = mineNextBlock(
   1,
   3001
 );
-const rejectedForgedTransfer = realm.handleParsedMessage(submitter, { t: 'block', block: forgedRuneTransfer });
-assertRejected(rejectedForgedTransfer, 'unauthorized_rune_credit');
-assert.strictEqual(realm.getChain().length, 1, 'forged positive RUNE transfer should not append');
-assert.strictEqual(readMessages(peer).length, 0, 'forged positive RUNE transfer should not broadcast');
-assert.strictEqual(readMessages(submitter)[0].error.code, 'unauthorized_rune_credit');
+assertClientBlockDisabled(forgedRuneTransfer, 'forged RUNE transfer');
 
-const acceptedBlock = mineNextBlock(serverGenesis, [{ to: 'AUDIT', amt: 0, note: 'non-reward proof', cur: 'RUNE', id: 'tx-nonreward' }], 1, 3000);
-const accepted = realm.handleParsedMessage(submitter, { t: 'block', block: acceptedBlock });
-assert.strictEqual(accepted.ok, true, 'valid submitted block should be accepted');
-assert.strictEqual(realm.getChain().length, 2, 'accepted block should append');
-assert.deepStrictEqual(JSON.parse(fs.readFileSync(ledgerFile, 'utf8')), [serverGenesis, acceptedBlock]);
-assert.deepStrictEqual(readMessages(peer)[0], { t: 'block', block: acceptedBlock });
-assert.strictEqual(readMessages(submitter).length, 0, 'accepted block should not echo to submitter');
+const forgedGoldCredit = mineNextBlock(
+  serverGenesis,
+  [{ to: submitterJoin.account.character.address, amt: 25, note: 'forged gold', cur: 'GOLD', id: 'tx-forged-gold' }],
+  1,
+  3002
+);
+assertClientBlockDisabled(forgedGoldCredit, 'forged GOLD credit');
 
-const replayed = realm.handleParsedMessage(submitter, { t: 'block', block: acceptedBlock });
-assertRejected(replayed, 'invalid_block_index');
-assert.strictEqual(realm.getChain().length, 2, 'replayed block should not append');
-assert.strictEqual(readMessages(peer).length, 0, 'replayed block should not broadcast');
-assert.strictEqual(readMessages(submitter)[0].error.code, 'invalid_block_index');
+const forgedAssetMints = [
+  [{ to: submitterJoin.account.character.address, amt: 0, greatRune: { id: 'fake-rune', name: 'Fake Sigil' }, note: 'fake sigil', cur: 'RUNE', id: 'tx-fake-rune' }],
+  [{ to: submitterJoin.account.character.address, amt: 0, cosmetic: 'fake-skin', note: 'fake skin', cur: 'GOLD', id: 'tx-fake-skin' }],
+  [{ to: submitterJoin.account.character.address, amt: 0, item: 'fake-relic', note: 'fake relic', cur: 'RUNE', id: 'tx-fake-relic' }],
+];
+for (const txs of forgedAssetMints) {
+  assertClientBlockDisabled(mineNextBlock(serverGenesis, txs, 1, 3003), 'forged asset mint');
+}
 
 nowMs = 4000;
 const rewardRequest = realm.handleParsedMessage(submitter, {
@@ -265,15 +328,21 @@ assert.strictEqual(rewardRequest.ok, true, 'server should issue mining work for 
 const rewardWork = readMessages(submitter)[0];
 assert.strictEqual(rewardWork.t, 'mine:work');
 assert.strictEqual(rewardWork.work.difficulty, 1);
-assert.strictEqual(rewardWork.work.block.index, 2);
-assert.strictEqual(rewardWork.work.block.prev, acceptedBlock.hash);
+assert.strictEqual(rewardWork.work.block.index, 1);
+assert.strictEqual(rewardWork.work.block.prev, serverGenesis.hash);
 assert.deepStrictEqual(rewardWork.work.block.txs, [{
-  to: 'Recorder',
+  to: submitterJoin.account.character.address,
   amt: 14,
   note: 'Hollow Debtor slain',
   cur: 'RUNE',
   id: rewardWork.work.candidateId,
-  auth: { type: 'server-reward', source: 'enemy:hollow' },
+  auth: {
+    type: 'server-reward',
+    source: 'enemy:hollow',
+    accountId: submitterJoin.account.accountId,
+    characterId: submitterJoin.account.character.id,
+    seasonId: 'test-season',
+  },
 }]);
 
 const duplicateRewardRequest = realm.handleParsedMessage(submitter, {
@@ -281,7 +350,7 @@ const duplicateRewardRequest = realm.handleParsedMessage(submitter, {
   source: { type: 'enemy', key: 'auditor' },
 });
 assertRejected(duplicateRewardRequest, 'mining_candidate_pending');
-assert.strictEqual(realm.getChain().length, 2, 'pending reward work should cap each client at one candidate');
+assert.strictEqual(realm.getChain().length, 1, 'pending reward work should cap each client at one candidate');
 assert.strictEqual(readMessages(submitter)[0].error.code, 'mining_candidate_pending');
 
 const tamperedWork = mineBlock({
@@ -294,7 +363,7 @@ const rejectedTamperedWork = realm.handleParsedMessage(submitter, {
   block: tamperedWork,
 });
 assertRejected(rejectedTamperedWork, 'invalid_mining_candidate');
-assert.strictEqual(realm.getChain().length, 2, 'tampered server work should not append');
+assert.strictEqual(realm.getChain().length, 1, 'tampered server work should not append');
 assert.strictEqual(readMessages(peer).length, 0, 'tampered server work should not broadcast');
 assert.strictEqual(readMessages(submitter)[0].error.code, 'invalid_mining_candidate');
 
@@ -305,11 +374,11 @@ const acceptedRewardWork = realm.handleParsedMessage(submitter, {
   block: minedRewardBlock,
 });
 assert.strictEqual(acceptedRewardWork.ok, true, 'server-authorized mined reward work should be accepted');
-assert.strictEqual(realm.getChain().length, 3, 'accepted reward work should append');
-assert.deepStrictEqual(realm.getChain()[2], minedRewardBlock);
+assert.strictEqual(realm.getChain().length, 2, 'accepted reward work should append');
+assert.deepStrictEqual(realm.getChain()[1], minedRewardBlock);
 assert.deepStrictEqual(readMessages(submitter)[0], { t: 'mine:accepted', block: minedRewardBlock });
 assert.deepStrictEqual(readMessages(peer)[0], { t: 'block', block: minedRewardBlock });
-assert.deepStrictEqual(JSON.parse(fs.readFileSync(ledgerFile, 'utf8')), [serverGenesis, acceptedBlock, minedRewardBlock]);
+assert.deepStrictEqual(JSON.parse(fs.readFileSync(ledgerFile, 'utf8')), [serverGenesis, minedRewardBlock]);
 
 realm.close();
 fs.rmSync(tempDir, { recursive: true, force: true });

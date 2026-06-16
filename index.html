@@ -929,7 +929,10 @@ const Net=(function(){
         }
         if(m.t==='leave'){ delete remotes[m.id]; updatePeers(); }
         if(m.t==='block'&&Chain.acceptRemote(m.block))log('Received a mined block from a peer.');
-        if(m.t==='chain')Chain.replaceIfLonger(m.chain);
+        if(m.t==='block:error'){
+          if(Chain.replaceFromAuthority(m.chain))log('Server rejected a local block; synced to the authoritative Chainwell.');
+        }
+        if(m.t==='chain')Chain.replaceFromAuthority(m.chain);
       };
       ws.onclose=()=>{ if(connected)log('Realm server lost. Solo mode.'); connected=false; updatePeers(); };
       ws.onerror=()=>{ try{ws.close();}catch(_){} };

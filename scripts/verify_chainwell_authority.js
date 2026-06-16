@@ -230,6 +230,18 @@ assert.strictEqual(realm.getChain().length, 1, 'unauthorized RUNE credit should 
 assert.strictEqual(readMessages(peer).length, 0, 'unauthorized RUNE credit should not broadcast');
 assert.strictEqual(readMessages(submitter)[0].error.code, 'unauthorized_rune_credit');
 
+const forgedRuneTransfer = mineNextBlock(
+  serverGenesis,
+  [{ from: 'FAKE_TREASURY', to: 'Recorded', amt: 500, note: 'forged transfer', cur: 'RUNE', id: 'tx-forged-transfer' }],
+  1,
+  3001
+);
+const rejectedForgedTransfer = realm.handleParsedMessage(submitter, { t: 'block', block: forgedRuneTransfer });
+assertRejected(rejectedForgedTransfer, 'unauthorized_rune_credit');
+assert.strictEqual(realm.getChain().length, 1, 'forged positive RUNE transfer should not append');
+assert.strictEqual(readMessages(peer).length, 0, 'forged positive RUNE transfer should not broadcast');
+assert.strictEqual(readMessages(submitter)[0].error.code, 'unauthorized_rune_credit');
+
 const acceptedBlock = mineNextBlock(serverGenesis, [{ to: 'AUDIT', amt: 0, note: 'non-reward proof', cur: 'RUNE', id: 'tx-nonreward' }], 1, 3000);
 const accepted = realm.handleParsedMessage(submitter, { t: 'block', block: acceptedBlock });
 assert.strictEqual(accepted.ok, true, 'valid submitted block should be accepted');
@@ -263,6 +275,14 @@ assert.deepStrictEqual(rewardWork.work.block.txs, [{
   id: rewardWork.work.candidateId,
   auth: { type: 'server-reward', source: 'enemy:hollow' },
 }]);
+
+const duplicateRewardRequest = realm.handleParsedMessage(submitter, {
+  t: 'mine:reward',
+  source: { type: 'enemy', key: 'auditor' },
+});
+assertRejected(duplicateRewardRequest, 'mining_candidate_pending');
+assert.strictEqual(realm.getChain().length, 2, 'pending reward work should cap each client at one candidate');
+assert.strictEqual(readMessages(submitter)[0].error.code, 'mining_candidate_pending');
 
 const tamperedWork = mineBlock({
   ...rewardWork.work.block,

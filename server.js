@@ -22,7 +22,7 @@ const {
   validateBlockCandidate,
   validateChain,
 } = require('./game/chain.js');
-const { ENEMY_REWARDS, STORY } = require('./game/content.js');
+const { ECON, ENEMY_REWARDS, STORY } = require('./game/content.js');
 
 const DEFAULT_PORT = process.env.PORT || 8080;
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
@@ -34,9 +34,11 @@ function createRealmServer(options = {}) {
   const now = typeof options.now === 'function' ? options.now : () => Date.now();
   const saveDelayMs = options.saveDelayMs == null ? 800 : options.saveDelayMs;
   const futureSkewMs = options.futureSkewMs;
+  const miningTtlMs = options.miningTtlMs == null ? 30000 : options.miningTtlMs;
   const quiet = !!options.quiet;
   const clients = new Set();
   const pendingMining = new Map();
+  const runeCreditSinks = new Set(['POWER_SINK', ECON.EXCHANGE_ADDR]);
   let saveTimer = null;
   let masterChain = loadLedger();
 
@@ -207,6 +209,14 @@ function createRealmServer(options = {}) {
   }
 
   function issueRewardMiningWork(client, source) {
+    cleanupMiningCandidates();
+    const pendingCandidate = findPendingCandidateForClient(client.id);
+    if (pendingCandidate) {
+      const result = blockError('mining_candidate_pending', 'Finish the current server-issued mining candidate before requesting another.');
+      send(client, { t: 'mine:error', error: result.error });
+      return result;
+    }
+
     const reward = resolveRewardSource(source);
     if (!reward.ok) {
       send(client, { t: 'mine:error', error: reward.error });
@@ -236,12 +246,14 @@ function createRealmServer(options = {}) {
     pendingMining.set(candidateId, {
       clientId: client.id,
       block,
+      createdAt: now(),
     });
     send(client, { t: 'mine:work', work });
     return { ok: true, work };
   }
 
   function acceptMinedWork(client, candidateId, block) {
+    cleanupMiningCandidates();
     const candidate = pendingMining.get(candidateId);
     if (!candidate || candidate.clientId !== client.id) {
       const result = blockError('unknown_mining_candidate', 'Mining candidate is unknown or no longer valid.');
@@ -258,6 +270,7 @@ function createRealmServer(options = {}) {
     const tip = masterChain[masterChain.length - 1];
     const result = validateBlockCandidate(block, tip, { sha256, difficulty, now, futureSkewMs });
     if (!result.ok) {
+      if (isStaleCandidateError(result.error.code)) pendingMining.delete(candidateId);
       send(client, { t: 'mine:error', error: result.error, chain: masterChain });
       return result;
     }
@@ -271,15 +284,34 @@ function createRealmServer(options = {}) {
 
   function validateSubmittedTransactions(block) {
     for (const tx of block.txs || []) {
-      if (isRuneCredit(tx)) {
+      if (isUnauthorizedRuneCredit(tx)) {
         return blockError('unauthorized_rune_credit', 'RUNE credits must be mined from server-issued reward work.');
       }
     }
     return { ok: true };
   }
 
-  function isRuneCredit(tx) {
-    return tx && (tx.cur || 'RUNE') === 'RUNE' && !tx.from && tx.to && Number(tx.amt) > 0;
+  function isUnauthorizedRuneCredit(tx) {
+    if (!tx || (tx.cur || 'RUNE') !== 'RUNE' || !tx.to || !(Number(tx.amt) > 0)) return false;
+    return !runeCreditSinks.has(tx.to);
+  }
+
+  function findPendingCandidateForClient(clientId) {
+    for (const [candidateId, candidate] of pendingMining) {
+      if (candidate.clientId === clientId) return { candidateId, candidate };
+    }
+    return null;
+  }
+
+  function cleanupMiningCandidates() {
+    const cutoff = now() - miningTtlMs;
+    for (const [candidateId, candidate] of pendingMining) {
+      if (candidate.createdAt < cutoff) pendingMining.delete(candidateId);
+    }
+  }
+
+  function isStaleCandidateError(code) {
+    return code === 'invalid_block_index' || code === 'invalid_block_parent' || code === 'invalid_block_time';
   }
 
   function matchesMiningCandidate(candidateBlock, submittedBlock) {

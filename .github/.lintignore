@@ -1,0 +1,5 @@
+# Lint ignore file for GitHub Actions workflows
+# Suppresses false positive warnings about secrets context access
+
+# Ignore "Context access might be invalid" warnings for secrets
+secrets.AWS_ROLE_ARN

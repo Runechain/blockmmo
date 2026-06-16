@@ -17,9 +17,13 @@ function hitRectCircle(r,c){ const x=clamp(c.x,r.x,r.x+r.w), y=clamp(c.y,r.y,r.y
 function inputDown(input, a, b){ return !!(input[a]||input[b]); }
 function call(api, name, ...args){ return api&&typeof api[name]==='function'?api[name](...args):undefined; }
 
+const RIVAL_NAMES=['Cassian','Vell','Marrow','Quill','Ashen','Doole','Reeve','Sol','Wren','Tace','Bram','Orla'];
+const RIVAL_TINTS=['#c2607a','#6fa3d6','#c8a24e','#7ec88a','#a98cff','#d98a4e','#e0708a','#5fb8c0'];
+
 export function createBattlefieldMode(level={}){
   let ctx=null, api=null, player=null, camera=null, zones=[], waves=[], creatures=[], elapsed=0, nextId=1;
   let attackBox=null, stateSend=0, duel=null, pending={}, unsubs=[];
+  let storm=null, rivals=[], projectiles=[], remaining=1, kills=0, banner=null, stormTick=0;
   const cfg={...DEF, ...(level.physics||{})};
 
   function reset(){
@@ -29,6 +33,35 @@ export function createBattlefieldMode(level={}){
     zones=(level.zones||[]).map(z=>({...z,safeUntil:0,_everSpawned:false,_clearAnnounced:false}));
     waves=(level.waves||[]).map((w,i)=>({...w,id:w.id||'wave'+i,done:false}));
     creatures=[]; elapsed=0; nextId=1; attackBox=null; stateSend=0; duel=null; pending={};
+    setupStorm(); spawnRivals(); projectiles=[]; kills=0; banner=null; stormTick=0; recomputeRemaining();
+  }
+
+  function setupStorm(){
+    if(level.storm===false){ storm=null; return; }
+    const W=level.width||1000, H=level.height||700, s=level.storm||{};
+    const cx=s.cx!=null?s.cx:W/2, cy=s.cy!=null?s.cy:H/2;
+    const r0=s.r0!=null?s.r0:Math.hypot(W,H)/2+24;
+    const rMin=s.rMin!=null?s.rMin:Math.max(96, Math.min(W,H)*0.13);
+    const dur=s.duration!=null?s.duration:44;
+    storm={ cx, cy, r:r0, r0, rMin, start:s.start!=null?s.start:5, rate:s.rate!=null?s.rate:(r0-rMin)/dur, dps:s.dps!=null?s.dps:8, pulse:0 };
+  }
+
+  function spawnRivals(){
+    rivals=[];
+    if(level.rivals===false)return;
+    const n=typeof level.rivals==='number'?level.rivals:(level.rivalCount||6);
+    const W=level.width||1000, H=level.height||700;
+    const cx=storm?storm.cx:W/2, cy=storm?storm.cy:H/2, rr=storm?storm.r*0.72:Math.min(W,H)*0.42;
+    for(let i=0;i<n;i++){
+      const a=(i/n)*Math.PI*2+0.35;
+      rivals.push({
+        id:'rv'+i, name:RIVAL_NAMES[i%RIVAL_NAMES.length], tint:RIVAL_TINTS[i%RIVAL_TINTS.length],
+        x:clamp(cx+Math.cos(a)*rr, 24, W-24), y:clamp(cy+Math.sin(a)*rr, 24, H-24),
+        vx:0, vy:0, dirX:0, dirY:1, r:9, hp:40, maxHp:40, dmg:6, speed:116+Math.random()*24,
+        attackCd:Math.random()*.5, fireCd:1+Math.random()*1.2, hitFlash:0, dead:false,
+        asset:(i%2)?'knight':'phantom', ranged:(i%3===0), reward:10+Math.floor(Math.random()*6)
+      });
+    }
   }
 
   function localId(){
@@ -165,6 +198,12 @@ export function createBattlefieldMode(level={}){
         call(api, 'onCreatureDefeated', c, {mode:'battlefield'});
       }
     }
+    for(const r of rivals){
+      if(r.dead||dist(r, player)>cfg.attackRange+r.r+8)continue;
+      r.hp-=dmg; r.hitFlash=.12;
+      call(api, 'onMeleeHit', r, {mode:'battlefield', damage:dmg, rival:true});
+      if(r.hp<=0)killRival(r,'player');
+    }
     if(duel&&duel.status==='active'&&duel.peer&&dist(duel.peer, player)<cfg.attackRange+14){
       send({t:PVP_TYPES.hit, duelId:duel.id, to:duel.peerId, amount:dmg, at:elapsed});
     }
@@ -201,6 +240,86 @@ export function createBattlefieldMode(level={}){
         api.player.regen(z.regen||1, dt, {mode:'battlefield', zone:z});
       }
     }
+  }
+
+  function livingRivals(){ let n=0; for(const r of rivals)if(!r.dead)n++; return n; }
+  function recomputeRemaining(){ remaining=1+livingRivals(); }
+  function inStorm(x,y){ return !!storm && Math.hypot(x-storm.cx,y-storm.cy)>storm.r; }
+
+  function updateStorm(dt){
+    if(!storm)return;
+    storm.pulse+=dt;
+    if(elapsed>storm.start && storm.r>storm.rMin) storm.r=Math.max(storm.rMin, storm.r-storm.rate*dt);
+    if(inStorm(player.x,player.y)){
+      stormTick+=dt;
+      if(stormTick>=.5){ stormTick=0; if(api&&api.player&&typeof api.player.damage==='function')api.player.damage(storm.dps*.5,{type:'storm'}); }
+    } else stormTick=0;
+    for(const c of creatures){ if(!c.dead&&inStorm(c.x,c.y)){ c.hp-=storm.dps*dt; if(c.hp<=0)c.dead=true; } }
+    for(const r of rivals){ if(!r.dead&&inStorm(r.x,r.y)){ r.hp-=storm.dps*dt; if(r.hp<=0)killRival(r,'storm'); } }
+  }
+
+  function fireProjectile(from, tx, ty, team, opt={}){
+    const n=norm(tx-from.x, ty-from.y), sp=opt.speed||220;
+    projectiles.push({ x:from.x, y:from.y, vx:n.x*sp, vy:n.y*sp, r:opt.r||5, dmg:opt.dmg||5, team,
+      life:opt.life||2.6, color:opt.color||'#d7d0a2', t:0 });
+  }
+
+  function nearestEnemyOf(r){
+    let bd=1e9, bt=null;
+    const consider=(x,y,team,ref)=>{ const d=Math.hypot(x-r.x,y-r.y); if(d<bd){ bd=d; bt={team,ref,x,y,d}; } };
+    consider(player.x,player.y,'player',null);
+    for(const o of rivals)if(o!==r&&!o.dead)consider(o.x,o.y,'rival',o);
+    for(const c of creatures)if(!c.dead)consider(c.x,c.y,'creature',c);
+    return bt;
+  }
+
+  function killRival(r, by){
+    if(r.dead)return;
+    r.dead=true; r.hitFlash=.14;
+    recomputeRemaining();
+    if(by==='player'){ kills++; call(api,'onCreatureDefeated',{id:r.id,key:'rival',name:r.name,reward:r.reward},{mode:'battlefield',rival:r,reward:r.reward}); }
+    banner={ text:(by==='player'?'You downed '+r.name:r.name+' fell')+'   —   '+remaining+' remain', t:2.6 };
+    if(remaining<=1) banner={ text:'LAST RECORDED STANDING', t:4 };
+  }
+
+  function updateRivals(dt){
+    for(const r of rivals){
+      if(r.dead)continue;
+      if(r.attackCd>0)r.attackCd-=dt;
+      if(r.fireCd>0)r.fireCd-=dt;
+      if(r.hitFlash>0)r.hitFlash=Math.max(0,r.hitFlash-dt);
+      const dC=storm?Math.hypot(r.x-storm.cx,r.y-storm.cy):0;
+      let tx, ty, tgt=null;
+      if(storm&&dC>storm.r-28){ tx=storm.cx; ty=storm.cy; }
+      else { tgt=nearestEnemyOf(r); tx=tgt?tgt.x:(storm?storm.cx:player.x); ty=tgt?tgt.y:(storm?storm.cy:player.y); }
+      const n=norm(tx-r.x,ty-r.y);
+      r.dirX=n.x; r.dirY=n.y;
+      r.x=clamp(r.x+n.x*r.speed*dt, r.r, (level.width||1000)-r.r);
+      r.y=clamp(r.y+n.y*r.speed*dt, r.r, (level.height||700)-r.r);
+      if(!tgt)continue;
+      if(r.ranged&&r.fireCd<=0&&tgt.d<320&&tgt.d>46){
+        r.fireCd=1.4+Math.random()*0.7;
+        fireProjectile(r, tgt.x, tgt.y, 'rival', {dmg:r.dmg, speed:205, color:r.tint, r:5});
+      } else if(tgt.d<r.r+18&&r.attackCd<=0){
+        r.attackCd=.7;
+        if(tgt.team==='player')damage(r.dmg, r);
+        else if(tgt.team==='rival'){ tgt.ref.hp-=r.dmg; tgt.ref.hitFlash=.1; if(tgt.ref.hp<=0)killRival(tgt.ref,'rival'); }
+        else if(tgt.team==='creature'){ tgt.ref.hp-=r.dmg; tgt.ref.hitFlash=.1; if(tgt.ref.hp<=0)tgt.ref.dead=true; }
+      }
+    }
+  }
+
+  function updateProjectiles(dt){
+    const W=level.width||1000, H=level.height||700;
+    for(const p of projectiles){
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; p.t+=dt;
+      if(p.life<=0)continue;
+      if(p.team!=='player'&&Math.hypot(p.x-player.x,p.y-player.y)<player.r+p.r){ damage(p.dmg,{type:'projectile'}); p.life=0; continue; }
+      if(p.team==='player'){
+        for(const c of creatures){ if(!c.dead&&Math.hypot(p.x-c.x,p.y-c.y)<c.r+p.r){ c.hp-=p.dmg; c.hitFlash=.1; if(c.hp<=0)c.dead=true; p.life=0; break; } }
+      }
+    }
+    projectiles=projectiles.filter(p=>p.life>0&&p.x>-40&&p.y>-40&&p.x<W+40&&p.y<H+40);
   }
 
   function updateCamera(){
@@ -308,10 +427,14 @@ export function createBattlefieldMode(level={}){
     if(player.hurtCd>0)player.hurtCd=Math.max(0,player.hurtCd-dt);
     if(player.attackCd>0)player.attackCd=Math.max(0,player.attackCd-dt);
     if(attackBox){ attackBox.t-=dt; if(attackBox.t<=0)attackBox=null; }
+    if(banner&&banner.t>0)banner.t-=dt;
     updateWaves();
     movePlayer(dt, input);
     melee(input);
     updateCreatures(dt);
+    updateRivals(dt);
+    updateProjectiles(dt);
+    updateStorm(dt);
     updateZones(dt);
     if(input.challengePressed||input.challenge)challengePeer(input.peerId||'stub-peer');
     if(input.forfeitPressed||input.forfeit)forfeitDuel();
@@ -335,26 +458,79 @@ export function createBattlefieldMode(level={}){
     if(nextCamera){ nextCamera.x=camera.x; nextCamera.y=camera.y; nextCamera.w=camera.w; nextCamera.h=camera.h; }
     const cam=nextCamera||camera;
     const spr=api&&api.assets&&api.assets.drawSheet;
+    const outside=inStorm(player.x,player.y);
     c.save();
     c.imageSmoothingEnabled=false;
     c.fillStyle='#101619'; c.fillRect(0,0,cam.w,cam.h);
     c.fillStyle='#1f2a24';
     for(let x=-((cam.x%40)+40); x<cam.w; x+=40)c.fillRect(x,0,1,cam.h);
     for(let y=-((cam.y%40)+40); y<cam.h; y+=40)c.fillRect(0,y,cam.w,1);
+
+    // Ledger storm: tint everything OUTSIDE the safe ring (even-odd = rect minus circle hole)
+    if(storm){
+      const sx=storm.cx-cam.x, sy=storm.cy-cam.y, rr=Math.max(0,storm.r);
+      c.beginPath();
+      c.rect(0,0,cam.w,cam.h);
+      c.arc(sx,sy,rr,0,Math.PI*2);
+      c.fillStyle='rgba(116,28,150,.46)';
+      c.fill('evenodd');
+      // inner danger glow just inside the storm edge
+      c.beginPath();
+      c.rect(0,0,cam.w,cam.h);
+      c.arc(sx,sy,rr+26,0,Math.PI*2);
+      c.fillStyle='rgba(150,50,180,.22)';
+      c.fill('evenodd');
+    }
+
+    // Safe regen zones (lightened so they don't fight the storm)
     for(const z of zones){
-      const safe=z.safeUntil>elapsed;
-      drawRect(c, cam, z, safe?'rgba(83,136,102,.42)':'rgba(70,65,54,.34)');
-      c.strokeStyle=safe?'#75c893':'#625840'; c.lineWidth=2;
+      if(z.safeUntil<=elapsed)continue;
+      drawRect(c, cam, z, 'rgba(83,136,102,.28)');
+      c.strokeStyle='#75c893'; c.lineWidth=2;
       c.strokeRect(Math.round(z.x-cam.x), Math.round(z.y-cam.y), z.w, z.h);
     }
+
+    // Storm ring boundary (pulsing)
+    if(storm){
+      const sx=storm.cx-cam.x, sy=storm.cy-cam.y, pulse=1+Math.sin(storm.pulse*4)*0.04;
+      c.strokeStyle='rgba(150,60,180,.35)'; c.lineWidth=9; c.beginPath(); c.arc(sx,sy,Math.max(0,storm.r),0,Math.PI*2); c.stroke();
+      c.strokeStyle='rgba(222,130,242,.95)'; c.lineWidth=2.5; c.beginPath(); c.arc(sx,sy,Math.max(0,storm.r*pulse),0,Math.PI*2); c.stroke();
+    }
+
     for(const cr of creatures){
+      if(cr.dead&&cr.hitFlash<=0)continue;
       drawCircle(c, cam, cr.x, cr.y, cr.r+4, 'rgba(0,0,0,.32)');
       if(!(spr&&spr(cr.asset||cr.key, cr.x, cr.y+cr.r, cr.hitFlash>0?3:1, cr.scale||1)))
         drawCircle(c, cam, cr.x, cr.y, cr.r, cr.hitFlash>0?'#f4eee0':cr.color);
-      const w=cr.r*2+8, x=Math.round(cr.x-cam.x-w/2), y=Math.round(cr.y-cam.y-cr.r-10);
-      c.fillStyle='#08090a'; c.fillRect(x,y,w,3);
-      c.fillStyle='#c95b52'; c.fillRect(x+1,y+1,(w-2)*Math.max(0,cr.hp/cr.maxHp),1);
+      if(cr.hp<cr.maxHp){
+        const w=cr.r*2+8, x=Math.round(cr.x-cam.x-w/2), y=Math.round(cr.y-cam.y-cr.r-10);
+        c.fillStyle='#08090a'; c.fillRect(x,y,w,3);
+        c.fillStyle='#c95b52'; c.fillRect(x+1,y+1,(w-2)*Math.max(0,cr.hp/cr.maxHp),1);
+      }
     }
+
+    // Rival Recorded — the other combatants in the royale
+    for(const rv of rivals){
+      if(rv.dead&&rv.hitFlash<=0)continue;
+      drawCircle(c, cam, rv.x, rv.y+5, 11, 'rgba(0,0,0,.34)');
+      if(!(spr&&spr(rv.asset, rv.x, rv.y+rv.r+2, rv.hitFlash>0?3:0, 1, {flipX:rv.dirX<0})))
+        drawCircle(c, cam, rv.x, rv.y, rv.r, rv.hitFlash>0?'#ffffff':rv.tint);
+      c.strokeStyle=rv.tint; c.lineWidth=2; c.beginPath(); c.arc(Math.round(rv.x-cam.x),Math.round(rv.y-cam.y),rv.r+3,0,Math.PI*2); c.stroke();
+      if(!rv.dead){
+        c.fillStyle='#d8d2c4'; c.font='8px monospace'; c.textAlign='center';
+        c.fillText(rv.name, Math.round(rv.x-cam.x), Math.round(rv.y-cam.y-rv.r-10));
+        const w=rv.r*2+10, x=Math.round(rv.x-cam.x-w/2), y=Math.round(rv.y-cam.y-rv.r-8);
+        c.fillStyle='#08090a'; c.fillRect(x,y,w,3);
+        c.fillStyle=rv.tint; c.fillRect(x+1,y+1,(w-2)*Math.max(0,rv.hp/rv.maxHp),1);
+        c.textAlign='left';
+      }
+    }
+
+    for(const p of projectiles){
+      drawCircle(c, cam, p.x, p.y, p.r+1.5, 'rgba(0,0,0,.25)');
+      drawCircle(c, cam, p.x, p.y, p.r, p.color||'#d7d0a2');
+    }
+
     if(attackBox)drawCircle(c, cam, attackBox.x, attackBox.y, attackBox.r, 'rgba(241,230,200,.22)');
     if(duel&&duel.peer){
       drawCircle(c, cam, duel.peer.x, duel.peer.y, 13, 'rgba(150,180,255,.25)');
@@ -367,15 +543,45 @@ export function createBattlefieldMode(level={}){
       c.fillStyle='#f2d37f';
       c.fillRect(Math.round(player.x-cam.x+player.dirX*11-2), Math.round(player.y-cam.y+player.dirY*11-2), 4, 4);
     }
-    c.fillStyle='#e8dfc8'; c.font='12px monospace';
-    const duelText=duel?'duel: '+duel.status:'duel: none';
-    c.fillText('waves '+waves.filter(w=>w.done).length+'/'+waves.length+'  creatures '+creatures.filter(cr=>!cr.dead).length+'  '+duelText, 12, 20);
+    if(outside){
+      c.strokeStyle='rgba(226,120,240,.85)'; c.lineWidth=2;
+      c.beginPath(); c.arc(Math.round(player.x-cam.x),Math.round(player.y-cam.y),player.r+5+Math.sin(elapsed*10)*1.5,0,Math.PI*2); c.stroke();
+    }
+
+    // HUD — royale roster + storm state
+    c.textAlign='center';
+    c.fillStyle='#0c0c10'; c.fillRect(cam.w/2-94, 6, 188, 22);
+    c.fillStyle='#f0e6d0'; c.font='bold 15px monospace';
+    c.fillText(remaining+' RECORDED REMAIN', cam.w/2, 22);
+    if(storm){
+      c.font='10px monospace';
+      if(outside){ c.fillStyle='#ff7ad0'; c.fillText('! OUTSIDE THE LEDGER — you are being unwritten !', cam.w/2, 40); }
+      else { c.fillStyle='#cf8ae0'; c.fillText(elapsed<storm.start?('the ledger closes in '+Math.ceil(storm.start-elapsed)+'s'):(storm.r>storm.rMin+1?'the ledger is closing — stay inside the ring':'final ground'), cam.w/2, 40); }
+    }
+    if(banner&&banner.t>0){
+      const a=Math.min(1,banner.t);
+      c.fillStyle='rgba(0,0,0,'+(0.55*a)+')'; c.fillRect(cam.w/2-145, cam.h-44, 290, 22);
+      c.fillStyle='rgba(236,217,168,'+a+')'; c.font='bold 11px monospace';
+      c.fillText(banner.text, cam.w/2, cam.h-29);
+    }
+    c.textAlign='left';
+    c.fillStyle='#9aa0a6'; c.font='10px monospace';
+    c.fillText('downs '+kills+(creatures.filter(cr=>!cr.dead).length?'   wildlife '+creatures.filter(cr=>!cr.dead).length:''), 12, cam.h-12);
     c.restore();
   }
 
   return {
     enter, exit, update, render,
     challengePeer, acceptDuel, declineDuel, forfeitDuel,
-    getState(){ return {player,camera,zones,waves,creatures,duel,pending,elapsed}; }
+    getState(){
+      const wavesDone=!waves.length||waves.every(w=>w.done);
+      const noCreatures=creatures.filter(c=>!c.dead).length===0;
+      const hadRivals=rivals.length>0;
+      const noRivals=livingRivals()===0;
+      // Battle royale: you win by being the last Recorded standing (all rivals down).
+      // Levels with rivals disabled fall back to the classic survive-the-waves clear.
+      return {player,camera,zones,waves,creatures,rivals,storm,projectiles,remaining,kills,duel,pending,elapsed,
+        complete: hadRivals ? noRivals : (wavesDone&&noCreatures)};
+    }
   };
 }

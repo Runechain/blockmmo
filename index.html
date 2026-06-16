@@ -791,7 +791,7 @@ function updateBossSequence(dt){
     modeManager.update(dt, engineInput());
     if(bossSeq.activeMode()==='battlefield'){
       const s=modeManager.getMode().getState&&modeManager.getMode().getState();
-      if(s&&s.waves&&s.waves.length&&s.waves.every(w=>w.done)&&(s.creatures||[]).filter(c=>!c.dead).length===0)bossSeq.segmentEvent('cleared',{});
+      if(s&&s.complete)bossSeq.segmentEvent('cleared',{});
     }
   }
   player.hp=Math.max(0,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;

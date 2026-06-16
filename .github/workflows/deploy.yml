@@ -1,0 +1,118 @@
+# LINT NOTE: This file contains valid GitHub Actions syntax that may trigger false positive warnings
+# about "Context access might be invalid: AWS_ROLE_ARN". These warnings can be safely ignored
+# as secrets.AWS_ROLE_ARN is the correct and documented way to access GitHub repository secrets.
+
+name: Deploy to ECS Fargate
+
+on:
+  push:
+    branches: [ main, combat-economy-skins ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      aws_role_arn:
+        description: 'AWS Role ARN for deployment'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: runechain
+  ECS_SERVICE: runechain-service
+  ECS_CLUSTER: runechain-cluster
+  ECS_TASK_DEFINITION: .aws/task-definition.json
+  CONTAINER_NAME: runechain
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Validate syntax
+      run: node -c server.js
+
+    - name: Test health check endpoint
+      run: |
+        npm start &
+        sleep 5
+        curl -f http://localhost:8080/healthz || exit 1
+        pkill -f "node server.js"
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/combat-economy-skins'
+    
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        # LINT IGNORE: This is a false positive - secrets.AWS_ROLE_ARN is valid GitHub Actions syntax
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+    - name: Verify AWS access
+      run: |
+        aws sts get-caller-identity
+        echo "✅ AWS credentials configured successfully"
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+
+    - name: Get service URL
+      id: service-url
+      run: |
+        # Get the load balancer DNS name from the ECS service
+        TASK_ARN=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].taskDefinition' --output text)
+        LB_ARN=$(aws ecs describe-task-definition --task-definition $TASK_ARN --query 'taskDefinition[0].loadBalancers[0].targetGroupArn' --output text)
+        LB_DNS=$(aws elbv2 describe-target-groups --target-group-arns $LB_ARN --query 'TargetGroups[0].LoadBalancerArns[0]' --output text | xargs aws elbv2 describe-load-balancers --load-balancer-arns --query 'LoadBalancers[0].DNSName' --output text)
+        echo "url=http://$LB_DNS" >> $GITHUB_OUTPUT
+
+    - name: Verify deployment
+      run: |
+        sleep 30 # Wait for service to be healthy
+        curl -f ${{ steps.service-url.outputs.url }}/healthz || exit 1

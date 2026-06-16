@@ -10,13 +10,17 @@ Thumbs.db
 *.swp
 .superpowers/
 .playwright-cli/
-output/playwright/
+output/
 
 # env / secrets — never commit keys (esp. once Solana/treasury keys exist)
 .env
 .env.*
 *.pem
 *-keypair.json
+contracts/keys/
+
+# Rust / Solana contract build output
+contracts/target/
 
 # runtime realm ledger (persisted chain state — regenerated as players mine)
 ledger.json

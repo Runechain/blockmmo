@@ -1,0 +1,8 @@
+# GitHub Actions Lint Configuration
+# Suppresses false positive warnings about secrets context access
+
+rules:
+  # Suppress "Context access might be invalid" warnings for secrets
+  - line: "secrets\\."
+    message: "Context access might be invalid"
+    severity: ignore

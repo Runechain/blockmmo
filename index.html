@@ -223,6 +223,7 @@
 <script src="game/sha256.js"></script>
 <script src="game/chain.js"></script>
 <script src="game/content.js"></script>
+<script src="game/account.js"></script>
 <script>
 /* ============================================================================
    RUNECHAIN PIXEL - single-file browser MMO demo
@@ -232,7 +233,7 @@
 
 /* ------------------------- Core data/runtime ----------------------------- */
 const Content = window.RUNECHAIN_CONTENT;
-if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN) throw new Error('RUNECHAIN core scripts failed to load');
+if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT) throw new Error('RUNECHAIN core scripts failed to load');
 const {
   ECON, STORY, RELICS, SIGILS, SKINS, ASSETS,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
@@ -243,12 +244,14 @@ const {
 const SHA256 = window.RUNECHAIN_SHA256;
 const Chain = window.RUNECHAIN_CHAIN.createChain({ sha256: SHA256, onBlockMined(block) { Net.gossipBlock(block); } });
 
+function valueAddress(){ return player.address || player.name || 'Recorded'; }
+
 function awardRune(source, amt, note){
   if(Net.requestRuneReward(source)){
     log('RUNE reward queued for server-verified mining.');
     return false;
   }
-  Chain.reward(player.name,amt,note);
+  Chain.reward(valueAddress(),amt,note);
   return true;
 }
 
@@ -342,17 +345,17 @@ const Story=(function(){
 
 function sigilBonuses(){
   const out={hp:0,sta:0,dmg:0,runeMult:0,atkSpeed:0};
-  for(const g of Chain.greatRunesOf(player.name)){
+  for(const g of Chain.greatRunesOf(valueAddress())){
     const s=g.key&&SIGILS[g.key];
     if(s){ out.hp+=s.hp||0; out.sta+=s.sta||0; out.dmg+=s.dmg||0; out.runeMult+=s.runeMult||0; out.atkSpeed+=s.atkSpeed||0; }
     else { out.dmg+=g.buff||0; out.hp+=(g.buff||0)*2; } // legacy unkeyed sigils keep their flat bonus
   }
   return out;
 }
-function sigilSig(){ return Chain.greatRunesOf(player.name).map(g=>g.key||('b'+(g.buff||0))).join(','); }
+function sigilSig(){ return Chain.greatRunesOf(valueAddress()).map(g=>g.key||('b'+(g.buff||0))).join(','); }
 function skinPal(id){ return SKINS.find(s=>s.id===id)||SKINS[0]; }
-function ownedSkin(id){ return id==='tarnished' || Chain.cosmeticsOf(player.name).includes(id); }
-function ownedItem(id){ return Chain.itemsOf(player.name).includes(id); }
+function ownedSkin(id){ return id==='tarnished' || Chain.cosmeticsOf(valueAddress()).includes(id); }
+function ownedItem(id){ return Chain.itemsOf(valueAddress()).includes(id); }
 function itemBonuses(){
   const out={hp:0,sta:0,dmg:0,runeMult:0};
   for(const it of RELICS)if(ownedItem(it.id)){
@@ -392,7 +395,8 @@ function maybeShake(){
 
 /* ------------------------------ Player ---------------------------------- */
 let player={
-  name:'Recorded', x:0, y:0, vx:0, vy:0, dirX:1, dirY:0, moving:false, radius:7,
+  name:'Recorded', address:'Recorded', accountId:null, characterId:null,
+  x:0, y:0, vx:0, vy:0, dirX:1, dirY:0, moving:false, radius:7,
   level:1, vigor:10, endurance:10, strength:10, runeMult:0, atkSpeedMult:0, sigilSig:'',
   hp:120, maxHp:120, sta:100, maxSta:100, dmg:34,
   attack:null, attackCd:0, invuln:0, dash:0, hurt:0, dead:false, lock:null,
@@ -527,7 +531,7 @@ function killEnemy(e){
   log('<b>'+esc(e.type.name)+'</b> slain. '+(localReward?'+'+reward.toFixed(2)+' RUNE pending.':'RUNE proof requested from the realm server.'));
   if(e.type.boss){
     const rune={id:e.key+'-'+Date.now(),name:e.type.sigilName||e.type.name+' Sigil',key:e.type.sigilKey||null,buff:e.type.sigilKey?0:(e.type.sigilBuff||12)};
-    Chain.mintGreatRune(player.name,rune);
+    Chain.mintGreatRune(valueAddress(),rune);
     Story.event('greatRune',{rune:rune.id});
     lootFlash('Boss Sigil sealed<br><small>'+esc(rune.name)+'</small>');
   }
@@ -834,7 +838,7 @@ function openGrace(){
 }
 function closeGrace(){ state.graceOpen=false; document.getElementById('levelup').style.display='none'; }
 function refreshGrace(){
-  const cost=levelCost(), sp=Chain.spendable(player.name,'RUNE');
+  const cost=levelCost(), sp=Chain.spendable(valueAddress(),'RUNE');
   document.getElementById('lvLevel').textContent=player.level;
   document.getElementById('lvBal').textContent=sp.toFixed(2);
   document.getElementById('lvCost').textContent=cost;
@@ -844,8 +848,8 @@ function refreshGrace(){
 }
 function doLevel(stat){
   const cost=levelCost();
-  if(Chain.spendable(player.name,'RUNE')<cost){ log('Not enough confirmed RUNE yet. Let the chain settle.'); return; }
-  Chain.spend(player.name,cost,'leveled '+stat);
+  if(Chain.spendable(valueAddress(),'RUNE')<cost){ log('Not enough confirmed RUNE yet. Let the chain settle.'); return; }
+  Chain.spend(valueAddress(),cost,'leveled '+stat);
   player[stat]++; player.level++; recalcStats(true);
   Story.event('level',{stat,level:player.level});
   log('Leveled <b>'+stat+'</b> to '+player[stat]+'.');
@@ -868,9 +872,9 @@ function renderRelics(sp){
   }
 }
 function forgeRelic(it){
-  if(ownedItem(it.id)||Chain.spendable(player.name,'RUNE')<it.price)return;
-  Chain.spend(player.name,it.price,'forged relic: '+it.name);
-  Chain.mintItem(player.name,it.id);
+  if(ownedItem(it.id)||Chain.spendable(valueAddress(),'RUNE')<it.price)return;
+  Chain.spend(valueAddress(),it.price,'forged relic: '+it.name);
+  Chain.mintItem(valueAddress(),it.id);
   progress.forged=true;
   recalcStats(false); Story.event('forge',{item:it.id});
   lootFlash('Relic forged<br><small>'+esc(it.name)+'</small>');
@@ -883,11 +887,11 @@ function openWardrobe(){
 function closeWardrobe(){ state.wardrobeOpen=false; document.getElementById('wardrobe').style.display='none'; }
 document.getElementById('wclose').onclick=closeWardrobe;
 function refreshWardrobe(){
-  document.getElementById('wGold').textContent=Econ.goldSpendable(player.name).toFixed(2);
-  const pend=Econ.goldPending(player.name);
+  document.getElementById('wGold').textContent=Econ.goldSpendable(valueAddress()).toFixed(2);
+  const pend=Econ.goldPending(valueAddress());
   document.getElementById('wGoldPend').textContent=pend>0.0001?'+'+pend.toFixed(2)+' settling':'';
-  document.getElementById('wRune').textContent=Chain.spendable(player.name,'RUNE').toFixed(2);
-  const spend=Econ.goldSpendable(player.name), list=document.getElementById('wlist');
+  document.getElementById('wRune').textContent=Chain.spendable(valueAddress(),'RUNE').toFixed(2);
+  const spend=Econ.goldSpendable(valueAddress()), list=document.getElementById('wlist');
   list.innerHTML='';
   for(const s of SKINS){
     const own=ownedSkin(s.id), eq=player.skinId===s.id;
@@ -898,18 +902,18 @@ function refreshWardrobe(){
     btn.onclick=()=>buySkin(s);
     list.appendChild(row);
   }
-  document.getElementById('wConv').disabled=Chain.spendable(player.name,'RUNE')<=0.0001;
+  document.getElementById('wConv').disabled=Chain.spendable(valueAddress(),'RUNE')<=0.0001;
 }
 function buySkin(s){
   if(!ownedSkin(s.id)){
-    if(Econ.goldSpendable(player.name)<s.price)return;
-    Econ.spendGold(player.name,s.price,'skin: '+s.name);
-    Chain.mintCosmetic(player.name,s.id);
+    if(Econ.goldSpendable(valueAddress())<s.price)return;
+    Econ.spendGold(valueAddress(),s.price,'skin: '+s.name);
+    Chain.mintCosmetic(valueAddress(),s.id);
   }
   player.skinId=s.id; player.pal=skinPal(s.id); refreshWardrobe();
 }
-document.getElementById('wConv').onclick=()=>{ const g=Econ.convertRuneToGold(player.name,Chain.spendable(player.name,'RUNE')); if(g>0)log('Converting '+g.toFixed(2)+' Gold from RUNE.'); refreshWardrobe(); };
-document.getElementById('wBuy').onclick=()=>{ const g=Econ.buyGoldWithSol(player.name,1); log('Bought '+g.toFixed(2)+' Gold in the devnet mock.'); refreshWardrobe(); };
+document.getElementById('wConv').onclick=()=>{ const g=Econ.convertRuneToGold(valueAddress(),Chain.spendable(valueAddress(),'RUNE')); if(g>0)log('Converting '+g.toFixed(2)+' Gold from RUNE.'); refreshWardrobe(); };
+document.getElementById('wBuy').onclick=()=>{ const g=Econ.buyGoldWithSol(valueAddress(),1); log('Bought '+g.toFixed(2)+' Gold in the devnet mock.'); refreshWardrobe(); };
 function toggleWallet(){
   state.wallet=!state.wallet;
   document.getElementById('wallet').style.display=state.wallet?'block':'none';
@@ -922,16 +926,86 @@ function flashBar(id){ const el=document.getElementById(id); el.style.filter='br
 
 /* ----------------------------- Networking ------------------------------- */
 const Net=(function(){
-  let ws=null, connected=false, id=Math.random().toString(36).slice(2,8), sendTimer=0, activeWork=null, submittedWork=null, awaitingWork=false, pendingSource=null;
+  let ws=null, connected=false, accountReady=false, accountCredential=null, id=Math.random().toString(36).slice(2,8), sendTimer=0, activeWork=null, submittedWork=null, awaitingWork=false, pendingSource=null;
   const rewardQueue=[];
+  function credentialPayload(){
+    return {
+      type: accountCredential.type,
+      publicKey: accountCredential.publicKey,
+    };
+  }
+  function clearRewardWork(){
+    awaitingWork=false;
+    activeWork=null;
+    submittedWork=null;
+    pendingSource=null;
+  }
+  function closeForAccountError(message){
+    accountReady=false;
+    clearRewardWork();
+    log(message);
+    try{ ws.close(); }catch(_){}
+  }
   function connect(){
     try{
       if(!location.host)throw new Error('file mode');
       const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/';
       ws=new WebSocket(url);
-      ws.onopen=()=>{ connected=true; log('Connected to the realm server.'); ws.send(JSON.stringify({t:'join',id,name:player.name,chain:Chain.chain})); updatePeers(); };
-      ws.onmessage=ev=>{
+      ws.onopen=()=>{
+        connected=true;
+        accountReady=false;
+        log('Connected to the realm server.');
+        window.RUNECHAIN_ACCOUNT.loadOrCreateAccount()
+          .then(credential=>{
+            accountCredential=credential;
+            if(!ws||ws.readyState!==1)return;
+            ws.send(JSON.stringify({t:'account:challenge',credential:credentialPayload()}));
+          })
+          .catch(err=>closeForAccountError('Account credential unavailable: '+esc(err.message||'unknown')));
+        updatePeers();
+      };
+      ws.onmessage=async ev=>{
         const m=JSON.parse(ev.data);
+        if(m.t==='account:challenge'){
+          if(!accountCredential){
+            closeForAccountError('Server requested an account before the browser credential was ready.');
+            return;
+          }
+          let signature;
+          try{
+            signature=await accountCredential.sign(m.message);
+          }catch(err){
+            closeForAccountError('Account challenge signing failed: '+esc(err.message||'unknown'));
+            return;
+          }
+          ws.send(JSON.stringify({
+            t:'join',
+            id,
+            name:player.name,
+            credential:{
+              ...credentialPayload(),
+              challengeId:m.challengeId,
+              signature,
+            },
+          }));
+        }
+        if(m.t==='account'){
+          const character=m.character||{};
+          id=m.peerId||id;
+          player.accountId=m.accountId||accountCredential.accountId||null;
+          player.characterId=character.id||null;
+          player.address=character.address||player.characterId||player.name;
+          accountReady=true;
+          log('Character bound for this season: <b>'+esc(character.name||player.name)+'</b>.');
+          updateHud();
+          updatePeers();
+          requestNextRewardWork();
+        }
+        if(m.t==='join:error'){
+          const code=m.error&&m.error.code;
+          closeForAccountError('Realm account rejected: '+esc(code||'unknown'));
+          return;
+        }
         if(m.t==='state'&&m.id!==id){
           let r=remotes[m.id];
           if(!r){ r={id:m.id,name:m.name||'Recorded',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false}; remotes[m.id]=r; updatePeers(); }
@@ -969,16 +1043,16 @@ const Net=(function(){
         if(m.t==='block:error'){
           if(Chain.replaceFromAuthority(m.chain))log('Server rejected a local block; synced to the authoritative Chainwell.');
         }
-        if(m.t==='chain')Chain.replaceFromAuthority(m.chain);
+        if(m.t==='chain'&&accountReady)Chain.replaceFromAuthority(m.chain);
       };
-      ws.onclose=()=>{ if(connected)log('Realm server lost. Solo mode.'); connected=false; awaitingWork=false; activeWork=null; submittedWork=null; pendingSource=null; updatePeers(); };
+      ws.onclose=()=>{ if(connected)log('Realm server lost. Solo mode.'); connected=false; accountReady=false; clearRewardWork(); updatePeers(); };
       ws.onerror=()=>{ try{ws.close();}catch(_){} };
     }catch(_){ connected=false; updatePeers(); }
     setTimeout(()=>{ if(!connected)updatePeers(); },900);
   }
   function tick(dt){
     for(const k in remotes){ const r=remotes[k]; r.x=lerp(r.x,r.tx,Math.min(1,dt*8)); r.y=lerp(r.y,r.ty,Math.min(1,dt*8)); }
-    if(connected){
+    if(connected&&accountReady){
       sendTimer+=dt;
       if(sendTimer>.08){
         sendTimer=0;
@@ -989,11 +1063,11 @@ const Net=(function(){
   function requestRuneReward(source){
     if(!connected||!ws||ws.readyState!==1)return false;
     rewardQueue.push(source);
-    requestNextRewardWork();
+    if(accountReady)requestNextRewardWork();
     return true;
   }
   function requestNextRewardWork(){
-    if(!connected||!ws||ws.readyState!==1||awaitingWork||activeWork||submittedWork)return;
+    if(!connected||!accountReady||!ws||ws.readyState!==1||awaitingWork||activeWork||submittedWork)return;
     pendingSource=rewardQueue.shift()||null;
     if(!pendingSource)return;
     awaitingWork=true;
@@ -1003,7 +1077,7 @@ const Net=(function(){
     return code==='invalid_block_index'||code==='invalid_block_parent'||code==='invalid_block_time';
   }
   function mineAuthorized(budget){
-    if(!connected||!ws||ws.readyState!==1)return null;
+    if(!connected||!accountReady||!ws||ws.readyState!==1)return null;
     if(!activeWork)return null;
     const block=activeWork.block, target='0'.repeat(activeWork.difficulty);
     for(let i=0;i<budget;i++){
@@ -1019,7 +1093,7 @@ const Net=(function(){
     }
     return null;
   }
-  function gossipBlock(block){ if(connected&&ws&&ws.readyState===1)ws.send(JSON.stringify({t:'block',id,block})); }
+  function gossipBlock(block){ if(connected&&accountReady&&ws&&ws.readyState===1)ws.send(JSON.stringify({t:'block',id,block})); }
   function updatePeers(){
     const el=document.getElementById('peerlist'); el.innerHTML='';
     const me=document.createElement('div'); me.className='peerline'; me.innerHTML='<span class="dot"></span>'+esc(player.name)+' <span style="color:#7d776b">(you)</span>'; el.appendChild(me);
@@ -1027,7 +1101,7 @@ const Net=(function(){
     if(!connected&&!rs.length){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot local"></span>Solo mode'; el.appendChild(d); return; }
     for(const r of rs){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot"></span>'+esc(r.name); el.appendChild(d); }
   }
-  return {connect,tick,mineAuthorized,requestRuneReward,gossipBlock,updatePeers,get connected(){return connected;}};
+  return {connect,tick,mineAuthorized,requestRuneReward,gossipBlock,updatePeers,get connected(){return connected;},get authenticated(){return accountReady;}};
 })();
 
 /* ----------------------------- Update loop ------------------------------ */
@@ -1486,7 +1560,7 @@ function updateHud(){
   document.getElementById('sEnd').textContent=player.endurance;
   document.getElementById('sStr').textContent=player.strength;
   document.getElementById('sDmg').textContent=player.dmg;
-  const grs=Chain.greatRunesOf(player.name);
+  const grs=Chain.greatRunesOf(valueAddress());
   document.getElementById('runes').textContent=grs.length?'Boss Sigil: '+grs.map(g=>g.name).join(', '):'';
   Story.updateHud();
   updateWallet();
@@ -1507,9 +1581,9 @@ function updateHud(){
   } else box.style.display='none';
 }
 function updateWallet(){
-  document.getElementById('bal').textContent=Chain.balanceOf(player.name).toFixed(2);
-  document.getElementById('pend').textContent=Chain.pendingCredit(player.name).toFixed(2);
-  document.getElementById('gold').textContent=Econ.goldSpendable(player.name).toFixed(2);
+  document.getElementById('bal').textContent=Chain.balanceOf(valueAddress()).toFixed(2);
+  document.getElementById('pend').textContent=Chain.pendingCredit(valueAddress()).toFixed(2);
+  document.getElementById('gold').textContent=Econ.goldSpendable(valueAddress()).toFixed(2);
   document.getElementById('height').textContent=Chain.chain.length-1;
   document.getElementById('diff').textContent=Chain.DIFFICULTY+' nibbles';
   document.getElementById('hr').textContent=Chain.hashrate.toLocaleString()+' H/s';
@@ -1524,6 +1598,7 @@ function updateWallet(){
 function startGame(){
   if(state.started)return;
   player.name=(document.getElementById('name').value.trim()||'Recorded').slice(0,14);
+  player.address=player.characterId||player.name;
   document.getElementById('charname').textContent=player.name;
   document.getElementById('start').style.display='none';
   document.body.classList.add('playing');

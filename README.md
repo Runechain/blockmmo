@@ -26,6 +26,15 @@ node server.js
 Then open **http://localhost:8080** in two or more tabs/machines. Every connected
 browser shares one world and one ledger.
 
+## Accounts
+
+Online realms create a local browser game account with Web Crypto and bind one character
+to that account per season. No wallet is required for the prototype. Clearing browser
+storage or using another browser/device creates another pseudonymous account, so this is
+a soft prototype cap, not production-grade identity or legal compliance. Prototype ledgers
+from before this account model used display-name addresses; reset them or migrate them
+explicitly before persistent playtests.
+
 ## Controls
 
 | Key | Action |

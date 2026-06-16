@@ -24,6 +24,7 @@ contracts/target/
 
 # runtime realm ledger (persisted chain state — regenerated as players mine)
 ledger.json
+accounts.json
 
 # large binary model files — keep the repo light.
 # Quaternius models are CC0, so you CAN commit them: just delete the next line.

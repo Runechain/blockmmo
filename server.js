@@ -6,7 +6,7 @@
        node server.js
        open http://localhost:8080  (in two+ browser tabs / machines)
 
-   It relays player transforms and accepts only server-validated Chainwell blocks
+   It relays player transforms and accepts only server-issued Chainwell reward work
    so every connected Recorded shares one world and one ledger.
    ========================================================================== */
 const http = require('http');
@@ -22,14 +22,18 @@ const {
   validateBlockCandidate,
   validateChain,
 } = require('./game/chain.js');
-const { ECON, ENEMY_REWARDS, STORY } = require('./game/content.js');
+const { ENEMY_REWARDS, STORY } = require('./game/content.js');
 
 const DEFAULT_PORT = process.env.PORT || 8080;
+const DEFAULT_SEASON_ID = 'preseason-1';
+const ACCOUNT_CREDENTIAL_TYPE = 'browser-p256-v1';
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
 
 function createRealmServer(options = {}) {
   const port = options.port == null ? DEFAULT_PORT : options.port;
   const ledgerFile = options.ledgerFile || path.join(__dirname, 'ledger.json');
+  const accountsFile = options.accountsFile || path.join(__dirname, 'accounts.json');
+  const seasonId = options.seasonId || DEFAULT_SEASON_ID;
   const difficulty = options.difficulty == null ? DEFAULT_DIFFICULTY : options.difficulty;
   const now = typeof options.now === 'function' ? options.now : () => Date.now();
   const saveDelayMs = options.saveDelayMs == null ? 800 : options.saveDelayMs;
@@ -38,9 +42,10 @@ function createRealmServer(options = {}) {
   const quiet = !!options.quiet;
   const clients = new Set();
   const pendingMining = new Map();
-  const runeCreditSinks = new Set(['POWER_SINK', ECON.EXCHANGE_ADDR]);
+  const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, seasonId, now });
   let saveTimer = null;
   let masterChain = loadLedger();
+  let peerNonce = 0;
 
   const server = http.createServer((req, res) => {
     if (req.url === '/healthz') {
@@ -80,7 +85,7 @@ function createRealmServer(options = {}) {
       `Sec-WebSocket-Accept: ${accept}\r\n\r\n`
     );
 
-    const client = { socket, id: null, name: 'Recorded', last: {} };
+    const client = { socket, id: null, name: 'Recorded', accountId: null, character: null, last: {} };
     addClient(client);
 
     let buffer = Buffer.alloc(0);
@@ -132,32 +137,96 @@ function createRealmServer(options = {}) {
 
   function handleParsedMessage(client, message) {
     switch (message && message.t) {
+      case 'account:challenge':
+        return issueAccountChallenge(client, message.credential);
       case 'join':
-        client.id = message.id;
-        client.name = (message.name || 'Recorded').slice(0, 14);
-        log(`* ${client.name} entered the realm  (${clients.size} online)`);
-        send(client, { t: 'chain', chain: masterChain });
+        return joinClient(client, message);
+      case 'state': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        const state = canonicalStateMessage(client, message);
+        client.last = state;
+        broadcast(state, client);
         return { ok: true };
-      case 'state':
-        client.last = message;
-        broadcast(message, client);
-        return { ok: true };
+      }
       case 'block': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
         const result = acceptBlock(message.block);
-        if (result.ok) {
-          broadcast({ t: 'block', block: result.block }, client);
-          return result;
-        }
         send(client, { t: 'block:error', error: result.error, chain: masterChain });
         return result;
       }
-      case 'mine:reward':
+      case 'mine:reward': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
         return issueRewardMiningWork(client, message.source);
-      case 'mine:submit':
+      }
+      case 'mine:submit': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
         return acceptMinedWork(client, message.candidateId, message.block);
+      }
       default:
         return { ok: false, error: { code: 'unknown_message_type', message: 'Unknown message type.' } };
     }
+  }
+
+  function issueAccountChallenge(client, credential) {
+    const result = accountRegistry.createChallenge(credential);
+    if (!result.ok) {
+      send(client, { t: 'join:error', error: result.error });
+      return result;
+    }
+    send(client, { t: 'account:challenge', ...result.challenge });
+    return result;
+  }
+
+  function joinClient(client, message) {
+    const name = sanitizeDisplayName(message.name);
+    const result = accountRegistry.verifyJoin(message.credential, name);
+    if (!result.ok) {
+      send(client, { t: 'join:error', error: result.error });
+      return result;
+    }
+
+    client.id = createPeerId();
+    client.name = name;
+    client.accountId = result.accountId;
+    client.character = result.character;
+    log(`* ${client.name} entered the realm  (${clients.size} online)`);
+    send(client, {
+      t: 'account',
+      accountId: result.accountId,
+      peerId: client.id,
+      seasonId: result.seasonId,
+      character: result.character,
+      createdAccount: result.createdAccount,
+      createdCharacter: result.createdCharacter,
+    });
+    send(client, { t: 'chain', chain: masterChain });
+    return result;
+  }
+
+  function requireAccount(client) {
+    if (client.accountId && client.character) return { ok: true };
+    const result = blockError('account_required', 'Join with a verified game account before sending realm messages.');
+    send(client, { t: 'join:error', error: result.error });
+    return result;
+  }
+
+  function canonicalStateMessage(client, message) {
+    return {
+      t: 'state',
+      id: client.id,
+      characterId: client.character.id,
+      name: client.name,
+      skin: sanitizeText(message.skin || 'tarnished', 32),
+      x: finiteNumber(message.x),
+      y: finiteNumber(message.y),
+      z: finiteNumber(message.z),
+      yaw: finiteNumber(message.yaw),
+      moving: !!message.moving,
+    };
   }
 
   function loadLedger() {
@@ -191,14 +260,8 @@ function createRealmServer(options = {}) {
     }, saveDelayMs);
   }
 
-  function acceptBlock(block) {
-    const tip = masterChain[masterChain.length - 1];
-    const result = validateBlockCandidate(block, tip, { sha256, difficulty, now, futureSkewMs });
-    if (!result.ok) return result;
-    const auth = validateSubmittedTransactions(block);
-    if (!auth.ok) return auth;
-
-    return appendBlock(block);
+  function acceptBlock() {
+    return blockError('client_block_submission_disabled', 'Connected realms only accept server-issued mining work.');
   }
 
   function appendBlock(block) {
@@ -210,7 +273,7 @@ function createRealmServer(options = {}) {
 
   function issueRewardMiningWork(client, source) {
     cleanupMiningCandidates();
-    const pendingCandidate = findPendingCandidateForClient(client.id);
+    const pendingCandidate = findPendingCandidateForCharacter(client.character.id);
     if (pendingCandidate) {
       const result = blockError('mining_candidate_pending', 'Finish the current server-issued mining candidate before requesting another.');
       send(client, { t: 'mine:error', error: result.error });
@@ -225,12 +288,18 @@ function createRealmServer(options = {}) {
 
     const candidateId = 'srv-' + crypto.randomBytes(8).toString('hex');
     const tx = {
-      to: client.name || 'Recorded',
+      to: client.character.address,
       amt: reward.amt,
       note: reward.note,
       cur: 'RUNE',
       id: candidateId,
-      auth: { type: 'server-reward', source: reward.sourceKey },
+      auth: {
+        type: 'server-reward',
+        source: reward.sourceKey,
+        accountId: client.accountId,
+        characterId: client.character.id,
+        seasonId,
+      },
     };
     const tip = masterChain[masterChain.length - 1];
     const block = {
@@ -244,7 +313,8 @@ function createRealmServer(options = {}) {
 
     const work = { candidateId, difficulty, block };
     pendingMining.set(candidateId, {
-      clientId: client.id,
+      accountId: client.accountId,
+      characterId: client.character.id,
       block,
       createdAt: now(),
     });
@@ -255,7 +325,7 @@ function createRealmServer(options = {}) {
   function acceptMinedWork(client, candidateId, block) {
     cleanupMiningCandidates();
     const candidate = pendingMining.get(candidateId);
-    if (!candidate || candidate.clientId !== client.id) {
+    if (!candidate || candidate.characterId !== client.character.id) {
       const result = blockError('unknown_mining_candidate', 'Mining candidate is unknown or no longer valid.');
       send(client, { t: 'mine:error', error: result.error, chain: masterChain });
       return result;
@@ -282,23 +352,9 @@ function createRealmServer(options = {}) {
     return accepted;
   }
 
-  function validateSubmittedTransactions(block) {
-    for (const tx of block.txs || []) {
-      if (isUnauthorizedRuneCredit(tx)) {
-        return blockError('unauthorized_rune_credit', 'RUNE credits must be mined from server-issued reward work.');
-      }
-    }
-    return { ok: true };
-  }
-
-  function isUnauthorizedRuneCredit(tx) {
-    if (!tx || (tx.cur || 'RUNE') !== 'RUNE' || !tx.to || !(Number(tx.amt) > 0)) return false;
-    return !runeCreditSinks.has(tx.to);
-  }
-
-  function findPendingCandidateForClient(clientId) {
+  function findPendingCandidateForCharacter(characterId) {
     for (const [candidateId, candidate] of pendingMining) {
-      if (candidate.clientId === clientId) return { candidateId, candidate };
+      if (candidate.characterId === characterId) return { candidateId, candidate };
     }
     return null;
   }
@@ -348,6 +404,28 @@ function createRealmServer(options = {}) {
     return blockError('invalid_reward_source', 'Unsupported reward source type.');
   }
 
+  function sanitizeDisplayName(value) {
+    return sanitizeText(value || 'Recorded', 14) || 'Recorded';
+  }
+
+  function createPeerId() {
+    let id;
+    do {
+      peerNonce += 1;
+      id = 'peer_' + peerNonce.toString(36);
+    } while ([...clients].some((client) => client.id === id));
+    return id;
+  }
+
+  function sanitizeText(value, max) {
+    return String(value == null ? '' : value).trim().slice(0, max);
+  }
+
+  function finiteNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function blockError(code, message) {
     return { ok: false, error: { code, message } };
   }
@@ -355,7 +433,7 @@ function createRealmServer(options = {}) {
   function broadcast(obj, except) {
     const data = encodeFrame(Buffer.from(JSON.stringify(obj)), 0x1);
     for (const client of clients) {
-      if (client !== except && client.socket.writable) client.socket.write(data);
+      if (client !== except && client.accountId && client.socket.writable) client.socket.write(data);
     }
   }
 
@@ -400,6 +478,221 @@ function createRealmServer(options = {}) {
     listen,
     close,
   };
+}
+
+function createAccountRegistry(options = {}) {
+  const accountsFile = options.accountsFile || path.join(__dirname, 'accounts.json');
+  const seasonId = options.seasonId || DEFAULT_SEASON_ID;
+  const now = typeof options.now === 'function' ? options.now : () => Date.now();
+  const challengeTtlMs = options.challengeTtlMs == null ? 60000 : options.challengeTtlMs;
+  const pendingChallenges = new Map();
+  let registry = loadRegistry();
+
+  function createChallenge(credential) {
+    const parsed = parseCredentialPublicKey(credential);
+    if (!parsed.ok) return parsed;
+
+    cleanupChallenges();
+    const accountId = accountIdForPublicKey(parsed.publicKey);
+    const challengeId = 'chal_' + crypto.randomBytes(12).toString('hex');
+    const issuedAt = now();
+    const message = [
+      'runechain-auth-v1',
+      'type=' + ACCOUNT_CREDENTIAL_TYPE,
+      'season=' + seasonId,
+      'account=' + accountId,
+      'challenge=' + challengeId,
+      'issued=' + issuedAt,
+    ].join('\n');
+
+    pendingChallenges.set(challengeId, {
+      accountId,
+      publicKey: parsed.publicKey,
+      message,
+      issuedAt,
+    });
+
+    return {
+      ok: true,
+      challenge: {
+        credentialType: ACCOUNT_CREDENTIAL_TYPE,
+        challengeId,
+        accountId,
+        seasonId,
+        message,
+      },
+    };
+  }
+
+  function verifyJoin(credential, displayName) {
+    const parsed = parseCredentialPublicKey(credential);
+    if (!parsed.ok) return parsed;
+    if (!credential || typeof credential.challengeId !== 'string') {
+      return accountError('invalid_account_challenge', 'Account challenge is missing or invalid.');
+    }
+
+    cleanupChallenges();
+    const accountId = accountIdForPublicKey(parsed.publicKey);
+    const challenge = pendingChallenges.get(credential.challengeId);
+    if (!challenge || challenge.accountId !== accountId || !samePublicKey(challenge.publicKey, parsed.publicKey)) {
+      return accountError('invalid_account_challenge', 'Account challenge is unknown, expired, or already used.');
+    }
+
+    if (!verifyP256Signature(parsed.publicKey, challenge.message, credential.signature)) {
+      return accountError('invalid_account_signature', 'Account signature does not verify.');
+    }
+
+    pendingChallenges.delete(credential.challengeId);
+    const binding = bindAccount(accountId, parsed.publicKey, displayName);
+    return {
+      ok: true,
+      accountId,
+      seasonId,
+      character: clone(binding.character),
+      createdAccount: binding.createdAccount,
+      createdCharacter: binding.createdCharacter,
+    };
+  }
+
+  function bindAccount(accountId, publicKey, displayName) {
+    const ts = now();
+    let account = registry.accounts[accountId];
+    let createdAccount = false;
+    if (!account) {
+      account = {
+        id: accountId,
+        credentialType: ACCOUNT_CREDENTIAL_TYPE,
+        publicKey: clone(publicKey),
+        createdAt: ts,
+        lastSeenAt: ts,
+        characters: {},
+      };
+      registry.accounts[accountId] = account;
+      createdAccount = true;
+    }
+
+    account.lastSeenAt = ts;
+    account.publicKey = clone(publicKey);
+
+    let character = account.characters[seasonId];
+    let createdCharacter = false;
+    if (!character) {
+      const id = characterIdForAccountSeason(accountId, seasonId);
+      character = {
+        id,
+        seasonId,
+        name: displayName,
+        address: id,
+        createdAt: ts,
+        lastSeenAt: ts,
+      };
+      account.characters[seasonId] = character;
+      createdCharacter = true;
+    } else {
+      character.name = displayName;
+      character.lastSeenAt = ts;
+    }
+
+    saveRegistry();
+    return { account, character, createdAccount, createdCharacter };
+  }
+
+  function cleanupChallenges() {
+    const cutoff = now() - challengeTtlMs;
+    for (const [challengeId, challenge] of pendingChallenges) {
+      if (challenge.issuedAt < cutoff) pendingChallenges.delete(challengeId);
+    }
+  }
+
+  function loadRegistry() {
+    if (!fs.existsSync(accountsFile)) return { version: 1, accounts: {} };
+    const data = JSON.parse(fs.readFileSync(accountsFile, 'utf8'));
+    if (!data || data.version !== 1 || !data.accounts || typeof data.accounts !== 'object' || Array.isArray(data.accounts)) {
+      throw new Error('Account registry is malformed.');
+    }
+    return data;
+  }
+
+  function saveRegistry() {
+    fs.mkdirSync(path.dirname(accountsFile), { recursive: true });
+    const tempFile = accountsFile + '.tmp-' + process.pid + '-' + Date.now();
+    fs.writeFileSync(tempFile, JSON.stringify(registry, null, 2));
+    fs.renameSync(tempFile, accountsFile);
+  }
+
+  function getState() {
+    return clone(registry);
+  }
+
+  return {
+    createChallenge,
+    verifyJoin,
+    getState,
+    accountIdForPublicKey,
+  };
+}
+
+function parseCredentialPublicKey(credential) {
+  if (!credential || credential.type !== ACCOUNT_CREDENTIAL_TYPE) {
+    return accountError('invalid_account_credential', 'Account credential type is missing or unsupported.');
+  }
+  const key = credential.publicKey;
+  if (!key || key.kty !== 'EC' || key.crv !== 'P-256' || typeof key.x !== 'string' || typeof key.y !== 'string') {
+    return accountError('invalid_account_credential', 'Account credential public key must be a P-256 JWK.');
+  }
+  return {
+    ok: true,
+    publicKey: {
+      kty: 'EC',
+      crv: 'P-256',
+      x: key.x,
+      y: key.y,
+    },
+  };
+}
+
+function accountIdForPublicKey(publicKey) {
+  return 'acct_' + crypto.createHash('sha256').update(canonicalPublicKey(publicKey)).digest('hex').slice(0, 24);
+}
+
+function characterIdForAccountSeason(accountId, seasonId) {
+  return 'char_' + crypto.createHash('sha256').update(accountId + '|' + seasonId).digest('hex').slice(0, 24);
+}
+
+function canonicalPublicKey(publicKey) {
+  return JSON.stringify({ crv: publicKey.crv, kty: publicKey.kty, x: publicKey.x, y: publicKey.y });
+}
+
+function samePublicKey(a, b) {
+  return !!a && !!b && canonicalPublicKey(a) === canonicalPublicKey(b);
+}
+
+function verifyP256Signature(publicKey, message, signature) {
+  try {
+    const sig = base64urlDecode(signature);
+    if (!sig.length) return false;
+    const key = crypto.createPublicKey({ key: publicKey, format: 'jwk' });
+    return crypto.verify('sha256', Buffer.from(message), {
+      key,
+      dsaEncoding: sig.length === 64 ? 'ieee-p1363' : 'der',
+    }, sig);
+  } catch (_) {
+    return false;
+  }
+}
+
+function base64urlDecode(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) return Buffer.alloc(0);
+  const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4);
+  return Buffer.from(padded, 'base64');
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function accountError(code, message) {
+  return { ok: false, error: { code, message } };
 }
 
 function decodeFrame(buf) {
@@ -459,6 +752,7 @@ if (require.main === module) {
 
 module.exports = {
   createRealmServer,
+  createAccountRegistry,
   decodeFrame,
   encodeFrame,
 };

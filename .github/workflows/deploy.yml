@@ -36,8 +36,8 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Validate syntax
-      run: node -c server.js
+    - name: Run verification suite
+      run: npm test
 
     - name: Test health check endpoint
       run: |

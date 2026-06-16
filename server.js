@@ -1,170 +1,305 @@
 /* ============================================================================
-   RUNECHAIN — authoritative realm server (MMO relay)
+   RUNECHAIN - authoritative realm server (MMO relay)
    Zero dependencies. Pure Node: serves the client over HTTP and runs a
    hand-rolled WebSocket server on the SAME port (8080).
 
        node server.js
        open http://localhost:8080  (in two+ browser tabs / machines)
 
-   It relays player transforms and gossips mined blockchain blocks so every
-   connected Tarnished shares one world and one ledger.
+   It relays player transforms and accepts only server-validated Chainwell blocks
+   so every connected Recorded shares one world and one ledger.
    ========================================================================== */
 const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT || 8080;
+const sha256 = require('./game/sha256.js');
+const {
+  DEFAULT_DIFFICULTY,
+  createGenesisBlock,
+  validateBlockCandidate,
+  validateChain,
+} = require('./game/chain.js');
+
+const DEFAULT_PORT = process.env.PORT || 8080;
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
 
-/* ---- HTTP: serve the game client -------------------------------------- */
-const server = http.createServer((req, res) => {
-  // health check for AWS load balancers / App Runner
-  if (req.url === '/healthz') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
-  const route = req.url.split('?')[0];
-  let file = route === '/' ? '/index.html' : route;
-  const full = path.join(__dirname, path.normalize(file).replace(/^(\.\.[/\\])+/, ''));
-  fs.readFile(full, (err, data) => {
-    if (err) { res.writeHead(404); return res.end('not found'); }
-    const ext = path.extname(full);
-    const type = ext === '.html' ? 'text/html'
-               : ext === '.js'   ? 'text/javascript'
-               : 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': type });
-    res.end(data);
-  });
-});
+function createRealmServer(options = {}) {
+  const port = options.port == null ? DEFAULT_PORT : options.port;
+  const ledgerFile = options.ledgerFile || path.join(__dirname, 'ledger.json');
+  const difficulty = options.difficulty == null ? DEFAULT_DIFFICULTY : options.difficulty;
+  const now = typeof options.now === 'function' ? options.now : () => Date.now();
+  const saveDelayMs = options.saveDelayMs == null ? 800 : options.saveDelayMs;
+  const futureSkewMs = options.futureSkewMs;
+  const quiet = !!options.quiet;
+  const clients = new Set();
+  let saveTimer = null;
+  let masterChain = loadLedger();
 
-/* ---- WebSocket: handshake + framing (RFC 6455, no deps) ---------------- */
-const clients = new Set();           // each: { socket, id, name, last }
-
-server.on('upgrade', (req, socket) => {
-  const key = req.headers['sec-websocket-key'];
-  if (!key) { socket.destroy(); return; }
-  const accept = crypto.createHash('sha1').update(key + GUID).digest('base64');
-  socket.write(
-    'HTTP/1.1 101 Switching Protocols\r\n' +
-    'Upgrade: websocket\r\n' +
-    'Connection: Upgrade\r\n' +
-    `Sec-WebSocket-Accept: ${accept}\r\n\r\n`
-  );
-  const client = { socket, id: null, name: 'Tarnished', last: {} };
-  clients.add(client);
-
-  let buffer = Buffer.alloc(0);
-  socket.on('data', (chunk) => {
-    buffer = Buffer.concat([buffer, chunk]);
-    let frame;
-    while ((frame = decodeFrame(buffer))) {
-      buffer = frame.rest;
-      if (frame.opcode === 0x8) { socket.end(); return; }      // close
-      if (frame.opcode === 0x9) { socket.write(encodeFrame(frame.payload, 0xA)); continue; } // ping->pong
-      if (frame.opcode === 0x1 && frame.payload != null) handleMessage(client, frame.payload.toString('utf8'));
+  const server = http.createServer((req, res) => {
+    if (req.url === '/healthz') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      return res.end('ok');
     }
-  });
-  socket.on('close', () => dropClient(client));
-  socket.on('error', () => dropClient(client));
-});
 
-function dropClient(client) {
-  if (!clients.has(client)) return;
-  clients.delete(client);
-  if (client.id) broadcast({ t: 'leave', id: client.id }, client);
-  console.log(`✦ ${client.name} left the realm  (${clients.size} online)`);
-}
-
-function handleMessage(client, raw) {
-  let m; try { m = JSON.parse(raw); } catch (_) { return; }
-  switch (m.t) {
-    case 'join':
-      client.id = m.id; client.name = (m.name || 'Tarnished').slice(0, 14);
-      console.log(`✦ ${client.name} entered the realm  (${clients.size} online)`);
-      // adopt the newcomer's ledger if it's longer (longest-chain convergence), then sync them
-      if (Array.isArray(m.chain) && m.chain.length > masterChain.length) { masterChain = m.chain; saveLedger(); }
-      send(client, { t: 'chain', chain: masterChain });
-      break;
-    case 'state':
-      client.last = m;
-      broadcast(m, client);                 // relay transform to everyone else
-      break;
-    case 'block':
-      acceptBlock(m.block);
-      broadcast(m, client);                  // gossip the mined block
-      break;
-  }
-}
-
-/* ---- shared ledger (longest-valid-chain authority) + disk persistence -- */
-const LEDGER_FILE = path.join(__dirname, 'ledger.json');
-let masterChain = loadLedger();
-let saveTimer = null;
-
-function loadLedger() {
-  try {
-    const data = JSON.parse(fs.readFileSync(LEDGER_FILE, 'utf8'));
-    if (Array.isArray(data)) { console.log(`⛓ ledger restored from disk — ${data.length} block(s)`); return data; }
-  } catch (_) { /* no ledger yet — start a fresh realm */ }
-  return [];
-}
-// debounced write: a burst of gossiped blocks collapses into one disk write
-function saveLedger() {
-  if (saveTimer) return;
-  saveTimer = setTimeout(() => {
-    saveTimer = null;
-    fs.writeFile(LEDGER_FILE, JSON.stringify(masterChain), (err) => {
-      if (err) console.error('⚠ ledger save failed:', err.message);
+    const route = req.url.split('?')[0];
+    const file = route === '/' ? '/index.html' : route;
+    const full = path.join(__dirname, path.normalize(file).replace(/^(\.\.[/\\])+/, ''));
+    fs.readFile(full, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        return res.end('not found');
+      }
+      const ext = path.extname(full);
+      const type = ext === '.html' ? 'text/html'
+                 : ext === '.js' ? 'text/javascript'
+                 : ext === '.png' ? 'image/png'
+                 : 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': type });
+      res.end(data);
     });
-  }, 800);
-}
+  });
 
-function acceptBlock(block) {
-  // trust client validation for this demo; keep the heaviest chain we've seen
-  if (block && typeof block.index === 'number' && block.index >= masterChain.length) {
-    masterChain[block.index] = block;
-    console.log(`⛓ block #${block.index} gossiped — ${block.txs ? block.txs.length : 0} tx`);
-    saveLedger();
+  server.on('upgrade', (req, socket) => {
+    const key = req.headers['sec-websocket-key'];
+    if (!key) {
+      socket.destroy();
+      return;
+    }
+    const accept = crypto.createHash('sha1').update(key + GUID).digest('base64');
+    socket.write(
+      'HTTP/1.1 101 Switching Protocols\r\n' +
+      'Upgrade: websocket\r\n' +
+      'Connection: Upgrade\r\n' +
+      `Sec-WebSocket-Accept: ${accept}\r\n\r\n`
+    );
+
+    const client = { socket, id: null, name: 'Recorded', last: {} };
+    addClient(client);
+
+    let buffer = Buffer.alloc(0);
+    socket.on('data', (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      let frame;
+      while ((frame = decodeFrame(buffer))) {
+        buffer = frame.rest;
+        if (frame.opcode === 0x8) {
+          socket.end();
+          return;
+        }
+        if (frame.opcode === 0x9) {
+          socket.write(encodeFrame(frame.payload, 0xA));
+          continue;
+        }
+        if (frame.opcode === 0x1 && frame.payload != null) handleMessage(client, frame.payload.toString('utf8'));
+      }
+    });
+    socket.on('close', () => dropClient(client));
+    socket.on('error', () => dropClient(client));
+  });
+
+  function log(...args) {
+    if (!quiet) console.log(...args);
   }
+
+  function addClient(client) {
+    clients.add(client);
+    return client;
+  }
+
+  function dropClient(client) {
+    if (!clients.has(client)) return;
+    clients.delete(client);
+    if (client.id) broadcast({ t: 'leave', id: client.id }, client);
+    log(`* ${client.name} left the realm  (${clients.size} online)`);
+  }
+
+  function handleMessage(client, raw) {
+    let message;
+    try {
+      message = JSON.parse(raw);
+    } catch (_) {
+      return { ok: false, error: { code: 'invalid_message_json', message: 'Message must be valid JSON.' } };
+    }
+    return handleParsedMessage(client, message);
+  }
+
+  function handleParsedMessage(client, message) {
+    switch (message && message.t) {
+      case 'join':
+        client.id = message.id;
+        client.name = (message.name || 'Recorded').slice(0, 14);
+        log(`* ${client.name} entered the realm  (${clients.size} online)`);
+        send(client, { t: 'chain', chain: masterChain });
+        return { ok: true };
+      case 'state':
+        client.last = message;
+        broadcast(message, client);
+        return { ok: true };
+      case 'block': {
+        const result = acceptBlock(message.block);
+        if (result.ok) {
+          broadcast({ t: 'block', block: result.block }, client);
+          return result;
+        }
+        send(client, { t: 'block:error', error: result.error, chain: masterChain });
+        return result;
+      }
+      default:
+        return { ok: false, error: { code: 'unknown_message_type', message: 'Unknown message type.' } };
+    }
+  }
+
+  function loadLedger() {
+    try {
+      const data = JSON.parse(fs.readFileSync(ledgerFile, 'utf8'));
+      const result = validateChain(data, { sha256, difficulty });
+      if (result.ok) {
+        log(`chain ledger restored from disk - ${data.length} block(s)`);
+        return data;
+      }
+      log(`ledger rejected on load: ${result.error.code}`);
+    } catch (_) {
+      // No persisted ledger yet; start a fresh realm.
+    }
+    return [createGenesisBlock(sha256)];
+  }
+
+  function saveLedger() {
+    if (saveDelayMs <= 0) {
+      fs.mkdirSync(path.dirname(ledgerFile), { recursive: true });
+      fs.writeFileSync(ledgerFile, JSON.stringify(masterChain));
+      return;
+    }
+    if (saveTimer) return;
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      fs.mkdirSync(path.dirname(ledgerFile), { recursive: true });
+      fs.writeFile(ledgerFile, JSON.stringify(masterChain), (err) => {
+        if (err) console.error('ledger save failed:', err.message);
+      });
+    }, saveDelayMs);
+  }
+
+  function acceptBlock(block) {
+    const tip = masterChain[masterChain.length - 1];
+    const result = validateBlockCandidate(block, tip, { sha256, difficulty, now, futureSkewMs });
+    if (!result.ok) return result;
+
+    masterChain.push(block);
+    log(`chain block #${block.index} accepted - ${block.txs ? block.txs.length : 0} tx`);
+    saveLedger();
+    return { ok: true, block };
+  }
+
+  function broadcast(obj, except) {
+    const data = encodeFrame(Buffer.from(JSON.stringify(obj)), 0x1);
+    for (const client of clients) {
+      if (client !== except && client.socket.writable) client.socket.write(data);
+    }
+  }
+
+  function send(client, obj) {
+    if (client.socket.writable) client.socket.write(encodeFrame(Buffer.from(JSON.stringify(obj)), 0x1));
+  }
+
+  function listen(callback) {
+    server.listen(port, () => {
+      log('');
+      log('  RUNECHAIN realm server is live');
+      log(`  -> http://localhost:${port}`);
+      log('  Open in 2+ tabs to see real multiplayer');
+      log('');
+      if (callback) callback();
+    });
+    return server;
+  }
+
+  function close(callback) {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    if (server.listening) server.close(callback);
+    else if (callback) callback();
+  }
+
+  function getChain() {
+    return masterChain.map((block) => ({ ...block, txs: (block.txs || []).map((tx) => ({ ...tx })) }));
+  }
+
+  return {
+    server,
+    clients,
+    addClient,
+    dropClient,
+    handleMessage,
+    handleParsedMessage,
+    acceptBlock,
+    getChain,
+    listen,
+    close,
+  };
 }
 
-function broadcast(obj, except) {
-  const data = encodeFrame(Buffer.from(JSON.stringify(obj)), 0x1);
-  for (const c of clients) if (c !== except && c.socket.writable) c.socket.write(data);
-}
-function send(client, obj) {
-  if (client.socket.writable) client.socket.write(encodeFrame(Buffer.from(JSON.stringify(obj)), 0x1));
-}
-
-/* ---- minimal RFC6455 frame codec -------------------------------------- */
 function decodeFrame(buf) {
   if (buf.length < 2) return null;
-  const fin = buf[0] & 0x80, opcode = buf[0] & 0x0f;
+  const fin = buf[0] & 0x80;
+  const opcode = buf[0] & 0x0f;
   const masked = buf[1] & 0x80;
-  let len = buf[1] & 0x7f, offset = 2;
-  if (len === 126) { if (buf.length < 4) return null; len = buf.readUInt16BE(2); offset = 4; }
-  else if (len === 127) { if (buf.length < 10) return null; len = Number(buf.readBigUInt64BE(2)); offset = 10; }
+  let len = buf[1] & 0x7f;
+  let offset = 2;
+  if (len === 126) {
+    if (buf.length < 4) return null;
+    len = buf.readUInt16BE(2);
+    offset = 4;
+  } else if (len === 127) {
+    if (buf.length < 10) return null;
+    len = Number(buf.readBigUInt64BE(2));
+    offset = 10;
+  }
   let mask;
-  if (masked) { if (buf.length < offset + 4) return null; mask = buf.slice(offset, offset + 4); offset += 4; }
+  if (masked) {
+    if (buf.length < offset + 4) return null;
+    mask = buf.slice(offset, offset + 4);
+    offset += 4;
+  }
   if (buf.length < offset + len) return null;
   let payload = buf.slice(offset, offset + len);
-  if (masked) { const out = Buffer.alloc(len); for (let i = 0; i < len; i++) out[i] = payload[i] ^ mask[i % 4]; payload = out; }
+  if (masked) {
+    const out = Buffer.alloc(len);
+    for (let i = 0; i < len; i++) out[i] = payload[i] ^ mask[i % 4];
+    payload = out;
+  }
   return { fin, opcode, payload, rest: buf.slice(offset + len) };
 }
+
 function encodeFrame(payload, opcode = 0x1) {
   const len = payload.length;
   let header;
-  if (len < 126) { header = Buffer.alloc(2); header[1] = len; }
-  else if (len < 65536) { header = Buffer.alloc(4); header[1] = 126; header.writeUInt16BE(len, 2); }
-  else { header = Buffer.alloc(10); header[1] = 127; header.writeBigUInt64BE(BigInt(len), 2); }
-  header[0] = 0x80 | opcode;           // FIN + opcode (server frames unmasked)
+  if (len < 126) {
+    header = Buffer.alloc(2);
+    header[1] = len;
+  } else if (len < 65536) {
+    header = Buffer.alloc(4);
+    header[1] = 126;
+    header.writeUInt16BE(len, 2);
+  } else {
+    header = Buffer.alloc(10);
+    header[1] = 127;
+    header.writeBigUInt64BE(BigInt(len), 2);
+  }
+  header[0] = 0x80 | opcode;
   return Buffer.concat([header, payload]);
 }
 
-server.listen(PORT, () => {
-  console.log('');
-  console.log('  ╔══════════════════════════════════════════════╗');
-  console.log('  ║   RUNECHAIN realm server is live             ║');
-  console.log(`  ║   → http://localhost:${PORT}                     ║`);
-  console.log('  ║   Open in 2+ tabs to see real multiplayer    ║');
-  console.log('  ╚══════════════════════════════════════════════╝');
-  console.log('');
-});
+if (require.main === module) {
+  createRealmServer().listen();
+}
+
+module.exports = {
+  createRealmServer,
+  decodeFrame,
+  encodeFrame,
+};

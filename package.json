@@ -4,7 +4,8 @@
   "description": "A tiny Soulslike MMO demo with a real SHA-256 proof-of-work blockchain mechanic.",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node scripts/verify_core_runtime.js && node scripts/verify_chainwell_authority.js"
   },
   "engines": {
     "node": ">=16"

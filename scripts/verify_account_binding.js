@@ -214,6 +214,12 @@ assert.strictEqual(persisted.accounts[firstJoin.account.accountId].id, firstJoin
 assert(!JSON.stringify(persisted).includes(firstJoin.account.character.id + firstJoin.account.character.id), 'registry should not duplicate character data');
 assert(!JSON.stringify(persisted).includes('signature'), 'registry must not persist login signatures');
 
+const rejectedAuthedBlock = realm.handleParsedMessage(submitter, { t: 'block', block: {} });
+assertRejected(rejectedAuthedBlock, 'client_block_submission_disabled');
+assert.strictEqual(realm.getChain().length, 1, 'authenticated raw client block must not mutate the chain');
+assert.strictEqual(readMessages(submitter)[0].error.code, 'client_block_submission_disabled');
+assert.strictEqual(readMessages(peer).length, 0, 'authenticated raw client block must not broadcast');
+
 const replayCredential = makeCredential();
 const replayClient = makeClient('replay');
 realm.addClient(replayClient);

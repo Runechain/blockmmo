@@ -242,7 +242,7 @@ const {
   PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS
 } = Content;
 const SHA256 = window.RUNECHAIN_SHA256;
-const Chain = window.RUNECHAIN_CHAIN.createChain({ sha256: SHA256, onBlockMined(block) { Net.gossipBlock(block); } });
+const Chain = window.RUNECHAIN_CHAIN.createChain({ sha256: SHA256 });
 
 function valueAddress(){ return player.address || player.name || 'Recorded'; }
 
@@ -1093,7 +1093,6 @@ const Net=(function(){
     }
     return null;
   }
-  function gossipBlock(block){ if(connected&&accountReady&&ws&&ws.readyState===1)ws.send(JSON.stringify({t:'block',id,block})); }
   function updatePeers(){
     const el=document.getElementById('peerlist'); el.innerHTML='';
     const me=document.createElement('div'); me.className='peerline'; me.innerHTML='<span class="dot"></span>'+esc(player.name)+' <span style="color:#7d776b">(you)</span>'; el.appendChild(me);
@@ -1101,7 +1100,7 @@ const Net=(function(){
     if(!connected&&!rs.length){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot local"></span>Solo mode'; el.appendChild(d); return; }
     for(const r of rs){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot"></span>'+esc(r.name); el.appendChild(d); }
   }
-  return {connect,tick,mineAuthorized,requestRuneReward,gossipBlock,updatePeers,get connected(){return connected;},get authenticated(){return accountReady;}};
+  return {connect,tick,mineAuthorized,requestRuneReward,updatePeers,get connected(){return connected;},get authenticated(){return accountReady;}};
 })();
 
 /* ----------------------------- Update loop ------------------------------ */

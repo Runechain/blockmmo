@@ -1008,8 +1008,8 @@ const Net=(function(){
         }
         if(m.t==='state'&&m.id!==id){
           let r=remotes[m.id];
-          if(!r){ r={id:m.id,name:m.name||'Recorded',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false}; remotes[m.id]=r; updatePeers(); }
-          r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0;
+          if(!r){ r={id:m.id,name:m.name||'Recorded',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false,lastSeen:Date.now()}; remotes[m.id]=r; updatePeers(); }
+          r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0; r.lastSeen=Date.now();
         }
         if(m.t==='leave'){ delete remotes[m.id]; updatePeers(); }
         if(m.t==='block'&&Chain.acceptRemote(m.block))log('Received a mined block from a peer.');
@@ -1045,13 +1045,19 @@ const Net=(function(){
         }
         if(m.t==='chain'&&accountReady)Chain.replaceFromAuthority(m.chain);
       };
-      ws.onclose=()=>{ if(connected)log('Realm server lost. Solo mode.'); connected=false; accountReady=false; clearRewardWork(); updatePeers(); };
+      ws.onclose=()=>{ if(connected)log('Realm server lost. Solo mode.'); connected=false; accountReady=false; clearRewardWork(); for(const k in remotes) delete remotes[k]; updatePeers(); };
       ws.onerror=()=>{ try{ws.close();}catch(_){} };
     }catch(_){ connected=false; updatePeers(); }
     setTimeout(()=>{ if(!connected)updatePeers(); },900);
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible'&&connected&&accountReady&&ws&&ws.readyState===1){
+        ws.send(JSON.stringify({t:'state',id,name:player.name,skin:player.skinId,x:player.x,y:0,z:player.y,yaw:Math.atan2(player.dirY,player.dirX),moving:player.moving}));
+      }
+    });
   }
   function tick(dt){
-    for(const k in remotes){ const r=remotes[k]; r.x=lerp(r.x,r.tx,Math.min(1,dt*8)); r.y=lerp(r.y,r.ty,Math.min(1,dt*8)); }
+    const pruneT=Date.now()-15000;
+    for(const k in remotes){ const r=remotes[k]; if(r.lastSeen<pruneT){ delete remotes[k]; updatePeers(); continue; } r.x=lerp(r.x,r.tx,Math.min(1,dt*8)); r.y=lerp(r.y,r.ty,Math.min(1,dt*8)); }
     if(connected&&accountReady){
       sendTimer+=dt;
       if(sendTimer>.08){
@@ -1445,6 +1451,10 @@ function drawPlayerSprite(p,remote=false){
   if(!remote&&!drewHero){
     const sx=s.x+p.dirX*15, sy=s.y-23+p.dirY*9;
     if(p.attack)rect(sx,sy,18,4,'#f1e6c8'); else rect(s.x+13,s.y-30,4,21,'#dce8ef');
+  }
+  if(remote&&p.name){
+    ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#d8d0bd';
+    ctx.fillText(p.name.length>14?p.name.slice(0,13)+'…':p.name,s.x,s.y-44);
   }
 }
 function drawEnemy(e){

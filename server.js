@@ -39,11 +39,13 @@ function createRealmServer(options = {}) {
   const saveDelayMs = options.saveDelayMs == null ? 800 : options.saveDelayMs;
   const futureSkewMs = options.futureSkewMs;
   const miningTtlMs = options.miningTtlMs == null ? 30000 : options.miningTtlMs;
+  const staleThresholdMs = options.staleThresholdMs == null ? 10000 : options.staleThresholdMs;
   const quiet = !!options.quiet;
   const clients = new Set();
   const pendingMining = new Map();
   const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, seasonId, now });
   let saveTimer = null;
+  let sweepInterval = null;
   let masterChain = loadLedger();
   let peerNonce = 0;
 
@@ -146,6 +148,7 @@ function createRealmServer(options = {}) {
         if (!account.ok) return account;
         const state = canonicalStateMessage(client, message);
         client.last = state;
+        client.lastStateAt = now();
         broadcast(state, client);
         return { ok: true };
       }
@@ -204,6 +207,9 @@ function createRealmServer(options = {}) {
       createdCharacter: result.createdCharacter,
     });
     send(client, { t: 'chain', chain: masterChain });
+    for (const peer of clients) {
+      if (peer !== client && peer.id && peer.last && peer.last.t) send(client, peer.last);
+    }
     return result;
   }
 
@@ -442,6 +448,7 @@ function createRealmServer(options = {}) {
   }
 
   function listen(callback) {
+    sweepInterval = setInterval(sweepStaleClients, 5000);
     server.listen(port, () => {
       log('');
       log('  RUNECHAIN realm server is live');
@@ -453,7 +460,22 @@ function createRealmServer(options = {}) {
     return server;
   }
 
+  function sweepStaleClients() {
+    const cutoff = now() - staleThresholdMs;
+    for (const client of clients) {
+      if (client.id && client.lastStateAt && client.lastStateAt < cutoff) {
+        broadcast({ t: 'leave', id: client.id }, client);
+        client.last = {};
+        client.lastStateAt = 0;
+      }
+    }
+  }
+
   function close(callback) {
+    if (sweepInterval) {
+      clearInterval(sweepInterval);
+      sweepInterval = null;
+    }
     if (saveTimer) {
       clearTimeout(saveTimer);
       saveTimer = null;

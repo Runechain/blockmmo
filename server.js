@@ -12,6 +12,7 @@
 const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const sha256 = require('./game/sha256.js');
@@ -25,14 +26,20 @@ const {
 const { ENEMY_REWARDS, STORY, RELICS, LEVELING } = require('./game/content.js');
 
 const DEFAULT_PORT = process.env.PORT || 8080;
+const DEFAULT_PREVIEW_PLAY_URL = 'http://40.176.60.86:8080';
 const DEFAULT_SEASON_ID = 'preseason-1';
 const ACCOUNT_CREDENTIAL_TYPE = 'browser-p256-v1';
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
+const GAME_OPEN = process.env.GAME_OPEN === '1' || process.env.GAME_OPEN === 'true';
 
 function createRealmServer(options = {}) {
   const port = options.port == null ? DEFAULT_PORT : options.port;
   const ledgerFile = options.ledgerFile || path.join(__dirname, 'ledger.json');
   const accountsFile = options.accountsFile || path.join(__dirname, 'accounts.json');
+  const mailingListFile = options.mailingListFile || process.env.RUNECHAIN_WAITLIST_CSV ||
+    path.join(process.env.VERCEL ? os.tmpdir() : __dirname, 'runechain-waitlist.csv');
+  const waitlistExportToken = options.waitlistExportToken || process.env.WAITLIST_EXPORT_TOKEN || '';
+  const previewPlayUrl = options.previewPlayUrl || process.env.RUNECHAIN_PREVIEW_URL || DEFAULT_PREVIEW_PLAY_URL;
   const seasonId = options.seasonId || DEFAULT_SEASON_ID;
   const difficulty = options.difficulty == null ? DEFAULT_DIFFICULTY : options.difficulty;
   const now = typeof options.now === 'function' ? options.now : () => Date.now();
@@ -48,14 +55,42 @@ function createRealmServer(options = {}) {
   let peerNonce = 0;
 
   const server = http.createServer((req, res) => {
-    if (req.url === '/healthz') {
+    const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+    const route = requestUrl.pathname;
+
+    if (route === '/healthz') {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       return res.end('ok');
     }
 
-    const route = req.url.split('?')[0];
-    const file = route === '/' ? '/index.html' : route;
-    const full = path.join(__dirname, path.normalize(file).replace(/^(\.\.[/\\])+/, ''));
+    if (route === '/api/waitlist') {
+      if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+      return handleWaitlistSignup(req, res);
+    }
+
+    if (route === '/api/waitlist.csv') {
+      if (req.method !== 'GET') return sendText(res, 405, 'method not allowed');
+      return handleWaitlistExport(requestUrl, res);
+    }
+
+    if (route === '/preview-play') {
+      res.writeHead(302, { Location: previewPlayUrl, 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+
+    // GAME_OPEN (set on the AWS game host) serves the playable client at / and /play;
+    // unset (Vercel/marketing) keeps the coming-soon gate.
+    const file = GAME_OPEN
+      ? (route === '/' || route === '/play' ? '/index.html' : route)
+      : (route === '/' ? '/landing.html'
+         : route === '/play' || route === '/index.html' ? '/coming-soon.html'
+         : route);
+    const normalized = path.normalize(file).replace(/^(\.\.[/\\])+/, '').replace(/^[/\\]+/, '');
+    const full = path.join(__dirname, normalized);
+    if (!full.startsWith(__dirname)) {
+      res.writeHead(404);
+      return res.end('not found');
+    }
     fs.readFile(full, (err, data) => {
       if (err) {
         res.writeHead(404);
@@ -64,12 +99,158 @@ function createRealmServer(options = {}) {
       const ext = path.extname(full);
       const type = ext === '.html' ? 'text/html'
                  : ext === '.js' ? 'text/javascript'
+                 : ext === '.json' ? 'application/json'
                  : ext === '.png' ? 'image/png'
+                 : ext === '.svg' ? 'image/svg+xml'
                  : 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': type });
       res.end(data);
     });
   });
+
+  function handleWaitlistSignup(req, res) {
+    readRequestBody(req, 65536, (err, raw) => {
+      if (err) return sendJson(res, 413, { ok: false, error: 'request_too_large' });
+
+      const parsed = parseSignupBody(req, raw);
+      if (!parsed.ok) return respondSignup(req, res, 400, { ok: false, error: parsed.error });
+
+      const signup = normalizeSignup(parsed.body, req);
+      if (!signup.ok) return respondSignup(req, res, 400, { ok: false, error: signup.error });
+
+      try {
+        appendWaitlistCsv(signup.row);
+      } catch (writeErr) {
+        log('waitlist write failed:', writeErr.message);
+        return respondSignup(req, res, 500, { ok: false, error: 'waitlist_unavailable' });
+      }
+
+      return respondSignup(req, res, 201, { ok: true });
+    });
+  }
+
+  function handleWaitlistExport(requestUrl, res) {
+    if (!waitlistExportToken || requestUrl.searchParams.get('token') !== waitlistExportToken) {
+      return sendText(res, 403, 'forbidden');
+    }
+
+    let csv = waitlistCsvHeader();
+    try {
+      if (fs.existsSync(mailingListFile)) csv = fs.readFileSync(mailingListFile, 'utf8');
+    } catch (err) {
+      log('waitlist export failed:', err.message);
+      return sendText(res, 500, 'waitlist unavailable');
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="runechain-waitlist.csv"',
+      'Cache-Control': 'no-store',
+    });
+    res.end(csv);
+  }
+
+  function respondSignup(req, res, status, payload) {
+    if (isFormPost(req)) {
+      if (status >= 200 && status < 300) {
+        res.writeHead(303, { Location: '/?joined=1#join' });
+        return res.end();
+      }
+      res.writeHead(303, { Location: '/?joined=0#join' });
+      return res.end();
+    }
+    return sendJson(res, status, payload);
+  }
+
+  function appendWaitlistCsv(row) {
+    fs.mkdirSync(path.dirname(mailingListFile), { recursive: true });
+    if (!fs.existsSync(mailingListFile)) fs.writeFileSync(mailingListFile, waitlistCsvHeader());
+    fs.appendFileSync(mailingListFile, row.map(csvCell).join(',') + '\n');
+  }
+
+  function waitlistCsvHeader() {
+    return 'created_at,email,source,name,note,ip_hash\n';
+  }
+
+  function normalizeSignup(body, req) {
+    const email = sanitizeText(body.email, 254).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return blockError('invalid_email', 'Enter a valid email address.');
+    return {
+      ok: true,
+      row: [
+        new Date().toISOString(),
+        email,
+        sanitizeText(body.source || 'runechain-lander', 80),
+        sanitizeText(body.name, 80),
+        sanitizeText(body.note, 180),
+        hashIp(req),
+      ],
+    };
+  }
+
+  function parseSignupBody(req, raw) {
+    const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    if (type === 'application/json') {
+      try {
+        return { ok: true, body: JSON.parse(raw || '{}') };
+      } catch (_) {
+        return blockError('invalid_json', 'Signup payload must be valid JSON.');
+      }
+    }
+    if (type === 'application/x-www-form-urlencoded' || !type) {
+      return { ok: true, body: Object.fromEntries(new URLSearchParams(raw)) };
+    }
+    return blockError('unsupported_content_type', 'Signup content type is not supported.');
+  }
+
+  function isFormPost(req) {
+    return String(req.headers['content-type'] || '').startsWith('application/x-www-form-urlencoded');
+  }
+
+  function readRequestBody(req, maxBytes, callback) {
+    let raw = '';
+    let received = 0;
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      received += Buffer.byteLength(chunk);
+      if (received > maxBytes) {
+        req.destroy();
+        callback(new Error('request_too_large'));
+        return;
+      }
+      raw += chunk;
+    });
+    req.on('end', () => callback(null, raw));
+    req.on('error', callback);
+  }
+
+  function csvCell(value) {
+    const text = String(value == null ? '' : value);
+    return /[",\n\r]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  }
+
+  function hashIp(req) {
+    const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    const raw = forwarded || req.socket.remoteAddress || '';
+    if (!raw) return '';
+    return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 16);
+  }
+
+  function sendJson(res, status, payload) {
+    res.writeHead(status, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+    res.end(JSON.stringify(payload));
+  }
+
+  function sendText(res, status, body) {
+    res.writeHead(status, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+    res.end(body);
+  }
 
   server.on('upgrade', (req, socket) => {
     const key = req.headers['sec-websocket-key'];

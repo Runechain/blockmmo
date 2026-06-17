@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RUNECHAIN - Gracefall Parish</title>
+<meta name="description" content="RUNECHAIN is a browser-native pixel Soulslike MMO set in Gracefall Parish, where every soul is Recorded and every RUNE is forged through play." />
+<link rel="preload" href="/assets/brand/runechain-lander.png" as="image" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070719'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%23f5c268' stroke-width='4'/%3E%3Cpath d='M22 18h12c8 0 12 4 12 10 0 4-2 7-6 9l8 11h-9l-7-10h-3v10h-7V18zm7 7v7h5c3 0 5-1 5-4s-2-3-5-3h-5z' fill='%23f5c268'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --night:#070719;
+    --deep:#111027;
+    --plum:#3e2945;
+    --ember:#de8743;
+    --gold:#f5c268;
+    --gold-deep:#b97720;
+    --text:#fff1cf;
+    --muted:#cbb88a;
+    --line:rgba(245,194,104,.38);
+    --cyan:#65d8ff;
+    --shadow:rgba(0,0,0,.62);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--night);
+    color:var(--text);
+    font-family:Georgia,"Times New Roman",serif;
+  }
+  a{color:inherit}
+  .site{min-height:100vh;background:
+    linear-gradient(180deg,rgba(7,7,25,.08),rgba(7,7,25,.96) 92%),
+    radial-gradient(circle at 70% 14%,rgba(245,194,104,.18),transparent 28%),
+    var(--night);
+  }
+  .hero{
+    position:relative;
+    min-height:100svh;
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:-2;
+    background:
+      linear-gradient(90deg,rgba(7,7,25,.92) 0%,rgba(7,7,25,.64) 42%,rgba(7,7,25,.2) 100%),
+      url("/assets/brand/runechain-lander.png") center right / min(62vw,700px) auto no-repeat,
+      var(--night);
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    inset:auto 0 0;
+    height:34vh;
+    z-index:-1;
+    background:linear-gradient(180deg,rgba(7,7,25,0),var(--night) 78%);
+  }
+  .nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    width:min(1160px,calc(100% - 36px));
+    margin:0 auto;
+    padding:22px 0;
+  }
+  .mark{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    color:var(--gold);
+    text-decoration:none;
+  }
+  .seal{
+    display:grid;
+    place-items:center;
+    width:48px;
+    height:48px;
+    border:2px solid var(--gold);
+    border-radius:50%;
+    color:var(--gold);
+    font-size:8px;
+    line-height:1.05;
+    letter-spacing:.08em;
+    text-align:center;
+    text-transform:uppercase;
+  }
+  .wordmark{
+    font-size:clamp(24px,3vw,42px);
+    letter-spacing:.08em;
+    line-height:1;
+    text-shadow:0 0 28px rgba(245,194,104,.18);
+  }
+  .navlinks{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    padding:8px 10px;
+    background:rgba(7,7,25,.76);
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .navlinks a{text-decoration:none;color:var(--muted)}
+  .navlinks a:hover{color:var(--gold)}
+  .nav-coming{
+    color:var(--muted);
+    cursor:default;
+  }
+  .hero-copy{
+    align-self:center;
+    width:min(1160px,calc(100% - 36px));
+    margin:0 auto;
+    padding:42px 0 34px;
+  }
+  h1{
+    max-width:760px;
+    margin:0;
+    color:var(--gold);
+    font-size:clamp(54px,9vw,128px);
+    line-height:.86;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    text-shadow:0 12px 34px rgba(0,0,0,.7),0 0 28px rgba(245,194,104,.14);
+  }
+  .subhead{
+    margin:18px 0 0;
+    color:#f7e5b6;
+    font-size:clamp(18px,2.6vw,34px);
+    letter-spacing:.28em;
+    text-transform:uppercase;
+  }
+  .intro{
+    max-width:650px;
+    margin:28px 0 0;
+    color:#e6d6b0;
+    font-size:clamp(18px,1.8vw,24px);
+    line-height:1.42;
+  }
+  .actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    align-items:flex-start;
+    margin-top:34px;
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  .preview-action{
+    display:grid;
+    gap:7px;
+  }
+  .button{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:48px;
+    padding:0 20px;
+    border:1px solid var(--gold);
+    background:linear-gradient(180deg,#f4c36a,#b87320);
+    color:#120b08;
+    text-decoration:none;
+    font-weight:800;
+    font-size:13px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .button.secondary{
+    background:rgba(7,7,25,.55);
+    color:var(--gold);
+    border-color:var(--line);
+  }
+  .button-note{
+    color:var(--muted);
+    font-size:11px;
+    letter-spacing:.13em;
+    text-transform:uppercase;
+    text-align:center;
+  }
+  .signup-band{
+    width:min(1160px,calc(100% - 36px));
+    margin:0 auto 24px;
+    padding:16px;
+    border:1px solid var(--line);
+    background:rgba(7,7,25,.72);
+    box-shadow:0 18px 60px var(--shadow);
+  }
+  .signup-band form{
+    display:grid;
+    grid-template-columns:1fr 1.3fr auto;
+    gap:10px;
+    align-items:end;
+  }
+  .field label{
+    display:block;
+    margin:0 0 6px;
+    color:var(--muted);
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  input{
+    width:100%;
+    height:46px;
+    border:1px solid rgba(245,194,104,.28);
+    border-radius:0;
+    background:rgba(255,241,207,.08);
+    color:var(--text);
+    padding:0 12px;
+    font:16px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  input:focus{
+    outline:2px solid rgba(101,216,255,.58);
+    outline-offset:1px;
+  }
+  input::placeholder{color:rgba(203,184,138,.62)}
+  .submit{
+    height:46px;
+    border:1px solid var(--gold);
+    background:#101126;
+    color:var(--gold);
+    padding:0 17px;
+    cursor:pointer;
+    font:800 12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .submit:hover{background:#181a35}
+  .form-status{
+    min-height:18px;
+    grid-column:1/-1;
+    color:var(--cyan);
+    font:12px ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  .world{
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);
+    gap:42px;
+    align-items:start;
+    width:min(1160px,calc(100% - 36px));
+    margin:0 auto;
+    padding:72px 0 82px;
+  }
+  .world h2{
+    margin:0;
+    color:var(--gold);
+    font-size:clamp(34px,5vw,68px);
+    line-height:.95;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+  }
+  .world p{
+    margin:20px 0 0;
+    color:#e4d1a8;
+    font-size:20px;
+    line-height:1.55;
+  }
+  .runes{
+    display:grid;
+    gap:1px;
+    align-content:start;
+    background:rgba(245,194,104,.18);
+    border:1px solid var(--line);
+  }
+  .rune-row{
+    display:grid;
+    grid-template-columns:110px 1fr;
+    gap:16px;
+    min-height:84px;
+    padding:18px;
+    background:rgba(13,11,31,.92);
+  }
+  .rune-row strong{
+    color:var(--gold);
+    font-size:13px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+  .rune-row span{
+    color:#dbcba5;
+    font:15px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  .footer{
+    border-top:1px solid rgba(245,194,104,.22);
+    padding:22px 18px 28px;
+    color:#aa9c77;
+    text-align:center;
+    font:12px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  @media (max-width:850px){
+    .hero{min-height:100svh}
+    .hero::before{
+      background:
+        linear-gradient(180deg,rgba(7,7,25,.58),rgba(7,7,25,.82) 44%,rgba(7,7,25,.96) 100%),
+        url("/assets/brand/runechain-lander.png") center 78px / min(100vw,520px) auto no-repeat,
+        var(--night);
+    }
+    .nav{align-items:flex-start}
+    .navlinks{gap:12px;font-size:10px}
+    .seal{width:42px;height:42px;font-size:7px}
+    .hero-copy{align-self:end;padding-top:260px}
+    .intro{font-size:17px}
+    .signup-band form{grid-template-columns:1fr}
+    .submit{width:100%}
+    .world{grid-template-columns:1fr;padding-top:54px}
+    .rune-row{grid-template-columns:1fr;gap:6px}
+  }
+  @media (max-width:560px){
+    .navlinks a:nth-child(1){display:none}
+    .wordmark{display:none}
+    h1{font-size:52px}
+    .subhead{font-size:16px;letter-spacing:.18em}
+    .hero-copy{padding-top:220px}
+    .actions{display:grid}
+    .button{width:100%}
+  }
+</style>
+</head>
+<body>
+<main class="site">
+  <section class="hero" aria-label="RUNECHAIN landing">
+    <nav class="nav" aria-label="Primary">
+      <a class="mark" href="/">
+        <span class="seal">Proof-of<br>Work<br>Seal</span>
+        <span class="wordmark">RUNECHAIN</span>
+      </a>
+      <div class="navlinks">
+        <a href="#join">Join</a>
+        <span class="nav-coming" aria-disabled="true">Coming Soon</span>
+      </div>
+    </nav>
+
+    <div class="hero-copy">
+      <h1>RUNECHAIN</h1>
+      <div class="subhead">Gracefall Parish</div>
+      <p class="intro">A browser-native pixel Soulslike MMO where the Chainwell records every soul, monsters drop RUNE, and power is forged through play.</p>
+      <div class="actions">
+        <div class="preview-action">
+          <a class="button" href="/preview-play">Preview Play</a>
+          <span class="button-note">Live Build, no saves</span>
+        </div>
+        <a class="button secondary" href="#join">Join the mailing list</a>
+      </div>
+    </div>
+
+    <div id="join" class="signup-band">
+      <form id="mailing-list" action="/api/waitlist" method="post">
+        <input type="hidden" name="source" value="runechain-lander" />
+        <div class="field">
+          <label for="name">Recorded name</label>
+          <input id="name" name="name" maxlength="80" autocomplete="name" placeholder="Optional" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="recorded@example.com" required />
+        </div>
+        <button class="submit" type="submit">Record me</button>
+        <div class="form-status" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="world" aria-label="Game pillars">
+    <div>
+      <h2>Grind the chain. Sell the soul you forged.</h2>
+      <p>Gracefall Parish is warm candlelight over institutional horror: debtors, bells, ledgers, graves, and the quiet terror of being correctly processed.</p>
+      <p>RUNE is earned by play and browser-mined proof-of-work. Gold stays cosmetic. The record remembers what you finished.</p>
+    </div>
+    <div class="runes">
+      <div class="rune-row"><strong>Recorded</strong><span>Wake as a soul filed into the Chainwell, bound to one character for the season.</span></div>
+      <div class="rune-row"><strong>RUNE</strong><span>Grind monsters, mine reward work, then spend confirmed RUNE at Hearthlight.</span></div>
+      <div class="rune-row"><strong>Sigils</strong><span>Bosses mint one-of-a-kind records of what your character survived.</span></div>
+    </div>
+  </section>
+</main>
+<footer class="footer">RUNECHAIN is a prototype game. The current proof-of-work chain is an in-game mechanic, not a cryptocurrency.</footer>
+<script>
+  const form = document.getElementById('mailing-list');
+  const status = form.querySelector('.form-status');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.textContent = 'Recording...';
+    const data = Object.fromEntries(new FormData(form).entries());
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('signup_failed');
+      form.reset();
+      status.textContent = 'Recorded. Watch for the next parish bell.';
+    } catch (_) {
+      status.textContent = 'The Chainwell missed that entry. Try again.';
+    }
+  });
+</script>
+</body>
+</html>

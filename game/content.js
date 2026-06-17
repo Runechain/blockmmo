@@ -185,6 +185,21 @@ const RELICS = [
 /* Boss Sigils — unique on-chain final-boss drops. RATIFIED RULINGS (docs/design/DESIGN-BIBLE.md):
    sigils grant RUNE-ACQUISITION bonuses earned by boss kills (grind-gated), never purchasable power.
    RUNE buys power ONLY at a Hearthlight; Gold is cosmetics only; endgame loops grant no farmable power. */
+/* Hearthlight leveling — the ONLY RUNE power-sink besides relic forging (DESIGN-BIBLE Ruling 1).
+   A stat's level is derived from accepted spend blocks on the ledger; cost rises with each level so
+   power stays grind-gated. Authoritative cost math lives here so client and server agree exactly. */
+const LEVELING = {
+  baseCost: 12,
+  growth: 8,
+  maxLevel: 20,
+  stats: {
+    vigor:     { name:'Vigor',     grants:'+12 max health',  hp:12 },
+    endurance: { name:'Endurance', grants:'+10 max stamina', sta:10 },
+    strength:  { name:'Strength',  grants:'+4 attack',       dmg:4 },
+  },
+  // Cost to buy the (level -> level+1) upgrade, where `level` is the current count of that stat.
+  costFor(level) { return this.baseCost + this.growth * level; },
+};
 const SIGILS = {
   'waxen-testament': { name:'The Waxen Testament', runeMult:0.12, note:'Legitimately Recorded' },
   'contested-will':  { name:'The Contested Will', runeMult:0.10, atkSpeed:0.12, iframeOnHit:true, note:'Severed from inheritance' },
@@ -415,7 +430,7 @@ const AREA3_ENCOUNTERS={
 };
 
   return {
-    ECON, ENEMY_REWARDS, STORY, RELICS, SIGILS, SKINS, ASSETS,
+    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, SKINS, ASSETS,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
     PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,

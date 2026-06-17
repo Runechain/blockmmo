@@ -152,8 +152,8 @@
   <div class="row"><span>Difficulty</span><b id="diff">3 nibbles</b></div>
   <div class="row"><span>Hashrate</span><b id="hr">0 H/s</b></div>
   <div class="row split"><span>Burned wSOL</span><b id="burned">0.0000</b></div>
-  <div class="row"><span>Prize pool</span><b id="prizepool">0.0000</b></div>
-  <div class="row"><span>Fees</span><b id="feepool">0.0000</b></div>
+  <div class="row"><span>Marketing fund</span><b id="marketingpool">0.0000</b></div>
+  <div class="row"><span>Ops fee</span><b id="opspool">0.0000</b></div>
   <div id="chain"></div>
 </div>
 
@@ -197,7 +197,7 @@
       <button id="wBuy" class="econbtn pay">Buy Gold - 1 wSOL</button>
     </div>
     <div id="wlist" class="wlist"></div>
-    <div class="econnote">Direct purchase, no loot boxes. Each wSOL split is 50% prize pool, 35% burn, 15% fee. Devnet mock only.</div>
+    <div class="econnote">Direct purchase, no loot boxes. Gold buys cosmetics only. Each mock wSOL split is 50% burn, 35% marketing, 15% ops fee. Devnet mock only.</div>
     <button id="wclose">Close (B)</button>
   </div>
 </div>
@@ -270,10 +270,10 @@ const Econ = {
   buyGoldWithSol(name, sol){
     if(sol<=0)return 0;
     const gold=+(sol*ECON.GOLD_PER_SOL).toFixed(2);
-    Chain.credit(name,gold,`bought with ${sol} wSOL`,'GOLD');
+    Chain.credit(name,gold,`bought with ${sol} mock wSOL`,'GOLD');
     Chain.credit(ECON.BURN_ADDR,sol*ECON.SPLIT.burn,'burned','SOL');
-    Chain.credit(ECON.PRIZE_ADDR,sol*ECON.SPLIT.prize,'prize pool','SOL');
-    Chain.credit(ECON.FEE_ADDR,sol*ECON.SPLIT.fee,'fee','SOL');
+    Chain.credit(ECON.MARKETING_ADDR,sol*ECON.SPLIT.marketing,'marketing','SOL');
+    Chain.credit(ECON.OPS_ADDR,sol*ECON.SPLIT.ops,'ops fee','SOL');
     return gold;
   },
   spendGold(name, amt, note){ Chain.debit(name,amt,note,'GOLD','GOLD_SINK'); }
@@ -1604,8 +1604,8 @@ function updateWallet(){
   document.getElementById('diff').textContent=Chain.DIFFICULTY+' nibbles';
   document.getElementById('hr').textContent=Chain.hashrate.toLocaleString()+' H/s';
   document.getElementById('burned').textContent=Econ.solTally(ECON.BURN_ADDR).toFixed(4);
-  document.getElementById('prizepool').textContent=Econ.solTally(ECON.PRIZE_ADDR).toFixed(4);
-  document.getElementById('feepool').textContent=Econ.solTally(ECON.FEE_ADDR).toFixed(4);
+  document.getElementById('marketingpool').textContent=Econ.solTally(ECON.MARKETING_ADDR).toFixed(4);
+  document.getElementById('opspool').textContent=Econ.solTally(ECON.OPS_ADDR).toFixed(4);
   let html='';
   if(Chain.mining)html+='<div class="blk mining">#'+Chain.mining.index+' mining - nonce '+Chain.mining.nonce.toLocaleString()+'</div>';
   for(const b of Chain.chain.slice(-5).reverse())html+='<div class="blk">#'+b.index+' '+b.hash.slice(0,12)+' - '+(b.txs||[]).length+' tx</div>';

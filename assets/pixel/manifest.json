@@ -11,8 +11,7 @@
       "walk",
       "attack",
       "hurt"
-    ],
-    "placeholder": true
+    ]
   },
   "auditor": {
     "name": "auditor",
@@ -54,8 +53,7 @@
       "walk",
       "attack",
       "hurt"
-    ],
-    "placeholder": true
+    ]
   },
   "cascade": {
     "name": "cascade",
@@ -532,8 +530,7 @@
       "walk",
       "attack",
       "hurt"
-    ],
-    "placeholder": true
+    ]
   },
   "scrivener": {
     "name": "scrivener",

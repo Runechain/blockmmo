@@ -236,6 +236,9 @@ const ASSETS={
   sorcerer:{src:'assets/pixel/sorcerer.png',w:24,h:24,img:null},
   sentinel:{src:'assets/pixel/sentinel.png',w:48,h:48,img:null},
   phantom:{src:'assets/pixel/phantom.png',w:24,h:24,img:null},
+  sexton:{src:'assets/pixel/sexton.png',w:56,h:56,img:null},
+  mempool:{src:'assets/pixel/mempool.png',w:56,h:56,img:null},
+  tallow:{src:'assets/pixel/tallow.png',w:64,h:64,img:null},
   'tallow-echo':{src:'assets/pixel/tallow-echo.png',w:24,h:24,img:null},
   foreman:{src:'assets/pixel/foreman.png',w:64,h:64,img:null},
   bifurcated:{src:'assets/pixel/bifurcated.png',w:56,h:56,img:null},
@@ -345,9 +348,9 @@ const BOSS_SCRIPT={id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,se
   {mode:'turnbased',name:'Marrow, face to face',payload:TURN_ENCOUNTER,beatText:'He raises the ledger-stamp.',complete:{event:'duel'}}
 ]};
 /* Area 1 bosses as story-gated, multi-play-style encounters (bible: Gracefall Parish). */
-const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b',sprite:'knight'}};
-const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff',sprite:'sorcerer'}};
-const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:150,attack:18,defense:3,color:'#f1c75b',sprite:'sentinel'}};
+const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b',sprite:'sexton'}};
+const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff',sprite:'mempool'}};
+const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:150,attack:18,defense:3,color:'#f1c75b',sprite:'tallow'}};
 /* Tallow House: vertical wax-choked interior, rising lift, dripping-wax hazards — distinct from the Parish Road climb. */
 const PLAT_TALLOW_HOUSE={id:'a1-tallow-house',name:'Tallow House',width:1080,height:720,spawn:{x:60,y:616},physics:{maxRun:195,jump:445},
   platforms:[{id:'ground',x:0,y:660,w:1080,h:60,type:'solid'},{id:'shelf-a',x:90,y:580,w:130,h:12,type:'oneWay'},{id:'mid-floor',x:320,y:560,w:260,h:14,type:'solid'},{id:'wax-lift',x:510,y:510,w:110,h:14,type:'solid',vy:32,minY:400,maxY:520},{id:'shelf-b',x:120,y:460,w:160,h:12,type:'oneWay'},{id:'walkway',x:650,y:430,w:200,h:14,type:'solid'},{id:'step-a',x:200,y:360,w:120,h:14,type:'solid'},{id:'step-b',x:750,y:340,w:140,h:12,type:'oneWay'},{id:'upper',x:380,y:270,w:260,h:14,type:'solid'},{id:'altar',x:700,y:190,w:230,h:14,type:'solid'}],

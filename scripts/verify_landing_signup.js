@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const { createRealmServer } = require('../server.js');
+const PREVIEW_DISCLAIMER = 'The Gameplay is meant to demonstrate progress being made by an experimental Distributed Agentic Work Grid, and does not represent the final experience';
 
 async function main() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'runechain-landing-'));
@@ -32,6 +33,7 @@ async function main() {
     assert.match(landing.body, /RUNECHAIN/, 'home route should include the RUNECHAIN brand');
     assert.match(landing.body, /Preview Play/, 'home route should expose the AWS preview CTA');
     assert.match(landing.body, /Live Build, no saves/, 'home route should label the preview as unsaved live build');
+    assert.match(landing.body, new RegExp(PREVIEW_DISCLAIMER), 'home route should explain the preview build context');
     assert.match(landing.body, /href="\/preview-play"/, 'home route should route preview through Vercel');
     assert.doesNotMatch(landing.body, /href="\/play"/, 'home route should not link to the playable game');
 
@@ -128,6 +130,7 @@ async function verifyVercelAdapter(tmp) {
       assert.match(landing.body, /<form[^>]+id="mailing-list"/, 'Vercel adapter should route root to the lander');
       assert.match(landing.body, /Preview Play/, 'Vercel adapter lander should expose the AWS preview CTA');
       assert.match(landing.body, /Live Build, no saves/, 'Vercel adapter lander should label the preview as unsaved live build');
+      assert.match(landing.body, new RegExp(PREVIEW_DISCLAIMER), 'Vercel adapter lander should explain the preview build context');
       assert.match(landing.body, /href="\/preview-play"/, 'Vercel adapter lander should route preview through Vercel');
       assert.doesNotMatch(landing.body, /href="\/play"/, 'Vercel adapter lander should not link to the playable game');
 

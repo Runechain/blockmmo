@@ -103,6 +103,13 @@
   .statbtn .cost{color:var(--gold)}
   button:hover:not(:disabled){border-color:var(--gold);background:#222820}
   button:disabled{opacity:.42;cursor:default}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  @keyframes low-hp-pulse{
+    0%{filter:brightness(1)}
+    50%{filter:brightness(1.4)}
+    100%{filter:brightness(1)}
+  }
+  .low-hp{animation:low-hp-pulse .8s infinite}
   .itemlist{margin-top:13px;border-top:1px solid #34302a;padding-top:10px}
   .itemrow{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid #272b2f}
   .itemicon{width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges;background:#08090a;border:1px solid #34302a;padding:4px}
@@ -132,14 +139,14 @@
 
 <div id="vitals" class="hud">
   <div class="lab"><span id="charname">Recorded</span> - Level <b id="lvl">1</b></div>
-  <div id="hp" class="bar"><i></i></div>
+  <div id="hp" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="120" aria-valuemax="120" aria-label="Health"><i></i></div>
   <div class="lab">Stamina</div>
-  <div id="sta" class="bar"><i></i></div>
+  <div id="sta" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="100" aria-valuemax="100" aria-label="Stamina"><i></i></div>
   <div class="statline">VGR <b id="sVgr">10</b> / END <b id="sEnd">10</b> / STR <b id="sStr">10</b> / DMG <b id="sDmg">34</b></div>
   <div id="runes" class="statline"></div>
 </div>
 
-<div id="quest" class="hud">
+<div id="quest" class="hud" aria-live="polite">
   <div class="qk">Current thread</div>
   <div id="qtitle" class="qt">Chainwell Ambush</div>
   <div id="qobj" class="qo">Enter the realm to wake the chain.</div>
@@ -165,7 +172,7 @@
 </div>
 
 <div id="prompt" class="hud"></div>
-<div id="log" class="hud"></div>
+<div id="log" class="hud" aria-live="polite"></div>
 <div id="bossbar" class="hud">
   <span id="bossname">Boss</span>
   <div class="bar"><i id="bossfill"></i></div>
@@ -204,8 +211,8 @@
   </div>
 </div>
 
-<div id="death">
-  <h1>YOU DIED</h1>
+<div id="death" role="alert" aria-labelledby="death-title">
+  <h1 id="death-title">YOU DIED</h1>
   <button id="respawn">Return to Hearthlight</button>
 </div>
 
@@ -217,7 +224,7 @@
     <b>WASD</b> move / <b>Mouse</b> aim / <b>Click</b>, <b>Space</b>, or <b>L</b> attack / <b>Shift</b> dash /
     <b>Q</b> target nearest / <b>E</b> interact / <b>G</b> Hearthlight / <b>B</b> wardrobe / <b>M</b> wallet
   </div>
-  <input id="name" maxlength="14" placeholder="name the Recorded" />
+  <input id="name" maxlength="14" placeholder="name the Recorded" aria-label="Name the Recorded" />
   <button id="go">Enter Gracefall</button>
   <div class="mini">This opens safe. One weak Hollow waits outside Hearthlight. The road, graveyard, and boss gates unlock as the ledger records you.</div>
 </div>
@@ -1798,6 +1805,7 @@ function draw(){
 
 /* ------------------------------- HUD ------------------------------------ */
 const hpFill=document.querySelector('#hp>i'), staFill=document.querySelector('#sta>i');
+const hpEl=document.getElementById('hp'), staEl=document.getElementById('sta');
 function log(html){
   const l=document.getElementById('log'), d=document.createElement('div');
   d.innerHTML=html; l.appendChild(d);
@@ -1805,8 +1813,14 @@ function log(html){
   setTimeout(()=>{ if(d.parentNode)d.remove(); },5200);
 }
 function updateHud(){
-  hpFill.style.width=(player.hp/player.maxHp*100)+'%';
-  staFill.style.width=(player.sta/player.maxSta*100)+'%';
+  const hpPct=player.hp/player.maxHp, staPct=player.sta/player.maxSta;
+  hpFill.style.width=(hpPct*100)+'%';
+  staFill.style.width=(staPct*100)+'%';
+  hpEl.setAttribute('aria-valuenow', Math.round(player.hp));
+  hpEl.setAttribute('aria-valuemax', Math.round(player.maxHp));
+  staEl.setAttribute('aria-valuenow', Math.round(player.sta));
+  staEl.setAttribute('aria-valuemax', Math.round(player.maxSta));
+  hpEl.classList.toggle('low-hp', hpPct < 0.25);
   document.getElementById('lvl').textContent=player.level;
   document.getElementById('sVgr').textContent=player.vigor;
   document.getElementById('sEnd').textContent=player.endurance;

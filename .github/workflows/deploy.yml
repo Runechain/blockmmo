@@ -102,18 +102,23 @@ jobs:
           echo "Service already exists — the deploy step will update it."
           exit 0
         fi
-        echo "Service not found (status=$STATUS) — creating it (no load balancer, public IP)."
+        echo "Service not found (status=$STATUS) — creating it behind the ALB."
         VPC=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)
         SUBNETS=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC \
           --query 'Subnets[].SubnetId' --output text | tr '\t' ',')
         SG=$(aws ec2 describe-security-groups --filters Name=group-name,Values=runechain-sg Name=vpc-id,Values=$VPC \
           --query 'SecurityGroups[0].GroupId' --output text)
+        # Re-attach to the ALB target group so a recreated service never goes dark behind play.runechaingame.com.
+        TG_ARN=$(aws elbv2 describe-target-groups --names runechain-tg \
+          --query 'TargetGroups[0].TargetGroupArn' --output text)
         TD_ARN=$(aws ecs register-task-definition \
           --cli-input-json file://${{ steps.task-def.outputs.task-definition }} \
           --query 'taskDefinition.taskDefinitionArn' --output text)
         aws ecs create-service \
           --cluster $ECS_CLUSTER --service-name $ECS_SERVICE \
           --task-definition "$TD_ARN" --desired-count 1 --launch-type FARGATE \
+          --health-check-grace-period-seconds 60 \
+          --load-balancers "targetGroupArn=$TG_ARN,containerName=$CONTAINER_NAME,containerPort=8080" \
           --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}"
 
     - name: Deploy Amazon ECS task definition

@@ -279,7 +279,7 @@ ok('q06 Keeper-of-Margins made optional (lectern-only, next q07 intact)');
 // ============ 7. NO REGRESSION: single-HP foe (Area1 Tallow, PvP-shape) unchanged ============
 {
   // A plain single-HP encounter must expose the classic ACTIONS and win on one pool.
-  const enc = content.TURN_TALLOW; // {opponent:{hp:150...}} no dualChain/phase2
+  const enc = content.TURN_TALLOW; // {opponent:{hp:260...}} no dualChain/phase2
   const m = createTurnBasedMode(enc); const api = makeApi({ meleeDamage: 40 });
   const orig = Math.random; Math.random = NO_RND;
   try {

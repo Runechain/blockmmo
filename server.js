@@ -54,7 +54,13 @@ function createRealmServer(options = {}) {
   const port = options.port == null ? DEFAULT_PORT : options.port;
   const ledgerFile = options.ledgerFile || path.join(__dirname, 'ledger.json');
   const accountsFile = options.accountsFile || path.join(__dirname, 'accounts.json');
-  const seasonId = options.seasonId || DEFAULT_SEASON_ID;
+  const seasonConfig = normalizeSeasonConfig(options.season || options.seasonState || {
+    id: options.seasonId || DEFAULT_SEASON_ID,
+    opensAt: options.seasonOpensAt,
+    closesAt: options.seasonClosesAt,
+    mandatoryTasks: options.mandatoryTasks,
+  });
+  const seasonId = seasonConfig.id;
   const difficulty = options.difficulty == null ? DEFAULT_DIFFICULTY : options.difficulty;
   const now = typeof options.now === 'function' ? options.now : () => Date.now();
   const saveDelayMs = options.saveDelayMs == null ? 800 : options.saveDelayMs;
@@ -334,7 +340,8 @@ function createRealmServer(options = {}) {
 
   function issueSpendMiningWork(client, source) {
     const address = client.character.address;
-    const spend = resolveSpendSource(source, address);
+    const currentCharacter = accountRegistry.getCharacterState(client.accountId);
+    const spend = resolveSpendSource(source, address, currentCharacter.ok ? currentCharacter.character : client.character);
     if (!spend.ok) {
       send(client, { t: 'mine:error', error: spend.error });
       return spend;
@@ -502,6 +509,9 @@ function createRealmServer(options = {}) {
 
     pendingMining.delete(candidateId);
     const accepted = appendBlock(block);
+    accountRegistry.applyAcceptedBlock(block);
+    const currentCharacter = accountRegistry.getCharacterState(client.accountId);
+    if (currentCharacter.ok) client.character = currentCharacter.character;
     send(client, { t: 'mine:accepted', block });
     broadcast({ t: 'block', block }, client);
     return accepted;
@@ -591,12 +601,13 @@ function createRealmServer(options = {}) {
     };
   }
 
-  function resolveSpendSource(source, address) {
+  function resolveSpendSource(source, address, characterState) {
     if (!source || typeof source !== 'object') return blockError('invalid_spend_source', 'Spend source is required.');
     if (source.type === 'level') {
       const def = LEVELING.stats[source.stat];
       if (!def) return blockError('invalid_spend_source', 'Unknown stat to level.');
-      const level = statLevelOf(address, source.stat);
+      const persistedLevel = characterState && characterState.stats ? characterState.stats[source.stat] || 0 : 0;
+      const level = Math.max(statLevelOf(address, source.stat), persistedLevel);
       if (level >= LEVELING.maxLevel) return blockError('stat_maxed', def.name + ' is already at the maximum level.');
       return {
         ok: true,
@@ -609,7 +620,9 @@ function createRealmServer(options = {}) {
     if (source.type === 'relic') {
       const relic = RELICS.find(r => r.id === source.relicId);
       if (!relic) return blockError('invalid_spend_source', 'Unknown relic to forge.');
-      if (ownsRelic(address, source.relicId)) return blockError('relic_owned', 'That relic is already forged.');
+      const ownsPersistedRelic = characterState && characterState.collection &&
+        Array.isArray(characterState.collection.relics) && characterState.collection.relics.includes(source.relicId);
+      if (ownsRelic(address, source.relicId) || ownsPersistedRelic) return blockError('relic_owned', 'That relic is already forged.');
       return {
         ok: true,
         amt: relic.price,
@@ -699,11 +712,18 @@ function createRealmServer(options = {}) {
 
 function createAccountRegistry(options = {}) {
   const accountsFile = options.accountsFile || path.join(__dirname, 'accounts.json');
-  const seasonId = options.seasonId || DEFAULT_SEASON_ID;
+  const seasonConfig = normalizeSeasonConfig(options.season || options.seasonState || {
+    id: options.seasonId || DEFAULT_SEASON_ID,
+    opensAt: options.seasonOpensAt,
+    closesAt: options.seasonClosesAt,
+    mandatoryTasks: options.mandatoryTasks,
+  });
+  const seasonId = seasonConfig.id;
   const now = typeof options.now === 'function' ? options.now : () => Date.now();
   const challengeTtlMs = options.challengeTtlMs == null ? 60000 : options.challengeTtlMs;
   const pendingChallenges = new Map();
   let registry = loadRegistry();
+  ensureSeasonState();
 
   function createChallenge(credential) {
     const parsed = parseCredentialPublicKey(credential);
@@ -765,6 +785,7 @@ function createAccountRegistry(options = {}) {
       ok: true,
       accountId,
       seasonId,
+      season: getSeasonState(),
       character: clone(binding.character),
       createdAccount: binding.createdAccount,
       createdCharacter: binding.createdCharacter,
@@ -795,23 +816,322 @@ function createAccountRegistry(options = {}) {
     let createdCharacter = false;
     if (!character) {
       const id = characterIdForAccountSeason(accountId, seasonId);
-      character = {
-        id,
-        seasonId,
-        name: displayName,
-        address: id,
-        createdAt: ts,
-        lastSeenAt: ts,
-      };
+      const carry = resolveCharacterCarry(account);
+      character = createSeasonCharacter(id, seasonId, displayName, ts, carry);
       account.characters[seasonId] = character;
       createdCharacter = true;
+      consumeCharacterCarry(account, carry);
     } else {
+      normalizeCharacterState(character);
       character.name = displayName;
       character.lastSeenAt = ts;
     }
 
     saveRegistry();
     return { account, character, createdAccount, createdCharacter };
+  }
+
+  function getSeasonState(id = seasonId) {
+    const season = registry.seasons && registry.seasons[id];
+    if (!season) return null;
+    const at = now();
+    return { ...clone(season), open: isSeasonOpen(season, at), now: at };
+  }
+
+  function completeMandatoryTask(accountId, taskId, at = now()) {
+    const account = registry.accounts[accountId];
+    if (!account) return accountError('unknown_account', 'Account is unknown.');
+    const character = account.characters && account.characters[seasonId];
+    if (!character) return accountError('unknown_character', 'Account has no character for this season.');
+    const season = registry.seasons[seasonId];
+    if (!isSeasonOpen(season, at)) return accountError('season_closed', 'Mandatory tasks can only complete while the season window is open.');
+    const cleanTaskId = sanitizeText(taskId, 64);
+    if (!cleanTaskId) return accountError('invalid_season_task', 'Season task id is required.');
+    if (season.mandatoryTasks.length && !season.mandatoryTasks.includes(cleanTaskId)) {
+      return accountError('invalid_season_task', 'Task is not part of this season completion set.');
+    }
+
+    normalizeCharacterState(character);
+    character.mandatoryTasks[cleanTaskId] = { completedAt: at };
+    updateSeasonComplete(character, season, at);
+    character.lastSeenAt = at;
+    saveRegistry();
+    return { ok: true, season: getSeasonState(), character: clone(character), seasonComplete: !!character.seasonComplete };
+  }
+
+  function markSeasonComplete(accountId, at = now()) {
+    const account = registry.accounts[accountId];
+    if (!account) return accountError('unknown_account', 'Account is unknown.');
+    const character = account.characters && account.characters[seasonId];
+    if (!character) return accountError('unknown_character', 'Account has no character for this season.');
+    const season = registry.seasons[seasonId];
+    if (!isSeasonOpen(season, at)) return accountError('season_closed', 'Season completion can only be recorded while the season window is open.');
+
+    normalizeCharacterState(character);
+    if (!allMandatoryTasksComplete(character, season)) {
+      return accountError('season_tasks_unfinished', 'Mandatory tasks are unfinished.');
+    }
+    character.seasonComplete = true;
+    character.completedAt = at;
+    character.lastSeenAt = at;
+    saveRegistry();
+    return { ok: true, season: getSeasonState(), character: clone(character), seasonComplete: true };
+  }
+
+  function isCharacterSeasonComplete(accountId, characterId) {
+    const found = characterId ? findCharacterById(characterId) : findCurrentCharacter(accountId);
+    if (!found) return { ok: true, seasonComplete: false };
+    const season = registry.seasons[found.character.seasonId];
+    return { ok: true, seasonComplete: isSeasonComplete(found.character, season), character: clone(found.character), season: clone(season) };
+  }
+
+  function recordCharacterProgress(accountId, progress = {}) {
+    const found = findCurrentCharacter(accountId);
+    if (!found) return accountError('unknown_character', 'Account has no character for this season.');
+    applyCharacterProgress(found.character, progress);
+    found.character.lastSeenAt = now();
+    saveRegistry();
+    return { ok: true, character: clone(found.character) };
+  }
+
+  function getCharacterState(accountId, idSeason = seasonId) {
+    const account = registry.accounts[accountId];
+    if (!account || !account.characters || !account.characters[idSeason]) {
+      return accountError('unknown_character', 'Account has no character for that season.');
+    }
+    normalizeCharacterState(account.characters[idSeason]);
+    return { ok: true, character: clone(account.characters[idSeason]) };
+  }
+
+  function canSellCharacter(accountId, at = now(), characterId) {
+    const found = characterId ? findCharacterById(characterId) : findCurrentCharacter(accountId);
+    if (!found || found.account.id !== accountId) return accountError('unknown_character', 'Seller does not own that character.');
+    const season = registry.seasons[found.character.seasonId];
+    if (isSeasonOpen(season, at)) return accountError('season_open', 'Cannot sell while the season window is open.');
+    if (!isSeasonComplete(found.character, season)) {
+      return accountError('season_tasks_unfinished', 'Character is not season-complete.');
+    }
+    return { ok: true, character: clone(found.character), season: clone(season) };
+  }
+
+  function recordCharacterSale(sellerAccountId, buyerAccountId, options = {}) {
+    const at = options.at == null ? now() : Number(options.at);
+    const buyer = registry.accounts[buyerAccountId];
+    if (!buyer) return accountError('unknown_buyer', 'Buyer account is unknown.');
+    const eligibility = canSellCharacter(sellerAccountId, at, options.characterId);
+    if (!eligibility.ok) return eligibility;
+    const found = findCharacterById(eligibility.character.id);
+    const character = found.character;
+
+    normalizeCharacterState(character);
+    normalizeAccountState(found.account);
+    normalizeAccountState(buyer);
+    const collection = clone(character.collection);
+    const sale = {
+      sourceCharacterId: character.id,
+      sourceSeasonId: character.seasonId,
+      sellerAccountId,
+      buyerAccountId,
+      soldAt: at,
+    };
+    character.sale = clone(sale);
+    found.account.restartNextSeason = { ...clone(sale), reason: 'sold-character' };
+    buyer.pendingSeasonCarry = {
+      mode: 'sale-transfer',
+      sourceCharacterId: character.id,
+      sourceSeasonId: character.seasonId,
+      sellerAccountId,
+      soldAt: at,
+      collection,
+      stats: zeroStats(),
+    };
+    saveRegistry();
+    return { ok: true, sale: clone(sale), seller: clone(found.account), buyer: clone(buyer) };
+  }
+
+  function applyAcceptedBlock(block) {
+    let changed = false;
+    for (const tx of block && block.txs || []) {
+      const auth = tx && tx.auth;
+      if (!auth || !auth.characterId) continue;
+      const found = findCharacterById(auth.characterId);
+      if (!found) continue;
+      if (auth.type === 'server-spend' && auth.effect) {
+        applySpendEffect(found.character, auth.effect);
+        changed = true;
+      }
+    }
+    if (changed) saveRegistry();
+    return { ok: true, changed };
+  }
+
+  function ensureSeasonState() {
+    if (!registry.seasons || typeof registry.seasons !== 'object' || Array.isArray(registry.seasons)) registry.seasons = {};
+    const existing = registry.seasons[seasonId];
+    const next = {
+      id: seasonId,
+      opensAt: seasonConfig.opensAt,
+      closesAt: seasonConfig.closesAt,
+      mandatoryTasks: seasonConfig.mandatoryTasks.slice(),
+      createdAt: existing && existing.createdAt || now(),
+      updatedAt: now(),
+    };
+    if (!existing ||
+        existing.opensAt !== next.opensAt ||
+        existing.closesAt !== next.closesAt ||
+        JSON.stringify(existing.mandatoryTasks || []) !== JSON.stringify(next.mandatoryTasks)) {
+      registry.seasons[seasonId] = next;
+      saveRegistry();
+    }
+    return registry.seasons[seasonId];
+  }
+
+  function createSeasonCharacter(id, idSeason, displayName, ts, carry) {
+    return {
+      id,
+      seasonId: idSeason,
+      name: displayName,
+      address: id,
+      createdAt: ts,
+      lastSeenAt: ts,
+      seasonComplete: false,
+      completedAt: null,
+      mandatoryTasks: {},
+      collection: clone(carry.collection || emptyCollection()),
+      stats: clone(carry.stats || zeroStats()),
+      carry: {
+        mode: carry.mode,
+        sourceCharacterId: carry.sourceCharacterId || null,
+        sourceSeasonId: carry.sourceSeasonId || null,
+        statsReset: !!carry.statsReset,
+      },
+    };
+  }
+
+  function resolveCharacterCarry(account) {
+    normalizeAccountState(account);
+    if (account.pendingSeasonCarry) {
+      return {
+        mode: account.pendingSeasonCarry.mode || 'sale-transfer',
+        sourceCharacterId: account.pendingSeasonCarry.sourceCharacterId || null,
+        sourceSeasonId: account.pendingSeasonCarry.sourceSeasonId || null,
+        collection: clone(account.pendingSeasonCarry.collection || emptyCollection()),
+        stats: zeroStats(),
+        statsReset: true,
+        consumePending: true,
+      };
+    }
+    if (account.restartNextSeason) {
+      return {
+        mode: 'restart-zero',
+        sourceCharacterId: account.restartNextSeason.sourceCharacterId || null,
+        sourceSeasonId: account.restartNextSeason.sourceSeasonId || null,
+        collection: emptyCollection(),
+        stats: zeroStats(),
+        statsReset: true,
+        consumeRestart: true,
+      };
+    }
+    const previous = latestCharacterBeforeSeason(account, seasonId);
+    if (previous) {
+      normalizeCharacterState(previous);
+      return {
+        mode: 'keep',
+        sourceCharacterId: previous.id,
+        sourceSeasonId: previous.seasonId,
+        collection: clone(previous.collection),
+        stats: clone(previous.stats),
+        statsReset: false,
+      };
+    }
+    return { mode: 'fresh', collection: emptyCollection(), stats: zeroStats(), statsReset: false };
+  }
+
+  function consumeCharacterCarry(account, carry) {
+    if (carry.consumePending) delete account.pendingSeasonCarry;
+    if (carry.consumeRestart) delete account.restartNextSeason;
+  }
+
+  function latestCharacterBeforeSeason(account, idSeason) {
+    let latest = null;
+    for (const character of Object.values(account.characters || {})) {
+      if (!character || character.seasonId === idSeason) continue;
+      if (!latest || (character.createdAt || 0) > (latest.createdAt || 0)) latest = character;
+    }
+    return latest;
+  }
+
+  function findCurrentCharacter(accountId) {
+    const account = registry.accounts[accountId];
+    if (!account || !account.characters || !account.characters[seasonId]) return null;
+    normalizeCharacterState(account.characters[seasonId]);
+    return { account, character: account.characters[seasonId] };
+  }
+
+  function findCharacterById(characterId) {
+    for (const account of Object.values(registry.accounts || {})) {
+      for (const character of Object.values(account.characters || {})) {
+        if (character && character.id === characterId) {
+          normalizeCharacterState(character);
+          return { account, character };
+        }
+      }
+    }
+    return null;
+  }
+
+  function allMandatoryTasksComplete(character, season) {
+    const tasks = season && Array.isArray(season.mandatoryTasks) ? season.mandatoryTasks : [];
+    if (!tasks.length) return true;
+    return tasks.every((taskId) => {
+      const task = character.mandatoryTasks && character.mandatoryTasks[taskId];
+      return task && isWithinSeason(task.completedAt, season);
+    });
+  }
+
+  function updateSeasonComplete(character, season, at) {
+    if (!allMandatoryTasksComplete(character, season)) {
+      character.seasonComplete = false;
+      character.completedAt = null;
+      return false;
+    }
+    character.seasonComplete = true;
+    character.completedAt = at;
+    return true;
+  }
+
+  function isSeasonComplete(character, season) {
+    normalizeCharacterState(character);
+    return !!character.seasonComplete && isWithinSeason(character.completedAt, season) && allMandatoryTasksComplete(character, season);
+  }
+
+  function applyCharacterProgress(character, progress) {
+    normalizeCharacterState(character);
+    if (progress.stats && typeof progress.stats === 'object') {
+      for (const stat of Object.keys(zeroStats())) {
+        if (Object.prototype.hasOwnProperty.call(progress.stats, stat)) {
+          character.stats[stat] = Math.max(0, Math.floor(finiteNumber(progress.stats[stat])));
+        }
+      }
+    }
+    if (progress.collection && typeof progress.collection === 'object') {
+      mergeCollection(character.collection, progress.collection);
+    }
+  }
+
+  function applySpendEffect(character, effect) {
+    normalizeCharacterState(character);
+    if (effect.kind === 'level' && Object.prototype.hasOwnProperty.call(character.stats, effect.stat)) {
+      character.stats[effect.stat] = Math.max(character.stats[effect.stat], Math.max(0, Math.floor(finiteNumber(effect.level))));
+    } else if (effect.kind === 'relic' && effect.relicId) {
+      mergeCollection(character.collection, { relics: [effect.relicId] });
+    } else if (effect.kind === 'cosmetic' && effect.skinId) {
+      mergeCollection(character.collection, { cosmetics: [effect.skinId] });
+    } else if (effect.kind === 'item' && effect.itemId) {
+      mergeCollection(character.collection, { items: [effect.itemId] });
+    } else if (effect.kind === 'sigil' && effect.sigilId) {
+      mergeCollection(character.collection, { sigils: [effect.sigilId] });
+    }
   }
 
   function cleanupChallenges() {
@@ -822,11 +1142,13 @@ function createAccountRegistry(options = {}) {
   }
 
   function loadRegistry() {
-    if (!fs.existsSync(accountsFile)) return { version: 1, accounts: {} };
+    if (!fs.existsSync(accountsFile)) return { version: 1, seasons: {}, accounts: {} };
     const data = JSON.parse(fs.readFileSync(accountsFile, 'utf8'));
     if (!data || data.version !== 1 || !data.accounts || typeof data.accounts !== 'object' || Array.isArray(data.accounts)) {
       throw new Error('Account registry is malformed.');
     }
+    if (!data.seasons || typeof data.seasons !== 'object' || Array.isArray(data.seasons)) data.seasons = {};
+    for (const account of Object.values(data.accounts)) normalizeAccountState(account);
     return data;
   }
 
@@ -845,6 +1167,15 @@ function createAccountRegistry(options = {}) {
     createChallenge,
     verifyJoin,
     getState,
+    getSeasonState,
+    completeMandatoryTask,
+    markSeasonComplete,
+    isCharacterSeasonComplete,
+    getCharacterState,
+    recordCharacterProgress,
+    recordCharacterSale,
+    canSellCharacter,
+    applyAcceptedBlock,
     accountIdForPublicKey,
   };
 }
@@ -882,6 +1213,115 @@ function canonicalPublicKey(publicKey) {
 
 function samePublicKey(a, b) {
   return !!a && !!b && canonicalPublicKey(a) === canonicalPublicKey(b);
+}
+
+function normalizeSeasonConfig(value = {}) {
+  const id = sanitizeText(value.id || value.seasonId || DEFAULT_SEASON_ID, 64) || DEFAULT_SEASON_ID;
+  const opensAt = timestampOr(value.opensAt, 0);
+  const closesAt = timestampOr(value.closesAt, Number.MAX_SAFE_INTEGER);
+  return {
+    id,
+    opensAt,
+    closesAt,
+    mandatoryTasks: uniqueTextArray(value.mandatoryTasks || value.tasks || []),
+  };
+}
+
+function timestampOr(value, fallback) {
+  if (value instanceof Date) {
+    const n = value.getTime();
+    return Number.isFinite(n) ? n : fallback;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function isSeasonOpen(season, at) {
+  if (!season) return false;
+  const t = timestampOr(at, Date.now());
+  return t >= timestampOr(season.opensAt, 0) && t < timestampOr(season.closesAt, Number.MAX_SAFE_INTEGER);
+}
+
+function isWithinSeason(at, season) {
+  if (!season) return false;
+  const t = timestampOr(at, NaN);
+  return Number.isFinite(t) && t >= timestampOr(season.opensAt, 0) && t < timestampOr(season.closesAt, Number.MAX_SAFE_INTEGER);
+}
+
+function normalizeAccountState(account) {
+  if (!account.characters || typeof account.characters !== 'object' || Array.isArray(account.characters)) account.characters = {};
+  for (const character of Object.values(account.characters)) normalizeCharacterState(character);
+  if (account.pendingSeasonCarry) {
+    account.pendingSeasonCarry.collection = normalizeCollection(account.pendingSeasonCarry.collection);
+    account.pendingSeasonCarry.stats = zeroStats(account.pendingSeasonCarry.stats);
+  }
+}
+
+function normalizeCharacterState(character) {
+  if (!character || typeof character !== 'object') return;
+  if (typeof character.seasonComplete !== 'boolean') character.seasonComplete = false;
+  if (!Object.prototype.hasOwnProperty.call(character, 'completedAt')) character.completedAt = null;
+  if (!character.mandatoryTasks || typeof character.mandatoryTasks !== 'object' || Array.isArray(character.mandatoryTasks)) character.mandatoryTasks = {};
+  character.collection = normalizeCollection(character.collection);
+  character.stats = zeroStats(character.stats);
+  if (!character.carry || typeof character.carry !== 'object' || Array.isArray(character.carry)) {
+    character.carry = { mode: 'legacy', sourceCharacterId: null, sourceSeasonId: null, statsReset: false };
+  }
+}
+
+function zeroStats(seed = {}) {
+  const stats = {};
+  for (const key of Object.keys(LEVELING.stats || {})) {
+    const n = Number(seed && seed[key]);
+    stats[key] = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  }
+  return stats;
+}
+
+function emptyCollection() {
+  return { items: [], cosmetics: [], relics: [], sigils: [] };
+}
+
+function normalizeCollection(value = {}) {
+  return {
+    items: uniqueTextArray(value.items),
+    cosmetics: uniqueTextArray(value.cosmetics),
+    relics: uniqueTextArray(value.relics),
+    sigils: uniqueTextArray(value.sigils),
+  };
+}
+
+function mergeCollection(target, source) {
+  const clean = normalizeCollection(source);
+  for (const key of Object.keys(emptyCollection())) {
+    target[key] = uniqueTextArray([...(target[key] || []), ...(clean[key] || [])]);
+  }
+}
+
+function uniqueTextArray(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const item of value) {
+    const text = sanitizeText(item, 80);
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    out.push(text);
+  }
+  return out;
+}
+
+function finiteNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function sanitizeText(value, max) {
+  return String(value == null ? '' : value).trim().slice(0, max);
 }
 
 function verifyP256Signature(publicKey, message, signature) {

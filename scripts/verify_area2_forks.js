@@ -280,13 +280,13 @@ ok('q06 Keeper-of-Margins made optional (lectern-only, next q07 intact)');
 {
   // A plain single-HP encounter must expose the classic ACTIONS and win on one pool.
   const enc = content.TURN_TALLOW; // {opponent:{hp:260...}} no dualChain/phase2
-  const m = createTurnBasedMode(enc); const api = makeApi({ meleeDamage: 40 });
+  const m = createTurnBasedMode(enc); const api = makeApi({ meleeDamage: 50 });
   const orig = Math.random; Math.random = NO_RND;
   try {
     m.enter(ctx, api);
     let guard = 0; while (m.getState().phase === 'intro' && guard++ < 40) m.update(0.05, {});
     assert(!m.getState().foe.dc && !m.getState().foe.phase2, 'single-HP foe has no dc/phase2');
-    assert(m.getState().foe.hp === 150 && m.getState().foe.maxHp === 150, 'single-HP foe.hp from opponent.hp (no fallback to 60)');
+    assert(m.getState().foe.hp === 260 && m.getState().foe.maxHp === 260, 'single-HP foe.hp from opponent.hp (no fallback to 60)');
     guard = 0;
     while (m.getState().phase !== 'win' && m.getState().phase !== 'lose' && guard++ < 500) selectAction(m, 'strike');
     assert(m.getState().phase === 'win', 'single-HP foe defeated via classic Strike path');

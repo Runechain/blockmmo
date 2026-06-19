@@ -1559,17 +1559,13 @@ function nearestNpc(){
 function doInteract(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||Dialogue.isOpen())return;
   const i=nearestInteractable();
-  if(!i)return;
-  if(!i.repeat)progress.interactions.add(interactionKey(i));
-  if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
-  log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
-  const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
-  const lines=beat?beat.lines:(ACT1_GRACEFALL&&ACT1_GRACEFALL.interactions&&ACT1_GRACEFALL.interactions[i.target]);
-  sayAct1(lines);
   if(i){
-    progress.interactions.add(interactionKey(i));
-    Story.event('interact',{target:i.target,id:i.id});
+    if(!i.repeat)progress.interactions.add(interactionKey(i));
+    if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
     log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
+    const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
+    const lines=beat?beat.lines:(ACT1_GRACEFALL&&ACT1_GRACEFALL.interactions&&ACT1_GRACEFALL.interactions[i.target]);
+    sayAct1(lines);
     return;
   }
   const n=nearestNpc();

@@ -238,7 +238,7 @@ const Content = window.RUNECHAIN_CONTENT;
 if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT) throw new Error('RUNECHAIN core scripts failed to load');
 const {
   ECON, STORY, RELICS, SIGILS, SKINS, ASSETS,
-  PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
+  PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT, ACT1_GRACEFALL,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
   PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS
@@ -318,13 +318,14 @@ const Story=(function(){
         state.stepIndex=0;
         state.stepCount=0;
         say(quest()&&quest().onStart);
+        say(quest()&&quest().dialogue);
       }
     }
     updateHud();
   }
   function event(type,payload={}){
     const q=quest(), st=step();
-    if(type==='start'){ say(q&&q.onStart); updateHud(); return; }
+    if(type==='start'){ say(q&&q.onStart); say(q&&q.dialogue); updateHud(); return; }
     if(!st||!matches(st.done,type,payload))return;
     if(st.done.count){ state.stepCount++; if(state.stepCount>=st.done.count)completeStep(); }
     else completeStep();
@@ -478,9 +479,11 @@ const TYPES={
 };
 function spawnEnemy(key,x,y,gate=0,opts={}){
   const t=TYPES[key];
-  enemies.push({type:t,key:t.key,x,y,homeX:x,homeY:y,vx:0,vy:0,radius:t.boss?18:key==='hound'?9:10,
+  const enemy={type:t,key:t.key,x,y,homeX:x,homeY:y,vx:0,vy:0,radius:t.boss?18:key==='hound'?9:10,
     hp:t.hp,maxHp:t.hp,dead:false,aggroed:false,windup:0,atkCd:.6,castCd:1.5,hitFlash:0,hurt:0,roam:Math.random()*6.28,
-    gate,unlockQuest:opts.unlockQuest||t.unlockQuest||null,minHollows:opts.minHollows??t.minHollows??null});
+    gate,unlockQuest:opts.unlockQuest||t.unlockQuest||null,minHollows:opts.minHollows??t.minHollows??null};
+  enemies.push(enemy);
+  return enemy;
 }
 function initWorld(){
   enemies.length=0;
@@ -517,6 +520,38 @@ function enemyUnlocked(e){
   if(e.key==='sentinel')return progress.forged;
   return progress.hollows>=3;
 }
+function enemySpeed(e){ return e.type.speed*(e.speedMult||1); }
+function act1Boss(key){ return ACT1_GRACEFALL&&ACT1_GRACEFALL.bosses&&ACT1_GRACEFALL.bosses[key]; }
+function sayAct1(lines){
+  (lines||[]).forEach(t=>log('<b style="color:#f1c75b">Gracefall:</b> '+esc(t)));
+}
+function applyAct1BossBehavior(e,dt,d,toP){
+  if(!act1Boss(e.key))return;
+  e.behaviorT=(e.behaviorT||0)+dt;
+  if(e.key==='sexton'&&e.hp<=e.maxHp*.5&&!e.enraged){
+    e.enraged=true; e.speedMult=1.28;
+    log('Gate Sexton Marrow enrages; ledger-stamp ink pools spread underfoot.');
+  }
+  if(e.key==='mempool'){
+    e.castRate=Math.max(.9,2-e.behaviorT*.018);
+    if(e.hp<=e.maxHp*.65&&!e.addsSpawned){
+      e.addsSpawned=true;
+      for(let i=0;i<2;i++){
+        const add=spawnEnemy('hollow',e.x+(i?24:-24),e.y+(i?22:-22),0,{unlockQuest:'q04'});
+        add.aggroed=true; add.minHollows=null;
+      }
+      log('The Mempool Warden batch-rejects the queue; Pending Hollows spill out.');
+    }
+  }
+  if(e.key==='tallow'&&e.hp<=e.maxHp*.5&&!e.phase2){
+    e.phase2=true; e.speedMult=1.18; e.castRate=1.15;
+    log('Mother Tallow smothers the chapel in phase 2 smoke.');
+  }
+  if(e.key==='tallow'&&e.phase2&&d<e.type.aggro&&e.castCd<=0){
+    e.castCd=e.castRate||1.15;
+    spawnProjectile(e,toP);
+  }
+}
 function hitEnemy(e, amount){
   if(e.dead)return;
   e.aggroed=true; e.hp=Math.max(0,e.hp-amount); e.hurt=.16; e.hitFlash=.12;
@@ -532,10 +567,13 @@ function killEnemy(e){
   Story.event('kill',{key:e.key});
   log('<b>'+esc(e.type.name)+'</b> slain. '+(localReward?'+'+reward.toFixed(2)+' RUNE pending.':'RUNE proof requested from the realm server.'));
   if(e.type.boss){
+    const boss=act1Boss(e.key);
+    if(boss&&boss.defeatLines)sayAct1(boss.defeatLines);
     const rune={id:e.key+'-'+Date.now(),name:e.type.sigilName||e.type.name+' Sigil',key:e.type.sigilKey||null,buff:e.type.sigilKey?0:(e.type.sigilBuff||12)};
     Chain.mintGreatRune(valueAddress(),rune);
     Story.event('greatRune',{rune:rune.id});
     lootFlash('Boss Sigil sealed<br><small>'+esc(rune.name)+'</small>');
+    if(e.key==='tallow'&&northPathUnlocked())log('<b style="color:#f1c75b">North path opened:</b> Shroud Vaults.');
   }
 }
 function updateEnemies(dt){
@@ -562,7 +600,7 @@ function updateEnemies(dt){
       const hd=Math.hypot(e.x-e.homeX,e.y-e.homeY);
       if(hd>3){
         const n=norm(e.homeX-e.x,e.homeY-e.y);
-        e.x+=n.x*e.type.speed*.45*dt; e.y+=n.y*e.type.speed*.45*dt;
+        e.x+=n.x*enemySpeed(e)*.45*dt; e.y+=n.y*enemySpeed(e)*.45*dt;
       } else {
         e.roam+=dt;
         e.x=e.homeX+Math.cos(e.roam*.7)*4;
@@ -572,16 +610,17 @@ function updateEnemies(dt){
     }
 
     const toP=norm(player.x-e.x,player.y-e.y);
+    applyAct1BossBehavior(e,dt,d,toP);
     if(e.type.ranged){
-      if(d>78){ e.x+=toP.x*e.type.speed*dt; e.y+=toP.y*e.type.speed*dt; }
-      else if(d<44){ e.x-=toP.x*e.type.speed*dt; e.y-=toP.y*e.type.speed*dt; }
-      if(d<e.type.reach && e.castCd<=0){ e.castCd=2.0; spawnProjectile(e,toP); }
+      if(d>78){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
+      else if(d<44){ e.x-=toP.x*enemySpeed(e)*dt; e.y-=toP.y*enemySpeed(e)*dt; }
+      if(d<e.type.reach && e.castCd<=0){ e.castCd=e.castRate||2.0; spawnProjectile(e,toP); }
       continue;
     }
     const reach=e.type.reach;
     if(d>reach+3){
       const crowdHold=attackers>2 && d<42 && !e.type.boss;
-      if(!crowdHold){ e.x+=toP.x*e.type.speed*dt; e.y+=toP.y*e.type.speed*dt; }
+      if(!crowdHold){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
     } else {
       attackers++;
       if(e.windup>0){
@@ -1231,6 +1270,7 @@ function drawTerrain(){
 }
 function drawDecor(){
   drawChapel();
+  drawNorthPath();
   for(const f of FENCES)drawFence(f);
   for(const r of RUINS)drawRuin(r);
   for(const g of GRAVES)drawGrave(g);
@@ -1247,6 +1287,24 @@ function drawDecor(){
   if(Math.sin(state.time*5)>0)rect(g.x-2,g.y-43,4,7,'#fff1a8');
   drawRoadSign(116,-44,'LEDGER');
   drawRoadSign(514,44,'EAST');
+}
+function northPathUnlocked(){
+  const u=ACT1_GRACEFALL&&ACT1_GRACEFALL.northPathUnlock;
+  return Story.questReached((u&&u.quest)||'q06');
+}
+function drawNorthPath(){
+  const unlocked=northPathUnlocked();
+  const gate=worldToScreen(930,-92);
+  rect(gate.x-28,gate.y-10,56,20,unlocked?'#253f50':'#4b332f');
+  rect(gate.x-22,gate.y-20,44,10,unlocked?'#6f8fa0':'#6d4a32');
+  ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillStyle=unlocked?'#b8d6e7':'#9f8b70';
+  ctx.fillText(unlocked?'NORTH: SHROUD VAULTS':'NORTH SEALED',gate.x,gate.y-24);
+  if(unlocked){
+    ctx.globalAlpha=.22; ctx.fillStyle='#8ec7ff';
+    ctx.beginPath(); ctx.ellipse(gate.x,gate.y+10,46,14,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
 }
 function drawChapel(){
   const base=worldToScreen(-92,-118);
@@ -1344,8 +1402,13 @@ const FENCES=[
 ];
 const INTERACTABLES=[
   {id:'hearth-registry',target:'hearth-registry',quest:'q01',x:-20,y:10,label:'REGISTRY',kind:'stone'},
+  {id:'chaplain',target:'act1-town-beat',quest:'q01',x:34,y:-28,label:'CHAPLAIN',kind:'stone',townBeat:'recorder-chaplain',repeat:true},
+  {id:'acolyte',target:'act1-town-beat',quest:'q01',x:-72,y:42,label:'ACOLYTE',kind:'stone',townBeat:'chapel-acolyte',repeat:true},
   {id:'bell-west',target:'verification-bell',quest:'q02',x:310,y:-48,label:'BELL',kind:'bell'},
   {id:'bell-east',target:'verification-bell',quest:'q02',x:414,y:40,label:'BELL',kind:'bell'},
+  {id:'grave-tender',target:'act1-town-beat',quest:'q02',x:174,y:114,label:'GRAVES',kind:'stone',townBeat:'sexton-grave-tenders',repeat:true},
+  {id:'archivist',target:'act1-town-beat',quest:'q03',x:-112,y:-76,label:'ARCHIVE',kind:'tablet',townBeat:'scribe-archivist',repeat:true},
+  {id:'confessional',target:'act1-town-beat',quest:'q04',x:246,y:92,label:'CONFESS',kind:'stone',townBeat:'debt-confessional',repeat:true},
   {id:'tablet-a',target:'pending-tablet',quest:'q04',x:502,y:-42,label:'PENDING',kind:'tablet'},
   {id:'tablet-b',target:'pending-tablet',quest:'q04',x:560,y:30,label:'PENDING',kind:'tablet'},
   {id:'tablet-c',target:'pending-tablet',quest:'q04',x:620,y:-52,label:'PENDING',kind:'tablet'},
@@ -1367,6 +1430,7 @@ const INTERACTABLES=[
 // which the foreman weakening gate in startBossEncounter() reads.
 function interactionKey(i){ return i.id==='margin-scroll' ? 'q06:margin-scroll' : (Story.state.activeQuestId+':'+i.id); }
 function interactableActive(i){
+  if(i.townBeat) return Story.questReached(i.quest);
   // Optional side-interaction: light up whenever q06 is reached and not yet inscribed.
   if(i.id==='margin-scroll') return Story.questReached('q06') && !progress.interactions.has(interactionKey(i));
   const st=Story.currentStep();
@@ -1385,9 +1449,12 @@ function doInteract(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen)return;
   const i=nearestInteractable();
   if(!i)return;
-  progress.interactions.add(interactionKey(i));
-  Story.event('interact',{target:i.target,id:i.id});
+  if(!i.repeat)progress.interactions.add(interactionKey(i));
+  if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
   log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
+  const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
+  const lines=beat?beat.lines:(ACT1_GRACEFALL&&ACT1_GRACEFALL.interactions&&ACT1_GRACEFALL.interactions[i.target]);
+  sayAct1(lines);
 }
 function drawInteractables(){
   for(const i of INTERACTABLES){

@@ -601,7 +601,7 @@ function createRealmServer(options = {}) {
     };
   }
 
-  function resolveSpendSource(source, address) {
+  function resolveSpendSource(source, address, characterState) {
     if (!source || typeof source !== 'object') return blockError('invalid_spend_source', 'Spend source is required.');
     if (source.type === 'level') {
       const def = LEVELING.stats[source.stat];

@@ -237,7 +237,7 @@
 const Content = window.RUNECHAIN_CONTENT;
 if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT) throw new Error('RUNECHAIN core scripts failed to load');
 const {
-  ECON, STORY, RELICS, SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL,
+  ECON, STORY, RELICS, SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
@@ -442,7 +442,7 @@ function sigilBonuses(){
 }
 function sigilSig(){ return Chain.greatRunesOf(valueAddress()).map(g=>g.key||('b'+(g.buff||0))).join(','); }
 function skinPal(id){ return SKINS.find(s=>s.id===id)||SKINS[0]; }
-function ownedSkin(id){ return id==='tarnished' || Chain.cosmeticsOf(valueAddress()).includes(id); }
+function ownedSkin(id){ return id==='tarnished' || (progress.cosmetics&&progress.cosmetics.has(id)) || Chain.cosmeticsOf(valueAddress()).includes(id); }
 function ownedItem(id){ return Chain.itemsOf(valueAddress()).includes(id); }
 function itemBonuses(){
   const out={hp:0,sta:0,dmg:0,runeMult:0};
@@ -491,7 +491,7 @@ let player={
   skinId:'tarnished', pal:skinPal('tarnished')
 };
 const enemies=[], particles=[], projectiles=[], remotes={};
-const progress={hollows:0, forged:false, interactions:new Set()};
+const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set()};
 
 function recalcStats(fullHeal){
   const b=itemBonuses();
@@ -1040,7 +1040,9 @@ function refreshWardrobe(){
   const spend=Econ.goldSpendable(valueAddress()), list=document.getElementById('wlist');
   list.innerHTML='';
   for(const s of SKINS){
-    const own=ownedSkin(s.id), eq=player.skinId===s.id;
+    const own=ownedSkin(s.id);
+    if(s.secret&&!own)continue; // exploration-only cosmetic: hidden from the shop until earned
+    const eq=player.skinId===s.id;
     const row=document.createElement('div'); row.className='skin'+(eq?' equipped':'');
     row.innerHTML='<span class="sw" style="background:'+s.body+';box-shadow:inset 0 0 0 5px '+s.trim+'"></span><span class="sn">'+esc(s.name)+'</span><button class="skinbtn">'+(eq?'Equipped':own?'Equip':s.price+' G')+'</button>';
     const btn=row.querySelector('button');
@@ -1381,6 +1383,7 @@ function drawDecor(){
   for(const c of CANDLES)drawCandle(c);
   drawNpcs();
   drawInteractables();
+  drawLore();
   const g=worldToScreen(GRACE.x,GRACE.y);
   ctx.globalAlpha=.14; ctx.fillStyle='#f1c75b'; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS*1.25,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
   ctx.strokeStyle='rgba(241,199,91,.55)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS,0,Math.PI*2); ctx.stroke();
@@ -1484,11 +1487,17 @@ const RUINS=[
   {x:198,y:46,w:62,h:13,c:'#44494b'},
   {x:338,y:-104,w:52,h:30,c:'#3b3e42',arch:true},
   {x:574,y:74,w:76,h:14,c:'#46494c'},
-  {x:742,y:-42,w:50,h:34,c:'#4f4a3d',arch:true}
+  {x:742,y:-42,w:50,h:34,c:'#4f4a3d',arch:true},
+  {x:-600,y:-300,w:66,h:36,c:'#3a3733',arch:true} // collapsed Unrecorded Vault (hidden NW dead-end)
 ];
 const TREES=[
   {x:-248,y:-126},{x:-172,y:104,dead:true},{x:-42,y:128},{x:146,y:-142},
-  {x:286,y:122},{x:404,y:-132,dead:true},{x:538,y:142,dead:true},{x:706,y:-126,dead:true},{x:826,y:106,dead:true}
+  {x:286,y:122},{x:404,y:-132,dead:true},{x:538,y:142,dead:true},{x:706,y:-126,dead:true},{x:826,y:106,dead:true},
+  // off-path thickets marking the lore dead-ends (north cairn, south marsh, west track, hidden vault)
+  {x:212,y:-352,dead:true},{x:284,y:-300,dead:true},
+  {x:556,y:352,dead:true},{x:486,y:300,dead:true},
+  {x:-356,y:158,dead:true},
+  {x:-560,y:-256,dead:true},{x:-652,y:-262,dead:true},{x:-616,y:-352,dead:true},{x:-540,y:-336,dead:true}
 ];
 const GRAVES=[
   {x:188,y:-118,candle:true},{x:214,y:-132},{x:240,y:-112,candle:true},{x:266,y:-138},
@@ -1498,7 +1507,9 @@ const CANDLES=[
   {x:-36,y:-48},{x:38,y:48},{x:126,y:32},{x:260,y:28},{x:420,y:-18},{x:560,y:22},{x:780,y:-24}
 ];
 const BRAMBLES=[
-  {x:442,y:-118,w:74,h:34,n:12},{x:500,y:94,w:82,h:42,n:14},{x:674,y:-96,w:96,h:46,n:18},{x:832,y:68,w:86,h:38,n:16}
+  {x:442,y:-118,w:74,h:34,n:12},{x:500,y:94,w:82,h:42,n:14},{x:674,y:-96,w:96,h:46,n:18},{x:832,y:68,w:86,h:38,n:16},
+  // bramble wall ringing the Unrecorded Vault into a concealed alcove (open only from the north)
+  {x:-600,y:-250,w:150,h:30,n:24},{x:-678,y:-300,w:34,h:96,n:18},{x:-522,y:-300,w:34,h:96,n:18}
 ];
 const FENCES=[
   {x:-178,y:58,len:82,dir:'h'},{x:-216,y:98,len:76,dir:'v'},{x:120,y:92,len:92,dir:'h'},{x:158,y:130,len:54,dir:'v'}
@@ -1559,21 +1570,65 @@ function nearestNpc(){
 function doInteract(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||Dialogue.isOpen())return;
   const i=nearestInteractable();
-  if(!i)return;
-  if(!i.repeat)progress.interactions.add(interactionKey(i));
-  if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
-  log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
-  const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
-  const lines=beat?beat.lines:(ACT1_GRACEFALL&&ACT1_GRACEFALL.interactions&&ACT1_GRACEFALL.interactions[i.target]);
-  sayAct1(lines);
   if(i){
-    progress.interactions.add(interactionKey(i));
-    Story.event('interact',{target:i.target,id:i.id});
+    if(!i.repeat)progress.interactions.add(interactionKey(i));
+    if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
     log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
+    const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
+    const lines=beat?beat.lines:(ACT1_GRACEFALL&&ACT1_GRACEFALL.interactions&&ACT1_GRACEFALL.interactions[i.target]);
+    sayAct1(lines);
     return;
   }
+  const lore=nearestLore();
+  if(lore){ discoverLore(lore); return; }
   const n=nearestNpc();
   if(n)Dialogue.open(n);
+}
+/* ---- Off-path lore / Codex (issue #25): rewarded curiosity, never power ---- */
+const LORE=(AREA1_LORE||[]);
+function nearestLore(){
+  let best=null, bestD=999;
+  for(const node of LORE){
+    if(progress.lore.has(node.id))continue;
+    const d=Math.hypot(player.x-node.x,player.y-node.y);
+    if(d<bestD){ best=node; bestD=d; }
+  }
+  return bestD<34?best:null;
+}
+function loreCount(){ return {found:progress.lore.size, total:LORE.length}; }
+function discoverLore(node){
+  if(progress.lore.has(node.id))return;
+  progress.lore.add(node.id);
+  const c=loreCount();
+  log('<b style="color:#bca0e6">Lore recorded:</b> '+esc(node.title)+' <span style="color:#7d776b">('+c.found+'/'+c.total+')</span>');
+  (node.lines||[]).forEach(t=>log('<span style="color:#cbb7ea">“'+esc(t)+'”</span>'));
+  // Exploration cosmetic: grant the secret skin the first time its node is found. This is a
+  // client-side unlock (like the lore set), not a Gold purchase — exploration rewards are never
+  // economic and never power, so they don't route through the on-chain spend ledger.
+  if(node.reward && !ownedSkin(node.reward)){
+    progress.cosmetics.add(node.reward);
+    const sk=SKINS.find(s=>s.id===node.reward);
+    if(sk)log('<b style="color:#f1c75b">Cosmetic unlocked:</b> '+esc(sk.name)+' — equip it in the wardrobe (B).');
+    if(state.wardrobeOpen)refreshWardrobe();
+  }
+  lootFlash('<b>'+esc(node.title)+'</b><br><span style="font-size:13px;color:#cbb7ea">Lore recorded '+c.found+'/'+c.total+(node.reward?' · cosmetic unlocked':'')+'</span>');
+  updateHud();
+}
+function drawLore(){
+  for(const node of LORE){
+    const s=worldToScreen(node.x,node.y), found=progress.lore.has(node.id);
+    const near=!found && nearestLore()===node;
+    // A weathered marker-stone with a faint violet rune that brightens when undiscovered.
+    rect(s.x-7,s.y-6,14,10,found?'#3d3a44':'#4a4658');
+    rect(s.x-5,s.y-14,10,9,found?'#4a4654':'#5b566c');
+    const glow=found?'#5a5466':(near?'#d9c2ff':'#9b86c4');
+    rect(s.x-3,s.y-12,6,5,glow);
+    if(near){
+      ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#d9c2ff';
+      ctx.fillText('E',s.x,s.y-20);
+    }
+  }
+  ctx.textAlign='left';
 }
 function drawInteractables(){
   for(const i of INTERACTABLES){
@@ -1821,9 +1876,11 @@ function updateHud(){
   else{
   const bossEnc=state.mode==='town'?nearestBossEncounter():null;
   const near=nearestInteractable();
+  const lore=state.mode==='town'?nearestLore():null;
   const npc=state.mode==='town'?nearestNpc():null;
   if(bossEnc){ prompt.style.display='block'; prompt.innerHTML='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>'; }
   else if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
+  else if(lore){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to examine <b>'+esc(lore.title)+'</b>'; }
   else if(npc){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to speak with <b>'+esc(npc.name)+'</b>'; }
   else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
   else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }

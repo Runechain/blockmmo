@@ -374,13 +374,30 @@ const AREA1_ENCOUNTERS={
   ]}
 };
 /* ---- Area 2 — The Shroud Vaults ---------------------------------------- */
+const AREA2_TOWN={id:'a2-vault-anteroom',name:'Vault Anteroom / Forklight Hearthlight',
+  hearthlight:{id:'forklight',free:true,safe:true},
+  npcs:[
+    {id:'keeper-ancestry',name:'Keeper of Ancestry',role:'Explains inherited debt-chain and confirms authorship at the Ledger-Bound fracture.'},
+    {id:'custodian-archivist',name:'Custodian Archivist',role:"Warns the deep records rest but never stay rested."},
+    {id:'librarian-shade',name:'Librarian Shade',role:'Advanced RUNE relic vendor and fork-lore witness.'},
+    {id:'keeper-margins',name:'Keeper of Margins',role:'Optional re-inscription side quest; testimony weakens the Debt Foreman.'},
+    {id:'vault-custodians',name:'Vault Custodians',role:'Gold cosmetics only.'}
+  ],
+  sideQuest:{id:'keeper-margins',interactionKey:'q06:margin-scroll',effect:'weaken-debt-foreman'}};
 /* Debt Mines: descent through a forked crystallized shaft, Canon left / Schism right, forced crossing bridge at mid-depth. */
 const PLAT_DEBT_MINES={id:'a2-debt-mines',name:'Debt Mines & Ledger Cistern',width:1300,height:760,spawn:{x:100,y:90},physics:{maxRun:200,jump:458},
+  fork:{splitX:650,
+    canon:{label:'CANON',region:{x:0,y:0,w:520,h:540},effect:{speedMul:0.92},identityRunes:['R','E','C','O','R','D','E','D'],desc:'stable amber platforms, slower but predictable'},
+    schism:{label:'SCHISM',region:{x:840,y:0,w:460,h:540},effect:{speedMul:1.08,damagePerSecond:2,damageEvery:0.75},identityRunes:['D','E','D','R','O','C','E','R'],desc:'faster mirror path with toxic debt-pressure'},
+    crossing:{region:{x:340,y:470,w:620,h:44},requiresBothSpellings:true,solution:'RECORDED|DEDROCER'}},
   platforms:[{id:'entrance',x:0,y:120,w:280,h:14,type:'solid'},{id:'c1',x:0,y:200,w:210,h:12,type:'solid'},{id:'c2',x:60,y:290,w:180,h:12,type:'solid'},{id:'c3',x:0,y:370,w:200,h:12,type:'solid'},{id:'c4',x:80,y:450,w:160,h:12,type:'solid'},{id:'pendulum',x:140,y:330,w:110,h:12,type:'solid',vx:48,minX:80,maxX:330},{id:'cross',x:340,y:490,w:620,h:14,type:'solid'},{id:'s1',x:1080,y:200,w:220,h:10,type:'oneWay'},{id:'s2',x:1000,y:290,w:190,h:10,type:'oneWay'},{id:'s3',x:1100,y:370,w:200,h:10,type:'oneWay'},{id:'s4',x:1020,y:450,w:170,h:10,type:'oneWay'},{id:'boss-floor',x:380,y:700,w:740,h:60,type:'solid'},{id:'boss-wall-l',x:380,y:560,w:50,h:140,type:'solid'},{id:'boss-wall-r',x:1070,y:560,w:50,h:140,type:'solid'},{id:'boss-step-l',x:440,y:640,w:120,h:14,type:'solid'},{id:'boss-step-r',x:940,y:640,w:120,h:14,type:'solid'}],
   hazards:[{id:'shard-a',type:'damage',x:90,y:285,w:30,h:12,damage:2},{id:'shard-b',type:'damage',x:180,y:365,w:30,h:12,damage:2},{id:'crystal-a',type:'projectile',x:110,y:80,w:20,h:16,interval:1.6,speedY:265,damage:3},{id:'crystal-b',type:'projectile',x:230,y:80,w:20,h:16,interval:2.2,speedY:258,damage:3},{id:'pendulum-blow',type:'knockback',x:180,y:285,w:80,h:36,damage:2,knockX:240,knockY:-200},{id:'echo-stun',type:'stun',x:80,y:356,w:36,h:14,stun:0.55},{id:'gas-a',type:'slow',x:1000,y:282,w:190,h:22,slow:0.34},{id:'gas-b',type:'slow',x:1020,y:442,w:170,h:22,slow:0.31},{id:'vent-a',type:'damage',x:1080,y:194,w:28,h:14,damage:3},{id:'vent-b',type:'damage',x:1100,y:362,w:28,h:14,damage:3},{id:'current',type:'slow',x:400,y:476,w:500,h:14,slow:0.40},{id:'crystal-s',type:'projectile',x:1140,y:80,w:20,h:16,interval:1.3,speedY:275,damage:3},{id:'gas-cross',type:'slow',x:540,y:474,w:260,h:14,slow:0.38}],
   bossTrigger:{id:'debt-foreman',x:660,y:620,w:180,h:80,lock:{x:400,y:530,w:700,h:240}},exit:{id:'to-ledger-vaults',x:0,y:640,w:40,h:80}};
 /* Ledger Vaults: underground split-zone arena, Canon left (amber) / Schism right (green). */
 const BATTLE_LEDGER_VAULTS={id:'a2-ledger-vaults',name:"Ledger Vaults / Well's Mouth",width:1600,height:900,spawn:{x:200,y:400},physics:{speed:175},
+  fork:{canonZone:'canon-sanctuary',schismZone:'schism-chasm',centerZone:'well-mouth',
+    canon:{enemy:'canon-auditor',style:'armored methodical pressure',regen:12},
+    schism:{enemy:'schism-shadow',style:'fast phasing pressure',regen:5}},
   creatures:{'hollow-ancestor':{hp:18,speed:80,damage:3,reach:14,radius:8,color:'#8cb8e0'},'canon-auditor':{hp:52,speed:28,damage:7,reach:24,radius:13,color:'#d4a83e'},'schism-shadow':{hp:14,speed:115,damage:4,reach:14,radius:7,color:'#4ecb7a'},default:{hp:20,speed:50,damage:3,reach:14,radius:9,color:'#7c9cbc'}},
   zones:[{id:'canon-sanctuary',x:80,y:150,w:500,h:320,regen:12,clearFor:16},{id:'schism-chasm',x:1020,y:150,w:500,h:320,regen:5,clearFor:14},{id:'well-mouth',x:600,y:500,w:400,h:280,regen:8,clearFor:12}],
   waves:[{id:'canon-first',at:0.5,zoneId:'canon-sanctuary',spawns:[{type:'canon-auditor',x:250,y:250,count:2},{type:'hollow-ancestor',x:420,y:360,count:3}]},{id:'schism-rush',at:5.5,zoneId:'schism-chasm',spawns:[{type:'schism-shadow',x:1150,y:260,count:4},{type:'hollow-ancestor',x:1280,y:380,count:3}]},{id:'well-surge',at:12.0,zoneId:'well-mouth',spawns:[{type:'canon-auditor',x:720,y:560,count:2},{type:'schism-shadow',x:880,y:620,count:3},{type:'hollow-ancestor',x:650,y:680,count:4}]}]};
@@ -393,8 +410,8 @@ const TURN_BIFURCATED={id:'duel-bifurcated',name:'Bifurcated Guard',opponent:{na
   dualChain:{a:{hp:60,label:'LEFT',color:'#d4a83e'},b:{hp:60,label:'RIGHT',color:'#4ecb7a'},crossHeal:true}};
 /* Ledger-Bound (FINAL): single-HP Phase 1, then opponent.phase2 splits it into a dual-pool
    re-merging arena at 40% HP (mergePerTurn regen unless Strike Both). Mints 'The Contested Will'. */
-const TURN_LEDGERBOUND={id:'duel-ledgerbound',name:'The Ledger-Bound',opponent:{name:'The Ledger-Bound',hp:220,attack:20,defense:5,color:'#a8c8ff',sprite:'ledgerbound',
-  phase2:{threshold:0.4,aHp:60,bHp:60,aLabel:'CANON',bLabel:'SCHISM',aColor:'#d4a83e',bColor:'#4ecb7a',mergePerTurn:5}}};
+const TURN_LEDGERBOUND={id:'duel-ledgerbound',name:'The Ledger-Bound',finalStroke:{requiresCenter:true,centerLabel:'FISSURE-CENTER',sigilKey:'contested-will'},opponent:{name:'The Ledger-Bound',hp:220,attack:20,defense:5,color:'#a8c8ff',sprite:'ledgerbound',
+  phase2:{threshold:0.4,aHp:60,bHp:60,aLabel:'CANON',bLabel:'SCHISM',aColor:'#d4a83e',bColor:'#4ecb7a',mergePerTurn:5,finalStroke:'center'}}};
 const AREA2_ENCOUNTERS={
   foreman:{id:'debt-foreman',name:'The Debt Foreman',beat:0.8,segments:[
     {mode:'platformer',name:'Descent into the Debt Mines',payload:PLAT_DEBT_MINES,beatText:'The shaft swallows names.',complete:{event:'boss'}},
@@ -444,7 +461,7 @@ const AREA3_ENCOUNTERS={
     ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, SKINS, ASSETS,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
-    PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
+    AREA2_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
     PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS
   };
 });

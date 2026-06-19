@@ -34,6 +34,10 @@ const STORY = root.RUNECHAIN_STORY || {
   quests:[{
     id:'q01',
     title:'Hearthlight Chapel',
+    dialogue:[
+      'Recorder/Chaplain: Put your hand on the registry stone. The Chainwell needs a name before it can spare a body.',
+      'Debt Confessional: The unpaid are not buried here. They are processed until they walk.'
+    ],
     onStart:['You wake beneath a warm ledger-lamp. The chapel floor has already recorded your name.'],
     steps:[
       {id:'registry', text:'Touch the Hearthlight registry stone.', done:{event:'interact', target:'hearth-registry', count:1}},
@@ -45,6 +49,10 @@ const STORY = root.RUNECHAIN_STORY || {
   },{
     id:'q02',
     title:'Parish Road Receipts',
+    dialogue:[
+      'Sexton grave-tender: Two bells, west then east, make a witness out of sound.',
+      'Gate Sexton Marrow: No entry passes the tithe-house without my stamp.'
+    ],
     onStart:['The road east is paved with unpaid vows and walking receipts. Two bells decide what counts.'],
     steps:[
       {id:'bells', text:'Ring 2 verification bells beside the parish road.', done:{event:'interact', target:'verification-bell', count:2}},
@@ -57,6 +65,10 @@ const STORY = root.RUNECHAIN_STORY || {
   },{
     id:'q03',
     title:'Chainwell Ledger',
+    dialogue:[
+      'Scribe/Archivist: A relic is not a gift. It is a receipt you can survive by carrying.',
+      'Recorder/Chaplain: Power is forged only in Hearthlight. Spend outside it and the parish calls it theft.'
+    ],
     onStart:['A dead ledger turns below the chapel stones. It wants proof, not prayer.'],
     steps:[
       {id:'first-relic', text:'Forge your first RUNE relic at Hearthlight.', done:{event:'forge', any:true}}
@@ -67,6 +79,10 @@ const STORY = root.RUNECHAIN_STORY || {
   },{
     id:'q04',
     title:'The Mempool Yard',
+    dialogue:[
+      'Debt Confessional: Pending dead circle the pit until someone confirms what they owe.',
+      'Mempool Warden: The queue grows teeth when you leave records unattended.'
+    ],
     onStart:['Petitioners circle the yard, each waiting to be confirmed into a worse shape.'],
     steps:[
       {id:'yard-debtors', text:'Clear 2 pending Hollow Debtors from the Mempool Yard.', done:{event:'kill', monster:'hollow', count:2}},
@@ -79,6 +95,10 @@ const STORY = root.RUNECHAIN_STORY || {
   },{
     id:'q05',
     title:'Tallow House',
+    dialogue:[
+      'Scribe/Archivist: Mother Tallow was the first record-keeper. She melted herself into wax so names would hold.',
+      'Recorder/Chaplain: If she yields, I will seal the mercy. The system will mint what the parish cannot forgive.'
+    ],
     onStart:['Candles burn with names instead of wax. Some names are still screaming.'],
     steps:[
       {id:'candles', text:'Extinguish 3 duplicate Tallow candles and leave the canonical flame lit.', done:{event:'interact', target:'tallow-candle', count:3}},
@@ -206,6 +226,82 @@ const SIGILS = {
   'waxen-testament': { name:'The Waxen Testament', runeMult:0.12, note:'Legitimately Recorded' },
   'contested-will':  { name:'The Contested Will', runeMult:0.10, atkSpeed:0.12, iframeOnHit:true, note:'Severed from inheritance' },
   'amended-record':  { name:'The Amended Record', runeMult:0.15, endgame:true, note:'Co-authored' }
+};
+
+const ACT1_GRACEFALL = {
+  id:'gracefall-parish',
+  title:'Gracefall Parish',
+  questIds:['q01','q02','q03','q04','q05'],
+  prototypeLedger:'Boss Sigils are represented by the existing Chainwell ledger path: Chain.mintGreatRune queues a greatRune transaction, and greatRunesOf reads pending or mined sigils.',
+  townBeats:[
+    {id:'recorder-chaplain',role:'Recorder/Chaplain',quest:'q01',lines:[
+      'The Hearthlight does not judge. It records, confirms, and returns you safely when the parish breaks your body.',
+      'Bring every proof back here. RUNE becomes power only under this lamp.'
+    ]},
+    {id:'scribe-archivist',role:'Scribe/Archivist',quest:'q03',lines:[
+      'Relics are indexed promises: paid in RUNE, forged in public, and useless until the Chainwell accepts the spend.',
+      'Tallow wrote the first parish names by candlelight. Ask why the wax still remembers them.'
+    ]},
+    {id:'debt-confessional',role:'Debt Confessional',quest:'q04',lines:[
+      'A debtor enters with a balance and leaves with a shape. Hollows are not monsters here; they are unresolved accounts.',
+      'The northern vaults inherit what Gracefall cannot settle.'
+    ]},
+    {id:'chapel-acolyte',role:'Chapel Acolyte',quest:'q01',lines:[
+      'Gold buys robes, colors, and vanity. It never buys strength.',
+      'If someone sells power for Gold, it is not Hearthlight doctrine.'
+    ]},
+    {id:'sexton-grave-tenders',role:'Sexton grave-tenders',quest:'q02',lines:[
+      'Paid graves face the chapel. Unpaid graves face the road, so they can be collected again.',
+      'Marrow stamps the doubtful twice. The second stamp usually screams.'
+    ]}
+  ],
+  interactions:{
+    'hearth-registry':[
+      'Recorder/Chaplain: Your name is Recorded. The Chainwell now has a place to return you.',
+      'The registry stone warms, then goes cold as your first entry settles.'
+    ],
+    'verification-bell':[
+      'The bell answers with a confirmation tone. Somewhere below, a ledger page stops shaking.',
+      'Sexton grave-tender: A bell without a witness is noise. Two bells make evidence.'
+    ],
+    'pending-tablet':[
+      'The pending tablet flips from MEMPOOL to CONFIRMED, and a hollow in the yard forgets why it was angry.',
+      'Debt Confessional: Batch-confirm the restless before the Warden turns the queue against you.'
+    ],
+    'tallow-candle':[
+      'A duplicate wax-name gutters out. Mother Tallow flinches as if the flame was tied to her wrist.',
+      'Scribe/Archivist: Leave the canonical flame. Extinguish only the copies that stole breath.'
+    ],
+    'ancestor-lectern':[
+      'The Shroud Vaults accept the Waxen Testament and open their first ledger.',
+      'Debt Confessional: North is inheritance. Do not mistake it for freedom.'
+    ]
+  },
+  bosses:{
+    sexton:{
+      key:'sexton',encounter:'gate-sexton-marrow',reward:'sextons-stamp',
+      behaviors:['ledger-stamp slams leave ink-pool pressure','enrage below 50% HP after the bells witness you']
+    },
+    mempool:{
+      key:'mempool',encounter:'mempool-warden',
+      behaviors:['summons 2 Pending Hollow adds when wounded','grows stronger over time unless tablets are batch-confirmed']
+    },
+    tallow:{
+      key:'tallow',encounter:'mother-tallow',sigilKey:'waxen-testament',unlocksQuest:'q06',
+      behaviors:['platformer candles permanently weaken her','battlefield Tallow Echoes rush the player','phase 2 smoke split below 50% HP','Chaplain intervenes at defeat and seals mercy'],
+      defeatLines:[
+        'Recorder/Chaplain: Mercy is also a record. The Waxen Testament is sealed.',
+        'Mother Tallow dissolves into warm wax and leaves a clean sigil in the Chainwell.'
+      ]
+    }
+  },
+  northPathUnlock:{
+    quest:'q06',
+    afterQuest:'q05',
+    label:'North path to the Shroud Vaults',
+    marker:'ancestor-lectern',
+    representation:'When q05 completes, Story advances to q06. The runtime draws the north path and activates the Vault Anteroom lectern.'
+  }
 };
 
 const SKINS = [

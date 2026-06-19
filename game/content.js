@@ -236,6 +236,9 @@ const ASSETS={
   sorcerer:{src:'assets/pixel/sorcerer.png',w:24,h:24,img:null},
   sentinel:{src:'assets/pixel/sentinel.png',w:48,h:48,img:null},
   phantom:{src:'assets/pixel/phantom.png',w:24,h:24,img:null},
+  sexton:{src:'assets/pixel/sexton.png',w:56,h:56,img:null},
+  mempool:{src:'assets/pixel/mempool.png',w:56,h:56,img:null},
+  tallow:{src:'assets/pixel/tallow.png',w:64,h:64,img:null},
   'tallow-echo':{src:'assets/pixel/tallow-echo.png',w:24,h:24,img:null},
   foreman:{src:'assets/pixel/foreman.png',w:64,h:64,img:null},
   bifurcated:{src:'assets/pixel/bifurcated.png',w:56,h:56,img:null},
@@ -345,9 +348,10 @@ const BOSS_SCRIPT={id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,se
   {mode:'turnbased',name:'Marrow, face to face',payload:TURN_ENCOUNTER,beatText:'He raises the ledger-stamp.',complete:{event:'duel'}}
 ]};
 /* Area 1 bosses as story-gated, multi-play-style encounters (bible: Gracefall Parish). */
-const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b',sprite:'knight'}};
-const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff',sprite:'sorcerer'}};
-const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:150,attack:18,defense:3,color:'#f1c75b',sprite:'sentinel'}};
+const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b',sprite:'sexton'}};
+const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff',sprite:'mempool'}};
+/* Mother Tallow hp = 260 is canon (DESIGN-BIBLE.md Area 1: "hp 260, dmg 22..."); matches the index.html registry. */
+const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:260,attack:18,defense:3,color:'#f1c75b',sprite:'tallow'}};
 /* Tallow House: vertical wax-choked interior, rising lift, dripping-wax hazards — distinct from the Parish Road climb. */
 const PLAT_TALLOW_HOUSE={id:'a1-tallow-house',name:'Tallow House',width:1080,height:720,spawn:{x:60,y:616},physics:{maxRun:195,jump:445},
   platforms:[{id:'ground',x:0,y:660,w:1080,h:60,type:'solid'},{id:'shelf-a',x:90,y:580,w:130,h:12,type:'oneWay'},{id:'mid-floor',x:320,y:560,w:260,h:14,type:'solid'},{id:'wax-lift',x:510,y:510,w:110,h:14,type:'solid',vy:32,minY:400,maxY:520},{id:'shelf-b',x:120,y:460,w:160,h:12,type:'oneWay'},{id:'walkway',x:650,y:430,w:200,h:14,type:'solid'},{id:'step-a',x:200,y:360,w:120,h:14,type:'solid'},{id:'step-b',x:750,y:340,w:140,h:12,type:'oneWay'},{id:'upper',x:380,y:270,w:260,h:14,type:'solid'},{id:'altar',x:700,y:190,w:230,h:14,type:'solid'}],
@@ -456,9 +460,149 @@ const AREA3_ENCOUNTERS={
     {mode:'turnbased',name:'Make your choice',payload:TURN_AUDITOR,beatText:'The Auditor rotates one final time. Answer it.',complete:{event:'duel'}}
   ]}
 };
+/* ---- NPCs — branching dialogue (issue #22, lore/dialogue lane) ----------- */
+/* DIALOGUE DATA FORMAT (reusable for Area 2/3 NPCs — the index.html Dialogue UI consumes this):
+   npc.dialogue = { start:'nodeId', repeat:'nodeId'(optional), nodes:{ id:node, ... } }
+     start  — entry node the first time you talk to this NPC.
+     repeat — entry node on every subsequent talk (defaults to start when omitted).
+   node = {
+     speaker: 'Name'        // optional per-node speaker override (defaults to npc.name)
+     text: ['line', ...]    // lines shown one at a time; advance with E / Space
+     choices: [             // optional; shown after the last line. Arrow keys pick, E confirms.
+       { label:'...', goto:'nodeId' }
+     ]
+     goto: 'nodeId'         // optional; auto-jump to another node after the last line (no choices)
+     end: true              // optional; closes the conversation after the last line
+   }
+   A node with neither choices, goto, nor end simply closes when its last line is dismissed. */
+const NPCS=[
+  {id:'recorder-chaplain', x:-72, y:-26, color:'#f1c75b', sprite:'knight', name:'Chaplain Verity', role:'Hearthlight Recorder',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Welcome, Recorded. The Hearthlight has your name already — it wrote you the moment you woke.',
+        'I keep the registry well. Here your RUNE is confirmed, your relics forged, your stats raised. Rest is free; the dead do not cross this plaza.'],
+        choices:[
+          {label:'What is this place?', goto:'place'},
+          {label:'How do I grow stronger?', goto:'power'},
+          {label:'I should go.', goto:'farewell'} ] },
+      place:{ text:[
+        'A tax-house, once. The Chainwell turns beneath these stones — the ledger of every soul that ever owed.',
+        'We turned it into sanctuary. Better the well keep us warm than swallow us cold.'],
+        goto:'intro' },
+      power:{ text:[
+        'Bring RUNE to the Hearthlight and I will record the spend as levels. That ledger is the only one that grants power.',
+        'Gold buys nothing but vestment and dye. No coin hurries a soul up the registry — only the grind, only the proof.'],
+        goto:'intro' },
+      farewell:{ text:['Go correctly filed, Recorded. The bells will mark your confirmations.'], end:true },
+      again:{ text:['Back at the warm ledger? Rest, forge, or raise your record — I will witness all three.'],
+        choices:[
+          {label:'Tell me of Mother Tallow.', goto:'tallow'},
+          {label:'Just resting.', goto:'farewell'} ] },
+      tallow:{ text:[
+        'She was the First Recorded — our original keeper. She melted into wax to bind names when the debts outgrew paper.',
+        'When you face her, do not hate her. She bound herself so debtors might still find a path to confirmation. I will be there when she falls.'],
+        goto:'again' } }} },
+  {id:'scribe-archivist', x:96, y:18, color:'#9b74ff', sprite:'sorcerer', name:'Archivist Quill', role:'Relic Scribe',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Mind the dust — every speck is a name nobody paid to keep clean.',
+        'I trade in relics. RUNE forged into edge and ward. Real power, honestly earned — none of that cosmetic glitter the Acolyte peddles.'],
+        choices:[
+          {label:'Show me what relics do.', goto:'relics'},
+          {label:'Who was here before us?', goto:'legacy'},
+          {label:'Maybe later.', goto:'farewell'} ] },
+      relics:{ text:[
+        'Forge at the Hearthlight; I only catalogue. An Ember Edge bites harder, a Warden Sigil keeps you breathing.',
+        'A blessed relic strikes Mother Tallow truer — the wax remembers the hands that recorded it.'],
+        goto:'intro' },
+      legacy:{ text:[
+        'Tallow kept these ledgers before the melting. Her hand is in every old margin — inheritances, compounded down the bloodlines.',
+        'What you owe, you did not always borrow. Some debts are willed to you. Remember that when you descend north.'],
+        goto:'intro' },
+      farewell:{ text:['The archive keeps. So do I.'], end:true },
+      again:{ text:['Back among the shelves? The relic ledger has not changed since you last read it — but the dust has.'],
+        choices:[
+          {label:'Refresh me on relics.', goto:'relics'},
+          {label:'Nothing today.', goto:'farewell'} ] } }} },
+  {id:'debt-confessional', x:188, y:54, color:'#7c3936', sprite:'hollow', name:'The Confessional', role:'Debt Booth',
+    dialogue:{ start:'intro', repeat:'intro', nodes:{
+      intro:{ text:[
+        'Kneel, debtor. State the sum you cannot pay.',
+        'This is where it begins — a debt confessed, a debt recorded, a debt that will not be forgiven. Watch the booth and learn how a Hollow is made.'],
+        choices:[
+          {label:'How does a soul go Hollow?', goto:'process'},
+          {label:'Where do the unpaid go?', goto:'north'},
+          {label:'Leave the booth.', goto:'farewell'} ] },
+      process:{ text:[
+        'First the debt compounds. Then the name greys. Then the body forgets it was ever owed-to, and only remembers it owes.',
+        'A Hollow is not punished. It is simply processed — filed, like all of us, into the shape the ledger needs.'],
+        goto:'intro' },
+      north:{ text:[
+        'North. Always north, and always down — to the Shroud Vaults, where the unpaid are kept against their heirs.',
+        'You will go there too, in time. The booth has already written it.'],
+        goto:'intro' },
+      farewell:{ text:['The booth keeps your confession. It keeps everything.'], end:true } }} },
+  {id:'chapel-acolyte', x:-36, y:42, color:'#7aa7ff', sprite:'knight', name:'Acolyte Plume', role:'Vestment Keeper',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Oh — a visitor with COLOUR potential! Stand still, let me imagine you in azure.',
+        'I keep the vestments and dyes. Gold only, and Gold buys looks alone — never an ounce of strength. The Archivist will tell you the same, grumpily.'],
+        choices:[
+          {label:'Gold gets me no power?', goto:'nopower'},
+          {label:'Show me vestments.', goto:'cosmetics'},
+          {label:'Not my style.', goto:'farewell'} ] },
+      nopower:{ text:[
+        'None whatsoever. That is the whole point, darling — a Gilded Champion and a tarnished Recorded swing the very same blade.',
+        'You buy Gold with real settlement, you wear it, you turn heads at the Hearthlight. Power you must earn in RUNE, like everyone.'],
+        goto:'intro' },
+      cosmetics:{ text:[
+        'Press B at any time to open the wardrobe. Crimson, Verdant, Voidwalker — all yours, for Gold.',
+        'A soul filed correctly may as well be filed beautifully.'],
+        goto:'intro' },
+      farewell:{ text:['Come back when you crave a little colour.'], end:true },
+      again:{ text:['Reconsidered the azure? The wardrobe is one tap of B away.'],
+        choices:[
+          {label:'Remind me — Gold and power?', goto:'nopower'},
+          {label:'Still no.', goto:'farewell'} ] } }} },
+  {id:'sexton-marrow-elder', x:228, y:-104, color:'#8d9386', sprite:'knight', name:'Sexton Greave', role:'Grave-Tender',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Quiet round the stones, if you would. The Paid rest easy here — and the Unpaid only pretend to.',
+        'Two kinds of grave in Gracefall. One marked with a settled flame, one left dark. I tend both, though only one tends back.'],
+        choices:[
+          {label:'Paid and Unpaid?', goto:'graves'},
+          {label:'Why the candles?', goto:'candles'},
+          {label:'Rest in peace.', goto:'farewell'} ] },
+      graves:{ text:[
+        'A Paid grave means the debt closed before the breath did. Those sleep. Those stay sleeping.',
+        'An Unpaid grave is just a Hollow that has not stood up yet. Step lightly. Some of them are listening for their names.'],
+        goto:'intro' },
+      candles:{ text:[
+        'A lit candle is a settled account — a flame the ledger accepts in place of the soul.',
+        'When you see them gutter out east, in the Tallow House — do not relight them. Those names are screaming to stay lit.'],
+        goto:'intro' },
+      farewell:{ text:['Mind the dark stones on your way out.'], end:true },
+      again:{ text:['Still walking among my stones? The Paid have not stirred. The Unpaid... we do not discuss.'],
+        choices:[
+          {label:'Tell me of the graves again.', goto:'graves'},
+          {label:'I will go.', goto:'farewell'} ] } }} },
+  {id:'sexton-junior', x:328, y:-122, color:'#cfa982', sprite:'hollow', name:'Tender Bram', role:'Grave-Digger',
+    dialogue:{ start:'intro', repeat:'intro', nodes:{
+      intro:{ text:[
+        'Dug three new plots this morning. All Unpaid. They always are, lately.',
+        'Old Greave says not to name them while I dig. I forget sometimes. Then they move.'],
+        choices:[
+          {label:'They move?', goto:'move'},
+          {label:'Stay safe, digger.', goto:'farewell'} ] },
+      move:{ text:[
+        'Just the dirt settling. That is what Greave says. The dirt settling, upward, in the shape of a hand.',
+        'I dig the holes. The ledger fills them. I try not to think about which order it does that in.'],
+        goto:'intro' },
+      farewell:{ text:['Back to the spade. Always more plots.'], end:true } }} }
+];
 
   return {
-    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, SKINS, ASSETS,
+    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, SKINS, ASSETS, NPCS,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
     AREA2_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,

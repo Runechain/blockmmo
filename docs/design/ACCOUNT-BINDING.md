@@ -16,6 +16,14 @@ mutable display name or transient WebSocket peer id.
 - Character id: `char_` plus the first 24 hex chars of SHA-256 over
   `accountId|seasonId`.
 - Cap: one character per account key per season.
+- Season state: the realm server persists `{ id, opensAt, closesAt, mandatoryTasks }`
+  in `accounts.json`. Timestamps are real-world epoch milliseconds supplied by the
+  operator/config for this prototype.
+- Season completion: a character is marked `seasonComplete` only after every configured
+  mandatory task is recorded while the shared window is open.
+- Carry/reset: a kept character carries grind-earned `collection` and `stats` into the
+  next season. A sale transfer carries the collection to the buyer but resets stats to
+  zero; the seller's next character restarts at zero.
 - Display name: mutable label only. It is not a value address.
 - Chainwell value address: the server-issued character id for the active season.
 - Online ledger append path: exact server-issued `mine:submit` reward work only. Generic
@@ -51,6 +59,17 @@ Pre-account prototype ledgers used mutable display names as value addresses. Thi
 does not auto-migrate those balances because a display name does not prove ownership of a
 new browser credential. Operators should reset old prototype ledgers or run an explicit
 out-of-band migration before persistent/public playtests.
+
+## Season-State Assumptions
+
+- Q-F7a is intentionally not resolved here: a character whose season window closes with
+  unfinished tasks remains incomplete. No penalty, lock, or auto-reset is applied by this
+  slice.
+- Q-A1 is intentionally not resolved here: buyer/seller operations use existing prototype
+  account ids. Production identity, wallet linkage, escrow, and compliance controls remain
+  separate work.
+- Open/close windows are deterministic server configuration, not a client clock. Tests use
+  injected timestamps so carry/reset behavior is replayable without external chain calls.
 
 ## Follow-Ups
 

@@ -176,7 +176,7 @@
 <div id="levelup">
   <div class="panel">
     <h2>Hearthlight</h2>
-    <div class="gsub">Rest safely. Spend confirmed RUNE on power or forge soulbound relics.</div>
+    <div class="gsub">Rest safely. Spend confirmed RUNE on power or forge RUNE relics.</div>
     <div class="lvrow"><span>Level</span><b id="lvLevel">1</b></div>
     <div class="lvrow"><span>Spendable RUNE</span><b id="lvBal">0.00</b></div>
     <div class="lvrow"><span>Next level costs</span><b id="lvCost">30</b></div>
@@ -237,7 +237,7 @@
 const Content = window.RUNECHAIN_CONTENT;
 if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT) throw new Error('RUNECHAIN core scripts failed to load');
 const {
-  ECON, STORY, RELICS, SIGILS, SKINS, ASSETS,
+  ECON, STORY, RELICS, SIGILS, SKINS, ASSETS, NPCS,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
@@ -318,13 +318,14 @@ const Story=(function(){
         state.stepIndex=0;
         state.stepCount=0;
         say(quest()&&quest().onStart);
+        say(quest()&&quest().dialogue);
       }
     }
     updateHud();
   }
   function event(type,payload={}){
     const q=quest(), st=step();
-    if(type==='start'){ say(q&&q.onStart); updateHud(); return; }
+    if(type==='start'){ say(q&&q.onStart); say(q&&q.dialogue); updateHud(); return; }
     if(!st||!matches(st.done,type,payload))return;
     if(st.done.count){ state.stepCount++; if(state.stepCount>=st.done.count)completeStep(); }
     else completeStep();
@@ -343,6 +344,91 @@ const Story=(function(){
     return !!(st && st.done && st.done.event==='kill' && st.done.monster===key);
   }
   return {state,event,updateHud,currentQuest,currentStep,questReached,stepMatchesMonster};
+})();
+
+/* --------------------------- Dialogue subsystem -------------------------- */
+/* Branching, multi-line, repeatable NPC conversations. Data-driven from each
+   NPC's dialogue tree (see game/content.js NPCS format). Mirrors the engine-mode
+   lifecycle: open()/advance()/choose()/render()/close(). World input is paused
+   while a dialogue is open (update()/doInteract() bail on Dialogue.isOpen()). */
+const Dialogue=(function(){
+  const talked=new Set();
+  let active=null; // {npc, nodes, nodeId, line, sel}
+  function isOpen(){ return !!active; }
+  function open(npc){
+    if(active||!npc||!npc.dialogue)return;
+    const d=npc.dialogue, seen=talked.has(npc.id);
+    const entry=(seen&&d.repeat)?d.repeat:d.start;
+    talked.add(npc.id);
+    active={npc, nodes:d.nodes, nodeId:entry, line:0, sel:0};
+  }
+  function node(){ return active&&active.nodes[active.nodeId]; }
+  function atLastLine(){ const n=node(); return !n||active.line>=(n.text?n.text.length:0)-1; }
+  function goTo(id){ active.nodeId=id; active.line=0; active.sel=0; }
+  function close(){ active=null; }
+  function advance(){
+    const n=node(); if(!n)return close();
+    const lines=n.text||[];
+    if(active.line<lines.length-1){ active.line++; return; }
+    if(n.choices&&n.choices.length)return; // wait for a choice
+    if(n.goto)return goTo(n.goto);
+    close();
+  }
+  function moveSel(delta){
+    const n=node(); if(!n||!atLastLine()||!(n.choices&&n.choices.length))return;
+    const len=n.choices.length;
+    active.sel=(active.sel+delta+len)%len;
+  }
+  function choose(){
+    const n=node(); if(!n||!atLastLine()||!(n.choices&&n.choices.length))return false;
+    goTo(n.choices[active.sel].goto);
+    return true;
+  }
+  // E / Space when a dialogue is open: pick a choice if one is showing, else advance text.
+  function input(){
+    const n=node(); if(!n)return close();
+    if(atLastLine()&&n.choices&&n.choices.length){ choose(); return; }
+    advance();
+  }
+  function wrap(text,max){
+    const words=String(text).split(' '), out=[]; let line='';
+    for(const w of words){
+      const t=line?line+' '+w:w;
+      if(t.length>max){ if(line)out.push(line); line=w; } else line=t;
+    }
+    if(line)out.push(line);
+    return out;
+  }
+  function render(){
+    const n=node(); if(!n)return;
+    const boxX=40, boxW=VIEW_W-80, boxH=120, boxY=VIEW_H-boxH-18;
+    ctx.fillStyle='rgba(10,9,14,.9)'; ctx.fillRect(boxX,boxY,boxW,boxH);
+    ctx.strokeStyle='rgba(241,199,91,.85)'; ctx.lineWidth=2; ctx.strokeRect(boxX+1,boxY+1,boxW-2,boxH-2);
+    ctx.strokeStyle='rgba(241,199,91,.25)'; ctx.lineWidth=1; ctx.strokeRect(boxX+5,boxY+5,boxW-10,boxH-10);
+    const speaker=n.speaker||active.npc.name, col=active.npc.color||'#f1c75b';
+    rect(boxX+12,boxY+12,16,16,col); ctx.strokeStyle='rgba(0,0,0,.6)'; ctx.lineWidth=1; ctx.strokeRect(boxX+12,boxY+12,16,16);
+    ctx.textAlign='left'; ctx.font='bold 11px ui-monospace,monospace'; ctx.fillStyle=col;
+    ctx.fillText(speaker,boxX+36,boxY+24);
+    if(active.npc.role){ ctx.font='8px ui-monospace,monospace'; ctx.fillStyle='#9a948a'; ctx.fillText(active.npc.role,boxX+36,boxY+36); }
+    const body=(n.text&&n.text[active.line])||'';
+    ctx.font='10px ui-monospace,monospace'; ctx.fillStyle='#e8e2d4';
+    const lines=wrap(body,Math.floor((boxW-32)/6)); let ty=boxY+52;
+    for(const ln of lines){ ctx.fillText(ln,boxX+16,ty); ty+=13; }
+    const last=atLastLine(), hasChoices=last&&n.choices&&n.choices.length;
+    if(hasChoices){
+      let cy=boxY+boxH-8-n.choices.length*12;
+      for(let k=0;k<n.choices.length;k++){
+        const on=k===active.sel;
+        ctx.fillStyle=on?'#f1c75b':'#8d8678'; ctx.font=(on?'bold ':'')+'10px ui-monospace,monospace';
+        ctx.fillText((on?'> ':'  ')+n.choices[k].label,boxX+18,cy); cy+=12;
+      }
+    } else {
+      ctx.textAlign='right'; ctx.font='8px ui-monospace,monospace'; ctx.fillStyle='#9a948a';
+      ctx.fillText(last?'E / Space to end ·':'E / Space ▾',boxX+boxW-14,boxY+boxH-12);
+      ctx.textAlign='left';
+    }
+  }
+  return {isOpen,open,close,input,moveSel,render};
 })();
 
 function sigilBonuses(){
@@ -466,9 +552,9 @@ const TYPES={
   sorcerer:{key:'sorcerer',name:'Hollow Sorcerer',hp:54,dmg:12,speed:20,reward:30,aggro:125,reach:85,ranged:true,color:'#9b74ff'},
   'flying-eye':{key:'flying-eye',asset:'flying-eye',name:'Ledger Eye',hp:42,dmg:9,speed:24,reward:20,aggro:124,reach:82,ranged:true,color:'#b65a48'},
   mushroom:{key:'mushroom',asset:'mushroom',name:'Spore Debtor',hp:48,dmg:7,speed:14,reward:18,aggro:92,reach:18,color:'#9f3e45'},
-  sexton:{key:'sexton',asset:'knight',name:'Gate Sexton Marrow',short:'SEXTON',hp:96,dmg:14,speed:27,reward:34,aggro:108,reach:19,color:'#d8b36b'},
-  mempool:{key:'mempool',asset:'sorcerer',name:'Mempool Warden',short:'WARDEN',hp:92,dmg:13,speed:22,reward:42,aggro:125,reach:88,ranged:true,color:'#b88cff'},
-  tallow:{key:'tallow',asset:'sentinel',name:'Mother Tallow',short:'MOTHER TALLOW',hp:260,dmg:22,speed:20,reward:100,aggro:134,reach:28,boss:true,color:'#f1c75b',sigilName:'The Waxen Testament',sigilKey:'waxen-testament'},
+  sexton:{key:'sexton',asset:'sexton',name:'Gate Sexton Marrow',short:'SEXTON',hp:96,dmg:14,speed:27,reward:34,aggro:108,reach:19,color:'#d8b36b'},
+  mempool:{key:'mempool',asset:'mempool',name:'Mempool Warden',short:'WARDEN',hp:92,dmg:13,speed:22,reward:42,aggro:125,reach:88,ranged:true,color:'#b88cff'},
+  tallow:{key:'tallow',asset:'tallow',name:'Mother Tallow',short:'MOTHER TALLOW',hp:260,dmg:22,speed:20,reward:100,aggro:134,reach:28,boss:true,color:'#f1c75b',sigilName:'The Waxen Testament',sigilKey:'waxen-testament'},
   foreman:{key:'foreman',asset:'foreman',name:'The Debt Foreman',short:'FOREMAN',hp:200,dmg:20,speed:18,reward:68,aggro:120,reach:22,color:'#4ecbaa'},
   bifurcated:{key:'bifurcated',asset:'bifurcated',name:'Bifurcated Guard',short:'GUARD',hp:160,dmg:16,speed:20,reward:58,aggro:115,reach:20,color:'#d4a83e'},
   ledgerbound:{key:'ledgerbound',asset:'ledgerbound',name:'The Ledger-Bound',short:'LEDGER-BOUND',hp:340,dmg:24,speed:14,reward:160,aggro:140,reach:30,boss:true,color:'#a8c8ff',sigilName:'The Contested Will',sigilKey:'contested-will'},
@@ -478,9 +564,11 @@ const TYPES={
 };
 function spawnEnemy(key,x,y,gate=0,opts={}){
   const t=TYPES[key];
-  enemies.push({type:t,key:t.key,x,y,homeX:x,homeY:y,vx:0,vy:0,radius:t.boss?18:key==='hound'?9:10,
+  const enemy={type:t,key:t.key,x,y,homeX:x,homeY:y,vx:0,vy:0,radius:t.boss?18:key==='hound'?9:10,
     hp:t.hp,maxHp:t.hp,dead:false,aggroed:false,windup:0,atkCd:.6,castCd:1.5,hitFlash:0,hurt:0,roam:Math.random()*6.28,
-    gate,unlockQuest:opts.unlockQuest||t.unlockQuest||null,minHollows:opts.minHollows??t.minHollows??null});
+    gate,unlockQuest:opts.unlockQuest||t.unlockQuest||null,minHollows:opts.minHollows??t.minHollows??null};
+  enemies.push(enemy);
+  return enemy;
 }
 function initWorld(){
   enemies.length=0;
@@ -517,6 +605,38 @@ function enemyUnlocked(e){
   if(e.key==='sentinel')return progress.forged;
   return progress.hollows>=3;
 }
+function enemySpeed(e){ return e.type.speed*(e.speedMult||1); }
+function act1Boss(key){ return ACT1_GRACEFALL&&ACT1_GRACEFALL.bosses&&ACT1_GRACEFALL.bosses[key]; }
+function sayAct1(lines){
+  (lines||[]).forEach(t=>log('<b style="color:#f1c75b">Gracefall:</b> '+esc(t)));
+}
+function applyAct1BossBehavior(e,dt,d,toP){
+  if(!act1Boss(e.key))return;
+  e.behaviorT=(e.behaviorT||0)+dt;
+  if(e.key==='sexton'&&e.hp<=e.maxHp*.5&&!e.enraged){
+    e.enraged=true; e.speedMult=1.28;
+    log('Gate Sexton Marrow enrages; ledger-stamp ink pools spread underfoot.');
+  }
+  if(e.key==='mempool'){
+    e.castRate=Math.max(.9,2-e.behaviorT*.018);
+    if(e.hp<=e.maxHp*.65&&!e.addsSpawned){
+      e.addsSpawned=true;
+      for(let i=0;i<2;i++){
+        const add=spawnEnemy('hollow',e.x+(i?24:-24),e.y+(i?22:-22),0,{unlockQuest:'q04'});
+        add.aggroed=true; add.minHollows=null;
+      }
+      log('The Mempool Warden batch-rejects the queue; Pending Hollows spill out.');
+    }
+  }
+  if(e.key==='tallow'&&e.hp<=e.maxHp*.5&&!e.phase2){
+    e.phase2=true; e.speedMult=1.18; e.castRate=1.15;
+    log('Mother Tallow smothers the chapel in phase 2 smoke.');
+  }
+  if(e.key==='tallow'&&e.phase2&&d<e.type.aggro&&e.castCd<=0){
+    e.castCd=e.castRate||1.15;
+    spawnProjectile(e,toP);
+  }
+}
 function hitEnemy(e, amount){
   if(e.dead)return;
   e.aggroed=true; e.hp=Math.max(0,e.hp-amount); e.hurt=.16; e.hitFlash=.12;
@@ -532,10 +652,13 @@ function killEnemy(e){
   Story.event('kill',{key:e.key});
   log('<b>'+esc(e.type.name)+'</b> slain. '+(localReward?'+'+reward.toFixed(2)+' RUNE pending.':'RUNE proof requested from the realm server.'));
   if(e.type.boss){
+    const boss=act1Boss(e.key);
+    if(boss&&boss.defeatLines)sayAct1(boss.defeatLines);
     const rune={id:e.key+'-'+Date.now(),name:e.type.sigilName||e.type.name+' Sigil',key:e.type.sigilKey||null,buff:e.type.sigilKey?0:(e.type.sigilBuff||12)};
     Chain.mintGreatRune(valueAddress(),rune);
     Story.event('greatRune',{rune:rune.id});
     lootFlash('Boss Sigil sealed<br><small>'+esc(rune.name)+'</small>');
+    if(e.key==='tallow'&&northPathUnlocked())log('<b style="color:#f1c75b">North path opened:</b> Shroud Vaults.');
   }
 }
 function updateEnemies(dt){
@@ -562,7 +685,7 @@ function updateEnemies(dt){
       const hd=Math.hypot(e.x-e.homeX,e.y-e.homeY);
       if(hd>3){
         const n=norm(e.homeX-e.x,e.homeY-e.y);
-        e.x+=n.x*e.type.speed*.45*dt; e.y+=n.y*e.type.speed*.45*dt;
+        e.x+=n.x*enemySpeed(e)*.45*dt; e.y+=n.y*enemySpeed(e)*.45*dt;
       } else {
         e.roam+=dt;
         e.x=e.homeX+Math.cos(e.roam*.7)*4;
@@ -572,16 +695,17 @@ function updateEnemies(dt){
     }
 
     const toP=norm(player.x-e.x,player.y-e.y);
+    applyAct1BossBehavior(e,dt,d,toP);
     if(e.type.ranged){
-      if(d>78){ e.x+=toP.x*e.type.speed*dt; e.y+=toP.y*e.type.speed*dt; }
-      else if(d<44){ e.x-=toP.x*e.type.speed*dt; e.y-=toP.y*e.type.speed*dt; }
-      if(d<e.type.reach && e.castCd<=0){ e.castCd=2.0; spawnProjectile(e,toP); }
+      if(d>78){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
+      else if(d<44){ e.x-=toP.x*enemySpeed(e)*dt; e.y-=toP.y*enemySpeed(e)*dt; }
+      if(d<e.type.reach && e.castCd<=0){ e.castCd=e.castRate||2.0; spawnProjectile(e,toP); }
       continue;
     }
     const reach=e.type.reach;
     if(d>reach+3){
       const crowdHold=attackers>2 && d<42 && !e.type.boss;
-      if(!crowdHold){ e.x+=toP.x*e.type.speed*dt; e.y+=toP.y*e.type.speed*dt; }
+      if(!crowdHold){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
     } else {
       attackers++;
       if(e.windup>0){
@@ -650,6 +774,14 @@ addEventListener('keydown',e=>{
   if(!keys[e.code]&&!e.repeat)pressed[e.code]=true;
   keys[e.code]=true;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if(Dialogue.isOpen()){
+    if(e.repeat)return;
+    if(e.code==='KeyE'||e.code==='Space')Dialogue.input();
+    else if(e.code==='ArrowUp'||e.code==='KeyW')Dialogue.moveSel(-1);
+    else if(e.code==='ArrowDown'||e.code==='KeyS')Dialogue.moveSel(1);
+    else if(e.code==='Escape')Dialogue.close();
+    return;
+  }
   if((e.code==='Space'||e.code==='KeyL'||e.code==='KeyJ')&&!e.repeat){ e.preventDefault(); doAttack(); }
   if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&!e.repeat)doDash();
   if(e.code==='KeyQ'&&!e.repeat)targetNearest();
@@ -710,7 +842,7 @@ const engineApi={
   onExit(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('exit',{id}); return; } log('Stage cleared ('+id+').'); exitEngineMode(); },
   onCreatureDefeated(){}, onWaveSpawn(w){ if(w&&w.id)log('Wave incoming: '+w.id); },
   onZoneCleared(id){ log('Safe ground secured: '+id); }, onMeleeHit(){},
-  onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from); },
+  onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from,m&&m.duelId); },
   onDuelResult(r){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('duel',r); return; } log('Duel: '+((r&&r.reason)||'over')); },
   onBossComplete(script){ const e=bossEncounterEnemy; log((script&&script.name||'The boss')+' is overcome.'); endBossSequence(); if(e&&!e.dead)killEnemy(e); } };
 function engineInput(){
@@ -750,10 +882,10 @@ function updateEngineMode(dt){
 /* Segment sequencer (F3): chains play-styles into one boss encounter, above the mode manager. */
 /* F2.3: real-time battlefield initiates a PvP encounter (rc:pvp handshake); on accept,
    both combatants transition into the turn-based mode to resolve it. */
-function startTurnDuel(peerName){
+function startTurnDuel(peerName, duelId){
   if(state.mode!=='battlefield'||!RCEngine||!RCEngine.createTurnBasedMode)return;
   const ep=engineApi.player; player.hp=Math.round(ep.hp); player.sta=ep.sta;
-  const enc={id:'pvp-duel',name:'Duel',peerId:peerName||'stub-rival',opponent:{name:(peerName||'Rival')+' Recorded',hp:90,attack:11,defense:1,color:'#6f7db0',sprite:'phantom'}};
+  const enc={id:duelId||'pvp-duel',name:'Duel',peerId:peerName||'stub-rival',duelId:duelId||null,opponent:{name:(peerName||'Rival')+' Recorded',hp:90,attack:11,defense:1,color:'#6f7db0',sprite:'phantom'}};
   const mode=turnbasedMode=RCEngine.createTurnBasedMode(enc);
   modeManager.setMode(mode, ctx, engineApi); state.mode='turnbased'; Net.updatePeers();
   log('Settling accounts — a turn-based duel begins. (T to leave)');
@@ -873,7 +1005,7 @@ document.querySelectorAll('.statbtn').forEach(b=>b.addEventListener('click',()=>
 document.getElementById('lvclose').onclick=closeGrace;
 function renderRelics(sp){
   const list=document.getElementById('itemlist');
-  list.innerHTML='<div class="gsub">Forge soulbound RUNE relics</div>';
+  list.innerHTML='<div class="gsub">Forge RUNE relics</div>';
   for(const it of RELICS){
     const own=ownedItem(it.id);
     const row=document.createElement('div'); row.className='itemrow';
@@ -1151,6 +1283,7 @@ function update(dt){
   if(state.mode==='sequencer'){ if(bossSeq)updateBossSequence(dt); return; }
   if(state.mode!=='town'){ if(modeManager)updateEngineMode(dt); return; }
   syncMouseWorld();
+  if(state.started&&Dialogue.isOpen()){ updateHud(); return; }
   if(state.started){
     if(state.introMercy>0)state.introMercy-=dt;
     updatePlayer(dt);
@@ -1231,12 +1364,14 @@ function drawTerrain(){
 }
 function drawDecor(){
   drawChapel();
+  drawNorthPath();
   for(const f of FENCES)drawFence(f);
   for(const r of RUINS)drawRuin(r);
   for(const g of GRAVES)drawGrave(g);
   for(const b of BRAMBLES)drawBramble(b);
   for(const t of TREES)drawTree(t);
   for(const c of CANDLES)drawCandle(c);
+  drawNpcs();
   drawInteractables();
   const g=worldToScreen(GRACE.x,GRACE.y);
   ctx.globalAlpha=.14; ctx.fillStyle='#f1c75b'; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS*1.25,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
@@ -1247,6 +1382,24 @@ function drawDecor(){
   if(Math.sin(state.time*5)>0)rect(g.x-2,g.y-43,4,7,'#fff1a8');
   drawRoadSign(116,-44,'LEDGER');
   drawRoadSign(514,44,'EAST');
+}
+function northPathUnlocked(){
+  const u=ACT1_GRACEFALL&&ACT1_GRACEFALL.northPathUnlock;
+  return Story.questReached((u&&u.quest)||'q06');
+}
+function drawNorthPath(){
+  const unlocked=northPathUnlocked();
+  const gate=worldToScreen(930,-92);
+  rect(gate.x-28,gate.y-10,56,20,unlocked?'#253f50':'#4b332f');
+  rect(gate.x-22,gate.y-20,44,10,unlocked?'#6f8fa0':'#6d4a32');
+  ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillStyle=unlocked?'#b8d6e7':'#9f8b70';
+  ctx.fillText(unlocked?'NORTH: SHROUD VAULTS':'NORTH SEALED',gate.x,gate.y-24);
+  if(unlocked){
+    ctx.globalAlpha=.22; ctx.fillStyle='#8ec7ff';
+    ctx.beginPath(); ctx.ellipse(gate.x,gate.y+10,46,14,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
 }
 function drawChapel(){
   const base=worldToScreen(-92,-118);
@@ -1344,8 +1497,13 @@ const FENCES=[
 ];
 const INTERACTABLES=[
   {id:'hearth-registry',target:'hearth-registry',quest:'q01',x:-20,y:10,label:'REGISTRY',kind:'stone'},
+  {id:'chaplain',target:'act1-town-beat',quest:'q01',x:34,y:-28,label:'CHAPLAIN',kind:'stone',townBeat:'recorder-chaplain',repeat:true},
+  {id:'acolyte',target:'act1-town-beat',quest:'q01',x:-72,y:42,label:'ACOLYTE',kind:'stone',townBeat:'chapel-acolyte',repeat:true},
   {id:'bell-west',target:'verification-bell',quest:'q02',x:310,y:-48,label:'BELL',kind:'bell'},
   {id:'bell-east',target:'verification-bell',quest:'q02',x:414,y:40,label:'BELL',kind:'bell'},
+  {id:'grave-tender',target:'act1-town-beat',quest:'q02',x:174,y:114,label:'GRAVES',kind:'stone',townBeat:'sexton-grave-tenders',repeat:true},
+  {id:'archivist',target:'act1-town-beat',quest:'q03',x:-112,y:-76,label:'ARCHIVE',kind:'tablet',townBeat:'scribe-archivist',repeat:true},
+  {id:'confessional',target:'act1-town-beat',quest:'q04',x:246,y:92,label:'CONFESS',kind:'stone',townBeat:'debt-confessional',repeat:true},
   {id:'tablet-a',target:'pending-tablet',quest:'q04',x:502,y:-42,label:'PENDING',kind:'tablet'},
   {id:'tablet-b',target:'pending-tablet',quest:'q04',x:560,y:30,label:'PENDING',kind:'tablet'},
   {id:'tablet-c',target:'pending-tablet',quest:'q04',x:620,y:-52,label:'PENDING',kind:'tablet'},
@@ -1367,6 +1525,7 @@ const INTERACTABLES=[
 // which the foreman weakening gate in startBossEncounter() reads.
 function interactionKey(i){ return i.id==='margin-scroll' ? 'q06:margin-scroll' : (Story.state.activeQuestId+':'+i.id); }
 function interactableActive(i){
+  if(i.townBeat) return Story.questReached(i.quest);
   // Optional side-interaction: light up whenever q06 is reached and not yet inscribed.
   if(i.id==='margin-scroll') return Story.questReached('q06') && !progress.interactions.has(interactionKey(i));
   const st=Story.currentStep();
@@ -1381,13 +1540,32 @@ function nearestInteractable(){
   }
   return bestD<36?best:null;
 }
+function nearestNpc(){
+  let best=null, bestD=999;
+  for(const n of (NPCS||[])){
+    const d=Math.hypot(player.x-n.x,player.y-n.y);
+    if(d<bestD){ best=n; bestD=d; }
+  }
+  return bestD<40?best:null;
+}
 function doInteract(){
-  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen)return;
+  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||Dialogue.isOpen())return;
   const i=nearestInteractable();
   if(!i)return;
-  progress.interactions.add(interactionKey(i));
-  Story.event('interact',{target:i.target,id:i.id});
+  if(!i.repeat)progress.interactions.add(interactionKey(i));
+  if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
   log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
+  const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
+  const lines=beat?beat.lines:(ACT1_GRACEFALL&&ACT1_GRACEFALL.interactions&&ACT1_GRACEFALL.interactions[i.target]);
+  sayAct1(lines);
+  if(i){
+    progress.interactions.add(interactionKey(i));
+    Story.event('interact',{target:i.target,id:i.id});
+    log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
+    return;
+  }
+  const n=nearestNpc();
+  if(n)Dialogue.open(n);
 }
 function drawInteractables(){
   for(const i of INTERACTABLES){
@@ -1408,6 +1586,25 @@ function drawInteractables(){
       ctx.fillText('E',s.x,s.y-24);
     }
   }
+}
+function drawNpcs(){
+  const near=(state.mode==='town'&&!Dialogue.isOpen())?nearestNpc():null;
+  for(const n of (NPCS||[])){
+    const s=worldToScreen(n.x,n.y), col=n.color||'#cfa982';
+    const bob=Math.round(Math.sin(state.time*2+n.x)*1);
+    ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fillRect(s.x-8,s.y+1,16,4);
+    rect(s.x-7,s.y-18+bob,14,18,'#2a2620');           // robe / body
+    rect(s.x-6,s.y-17+bob,12,6,col);                  // collar accent
+    rect(s.x-4,s.y-27+bob,8,9,'#cfa982');             // head
+    rect(s.x-4,s.y-30+bob,8,4,col);                   // hood / hat
+    ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#d8cbae';
+    ctx.fillText(n.name,s.x,s.y-34+bob);
+    if(near===n){
+      ctx.fillStyle='#f1c75b'; ctx.font='bold 9px ui-monospace,monospace';
+      ctx.fillText('E',s.x,s.y-44+bob);
+    }
+  }
+  ctx.textAlign='left';
 }
 function drawShadow(x,y,w,h){
   const s=worldToScreen(x,y); ctx.fillStyle='rgba(0,0,0,.34)'; ctx.fillRect(s.x-w/2,s.y-h/2,w,h);
@@ -1584,6 +1781,7 @@ function draw(){
   drawTargetLine();
   drawParticles();
   drawAim();
+  if(Dialogue.isOpen())Dialogue.render();
 }
 
 /* ------------------------------- HUD ------------------------------------ */
@@ -1607,13 +1805,18 @@ function updateHud(){
   Story.updateHud();
   updateWallet();
   const prompt=document.getElementById('prompt');
+  if(Dialogue.isOpen()){ prompt.style.display='none'; }
+  else{
   const bossEnc=state.mode==='town'?nearestBossEncounter():null;
   const near=nearestInteractable();
+  const npc=state.mode==='town'?nearestNpc():null;
   if(bossEnc){ prompt.style.display='block'; prompt.innerHTML='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>'; }
   else if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
+  else if(npc){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to speak with <b>'+esc(npc.name)+'</b>'; }
   else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
   else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }
   else prompt.style.display='none';
+  }
   const boss=enemies.find(e=>e.type.boss&&!e.dead);
   const box=document.getElementById('bossbar');
   if(boss&&(boss.hp<boss.maxHp||dist(boss,player)<130||player.lock===boss)){

@@ -28,6 +28,27 @@ const DEFAULT_PORT = process.env.PORT || 8080;
 const DEFAULT_SEASON_ID = 'preseason-1';
 const ACCOUNT_CREDENTIAL_TYPE = 'browser-p256-v1';
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
+const AUTHORITY_TIERS = Object.freeze({
+  authoritative: Object.freeze([
+    'economy-state',
+    'rune-credit-debit',
+    'leveling',
+    'death',
+    'character-season-state',
+    'pvp-outcome',
+  ]),
+  validated: Object.freeze([
+    'solo-segment-outcome',
+  ]),
+  nonAuthoritative: Object.freeze([
+    'movement-relay',
+  ]),
+});
+const SERVER_ARBITRATED_MESSAGE_TYPES = new Set([
+  'rc:pvp:hit',
+  'rc:pvp:forfeit',
+  'rc:pvp:result',
+]);
 
 function createRealmServer(options = {}) {
   const port = options.port == null ? DEFAULT_PORT : options.port;
@@ -42,6 +63,7 @@ function createRealmServer(options = {}) {
   const quiet = !!options.quiet;
   const clients = new Set();
   const pendingMining = new Map();
+  const validatedOutcomes = new Set();
   const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, seasonId, now });
   let saveTimer = null;
   let masterChain = loadLedger();
@@ -166,12 +188,24 @@ function createRealmServer(options = {}) {
         if (!account.ok) return account;
         return issueSpendMiningWork(client, message.source);
       }
+      case 'segment:complete': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        return issueValidatedOutcomeMiningWork(client, message.outcome);
+      }
       case 'mine:submit': {
         const account = requireAccount(client);
         if (!account.ok) return account;
         return acceptMinedWork(client, message.candidateId, message.block);
       }
       default:
+        if (message && SERVER_ARBITRATED_MESSAGE_TYPES.has(message.t)) {
+          const account = requireAccount(client);
+          if (!account.ok) return account;
+          const result = blockError('authoritative_message_requires_server', 'PvP outcomes are authoritative and must be resolved by the server.');
+          send(client, { t: 'authority:error', error: result.error });
+          return result;
+        }
         return { ok: false, error: { code: 'unknown_message_type', message: 'Unknown message type.' } };
     }
   }
@@ -330,6 +364,45 @@ function createRealmServer(options = {}) {
     }));
   }
 
+  function issueValidatedOutcomeMiningWork(client, outcome) {
+    const validated = validateSoloSegmentOutcome(client, outcome);
+    if (!validated.ok) {
+      send(client, { t: 'mine:error', error: validated.error });
+      return validated;
+    }
+    const replayKey = validated.outcomeKey;
+    if (validatedOutcomes.has(replayKey)) {
+      const result = blockError('segment_outcome_replayed', 'That solo segment outcome has already been submitted for ledger validation.');
+      send(client, { t: 'mine:error', error: result.error });
+      return result;
+    }
+    const reward = resolveRewardSource(validated.source);
+    if (!reward.ok) {
+      send(client, { t: 'mine:error', error: reward.error });
+      return reward;
+    }
+    validatedOutcomes.add(replayKey);
+    const issued = issueMiningCandidate(client, (candidateId) => ({
+      to: client.character.address,
+      amt: reward.amt,
+      note: 'validated outcome: ' + reward.note,
+      cur: 'RUNE',
+      id: candidateId,
+      auth: {
+        type: 'server-validated-outcome',
+        tier: 'validated',
+        source: reward.sourceKey,
+        segmentId: validated.segmentId,
+        mode: validated.mode,
+        accountId: client.accountId,
+        characterId: client.character.id,
+        seasonId,
+      },
+    }));
+    if (!issued.ok) validatedOutcomes.delete(replayKey);
+    return issued;
+  }
+
   // Build a server-issued mining candidate from a tx and hand the PoW work to the client.
   function issueMiningCandidate(client, buildTx) {
     cleanupMiningCandidates();
@@ -484,6 +557,38 @@ function createRealmServer(options = {}) {
       };
     }
     return blockError('invalid_reward_source', 'Unsupported reward source type.');
+  }
+
+  function validateSoloSegmentOutcome(client, outcome) {
+    if (!outcome || typeof outcome !== 'object') return blockError('invalid_segment_outcome', 'Solo segment outcome is required.');
+    const mode = sanitizeText(outcome.mode || '', 24);
+    if (mode !== 'platformer' && mode !== 'turnbased') {
+      return blockError('invalid_segment_outcome', 'Only solo platformer and turn-based segment outcomes are validated by this path.');
+    }
+    const segmentId = sanitizeText(outcome.segmentId || '', 80);
+    if (!segmentId) return blockError('invalid_segment_outcome', 'Solo segment outcome must include a segment id.');
+    const proof = outcome.proof;
+    if (!proof || typeof proof !== 'object' || proof.completed !== true) {
+      return blockError('invalid_segment_outcome', 'Solo segment outcome proof must show completion.');
+    }
+    const source = outcome.source;
+    if (!source || typeof source !== 'object') return blockError('invalid_segment_outcome', 'Solo segment outcome must include a reward source.');
+    if (source.type === 'enemy') {
+      const kills = Array.isArray(proof.kills) ? proof.kills : [];
+      const matched = kills.some((kill) => kill && kill.key === source.key && (kill.count == null || kill.count >= 1));
+      if (!matched) return blockError('invalid_segment_outcome', 'Enemy reward outcomes require matching kill proof.');
+    } else if (source.type === 'story') {
+      if (proof.questId !== source.questId) return blockError('invalid_segment_outcome', 'Story reward outcomes require matching quest proof.');
+    } else {
+      return blockError('invalid_segment_outcome', 'Unsupported solo segment reward source.');
+    }
+    return {
+      ok: true,
+      mode,
+      segmentId,
+      source: clone(source),
+      outcomeKey: [seasonId, client.character.id, mode, segmentId, JSON.stringify(source)].join('|'),
+    };
   }
 
   function resolveSpendSource(source, address) {
@@ -863,6 +968,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  AUTHORITY_TIERS,
   createRealmServer,
   createAccountRegistry,
   decodeFrame,

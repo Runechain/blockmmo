@@ -1621,14 +1621,18 @@ function doInteract(){
 }
 /* ---- World-to-interior portals (issue #19): walk to an entrance, press E to descend -------- */
 const PORTALS=(WORLD_PORTALS||[]);
+// Story-gate (folded in from #78): a portal with an `unlock` quest stays closed until it's reached,
+// so the entrance is an earned reward, not a hole in the wall. No `unlock` => always open.
+function portalUnlocked(p){ return !p.unlock || Story.questReached(p.unlock); }
 function nearestPortal(){
   let best=null, bestD=30;
-  for(const p of PORTALS){ const d=Math.hypot(player.x-p.x,player.y-p.y); if(d<bestD){ best=p; bestD=d; } }
+  for(const p of PORTALS){ if(!portalUnlocked(p))continue; const d=Math.hypot(player.x-p.x,player.y-p.y); if(d<bestD){ best=p; bestD=d; } }
   return best;
 }
 function drawPortals(){
   const near=(state.mode==='town'&&!Dialogue.isOpen())?nearestPortal():null;
   for(const p of PORTALS){
+    if(!portalUnlocked(p))continue; // unopened until its quest is reached
     const s=worldToScreen(p.x,p.y), cleared=progress.portals.has(p.id);
     // a dark cave mouth set into a stone arch
     rect(s.x-13,s.y-4,26,8,'#3b3f3a');

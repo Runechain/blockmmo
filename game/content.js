@@ -576,9 +576,11 @@ const AREA1_ENCOUNTERS={
    platformer interior loads inline; reach its exit (or leave via T) and re-emerge at the same
    spot. Reuses the segment-free engine path (host: enterPortal/exitEngineMode) and validated
    platformer geometry — bespoke interior layouts are a follow-up. `level` must expose an `exit`
-   so the player can always climb back out. */
+   so the player can always climb back out. `unlock` (optional) story-gates the entrance: the
+   portal only opens once that quest is reached, so descending is an EARNED, diegetic reward
+   (folded in from the #78 design) rather than a bare hole in the wall. Omit it = always open. */
 const WORLD_PORTALS=[
-  { id:'undercroft', x:-250, y:-188, label:'the Sunken Undercroft', kind:'cave',
+  { id:'undercroft', x:-250, y:-188, label:'the Sunken Undercroft', kind:'cave', unlock:'q02',
     intro:'A stair drops beneath the parish into a flooded receipts-tunnel.',
     level:PLAT_LEVEL }
 ];

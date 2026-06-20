@@ -26,9 +26,22 @@ for (const p of PORTALS) {
 }
 
 // Host wiring in index.html.
-for (const sym of ['WORLD_PORTALS', 'progress.portals', 'function enterPortal', 'function nearestPortal', 'function drawPortals', 'activePortal']) {
+// Story-gating (folded in from #78): a portal may carry an `unlock` quest; any unlock must
+// reference a real quest, and at least one portal should be story-gated so entry is earned.
+const questIds = new Set((content.STORY.quests || []).map((q) => q.id));
+for (const p of PORTALS) {
+  if (p.unlock) assert(questIds.has(p.unlock), p.id + ' unlock must reference a real quest: ' + p.unlock);
+}
+assert(PORTALS.some((p) => p.unlock), 'at least one portal should be story-gated (earned entry)');
+
+for (const sym of ['WORLD_PORTALS', 'progress.portals', 'function enterPortal', 'function nearestPortal', 'function drawPortals', 'activePortal', 'function portalUnlocked']) {
   assert(index.includes(sym), 'index.html must wire ' + sym);
 }
+// The story-gate must actually gate discovery + entry, and both nearestPortal and drawPortals
+// must skip a locked portal.
+assert(/Story\.questReached\(p\.unlock\)/.test(index), 'portalUnlocked must consult Story.questReached(p.unlock)');
+assert((index.match(/if\(!portalUnlocked\(p\)\)continue/g) || []).length >= 2,
+  'both nearestPortal and drawPortals must skip locked portals');
 // doInteract descends through a nearby portal.
 assert(/enterPortal\(portal\)/.test(index), 'doInteract must call enterPortal for a nearby portal');
 assert(/drawPortals\(\)/.test(index), 'render loop must call drawPortals()');

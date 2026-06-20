@@ -58,8 +58,9 @@
   #log div{display:inline-block;max-width:100%;margin:0 0 5px;padding:5px 7px;background:rgba(7,8,10,.64);
     border:1px solid rgba(241,199,91,.25);opacity:0;animation:logfade 4.6s forwards}
   @keyframes logfade{0%{opacity:0;transform:translateY(-5px)}8%{opacity:1;transform:none}82%{opacity:1}100%{opacity:0}}
-  #prompt{bottom:78px;left:50%;transform:translateX(-50%);display:none;background:var(--panel);border:2px solid var(--gold);
-    box-shadow:0 0 0 2px #050607;padding:7px 12px;font-size:12px;color:var(--gold);text-align:center}
+  #prompt{bottom:78px;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none;background:var(--panel);border:2px solid var(--gold);
+    box-shadow:0 0 0 2px #050607;padding:7px 12px;font-size:12px;color:var(--gold);text-align:center;transition:opacity .15s,transform .15s}
+  #prompt.on{opacity:1;transform:translateX(-50%) translateY(-4px);pointer-events:auto}
   #bossbar{display:none;left:50%;top:16px;transform:translateX(-50%);width:min(520px,58vw);text-align:center;
     color:var(--gold);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
   #bossbar .bar{height:12px;margin-top:5px;background:#170909;border-color:#050607}
@@ -104,6 +105,7 @@
   button:hover:not(:disabled){border-color:var(--gold);background:#222820}
   button:disabled{opacity:.42;cursor:default}
   button:focus-visible, input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  button:active{transform:translateY(1px);filter:brightness(.9)}
   @keyframes low-hp-pulse{
     0%{filter:brightness(1)}
     50%{filter:brightness(1.4)}
@@ -547,6 +549,7 @@ function hurtPlayer(amount){
   if(player.hp<=0){
     player.dead=true;
     document.getElementById('death').style.display='flex';
+    document.getElementById('respawn').focus();
     log('You died. Hearthlight will reset your body, not the chain.');
   }
 }
@@ -987,6 +990,7 @@ function openGrace(){
   state.graceOpen=true; player.hp=player.maxHp; player.sta=player.maxSta;
   Story.event('visit',{site:'hearthlight'});
   document.getElementById('levelup').style.display='flex';
+  document.getElementById('lvclose').focus();
   refreshGrace();
 }
 function closeGrace(){ state.graceOpen=false; document.getElementById('levelup').style.display='none'; }
@@ -1035,7 +1039,9 @@ function forgeRelic(it){
 }
 function openWardrobe(){
   if(!state.started||player.dead)return;
-  state.wardrobeOpen=true; document.getElementById('wardrobe').style.display='flex'; refreshWardrobe();
+  state.wardrobeOpen=true; document.getElementById('wardrobe').style.display='flex';
+  document.getElementById('wclose').focus();
+  refreshWardrobe();
 }
 function closeWardrobe(){ state.wardrobeOpen=false; document.getElementById('wardrobe').style.display='none'; }
 document.getElementById('wclose').onclick=closeWardrobe;
@@ -1953,21 +1959,24 @@ function updateHud(){
   Story.updateHud();
   updateWallet();
   const prompt=document.getElementById('prompt');
-  if(Dialogue.isOpen()){ prompt.style.display='none'; }
+  if(Dialogue.isOpen()){ prompt.classList.remove('on'); }
   else{
-  const bossEnc=state.mode==='town'?nearestBossEncounter():null;
-  const near=nearestInteractable();
-  const lore=state.mode==='town'?nearestLore():null;
-  const pz=state.mode==='town'?nearestPuzzleTarget():null;
-  const npc=state.mode==='town'?nearestNpc():null;
-  if(bossEnc){ prompt.style.display='block'; prompt.innerHTML='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>'; }
-  else if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
-  else if(lore){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to examine <b>'+esc(lore.title)+'</b>'; }
-  else if(pz){ prompt.style.display='block'; prompt.innerHTML=pz.clue?('Press <b>E</b> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <b>E</b> to stamp <b>'+esc(pz.node.label)+'</b>'); }
-  else if(npc){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to speak with <b>'+esc(npc.name)+'</b>'; }
-  else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
-  else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }
-  else prompt.style.display='none';
+    const bossEnc=state.mode==='town'?nearestBossEncounter():null;
+    const near=nearestInteractable();
+    const lore=state.mode==='town'?nearestLore():null;
+    const pz=state.mode==='town'?nearestPuzzleTarget():null;
+    const npc=state.mode==='town'?nearestNpc():null;
+    let html = '';
+    if(bossEnc) html='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>';
+    else if(near) html='Press <b>E</b> - '+esc(near.label);
+    else if(lore) html='Press <b>E</b> to examine <b>'+esc(lore.title)+'</b>';
+    else if(pz) html=pz.clue?('Press <b>E</b> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <b>E</b> to stamp <b>'+esc(pz.node.label)+'</b>');
+    else if(npc) html='Press <b>E</b> to speak with <b>'+esc(npc.name)+'</b>';
+    else if(nearGrace()&&!state.graceOpen&&!player.dead) html='Safe Hearthlight - press <b>G</b> to rest, level, forge';
+    else if(player.lock&&!player.lock.dead) html='Target: <b>'+esc(player.lock.type.name)+'</b>';
+
+    if(html){ if(prompt.innerHTML!==html)prompt.innerHTML=html; prompt.classList.add('on'); }
+    else prompt.classList.remove('on');
   }
   const boss=enemies.find(e=>e.type.boss&&!e.dead);
   const box=document.getElementById('bossbar');
@@ -2017,6 +2026,7 @@ initWorld();
 Story.updateHud();
 Net.updatePeers();
 updateHud();
+document.getElementById('name').focus();
 </script>
 </body>
 </html>

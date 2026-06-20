@@ -904,14 +904,19 @@ const engineApi={
     for(let x=ox-dw; x<viewW; x+=dw) ctx.drawImage(a.img, 0,0,a.w,a.h, Math.round(x),0,dw,dh);
     return true;
   } },
-  net:{ id:'local', _h:{}, on(t,fn){ (this._h[t]||(this._h[t]=[])).push(fn); return ()=>{}; },
-    send(m){ if(m&&m.t==='rc:pvp:challenge'){ const h=this._h; setTimeout(()=>{ (h['rc:pvp:accept']||[]).forEach(fn=>fn({t:'rc:pvp:accept',duelId:m.duelId,from:'stub-rival',to:m.from})); }, 350); } } },
+  net:{ id:'local', _h:{},
+    on(t,fn){ if(window.Net&&Net.onGameMessage)return Net.onGameMessage(t,fn); (this._h[t]||(this._h[t]=[])).push(fn); return ()=>{}; },
+    send(m){
+      if(window.Net&&Net.sendGameMessage&&Net.sendGameMessage(m))return true;
+      if(m&&m.t==='rc:pvp:challenge'){ const h=this._h; const duelId=m.duelId||('stub-duel-'+Date.now().toString(36)); setTimeout(()=>{ (h['rc:pvp:accept']||[]).forEach(fn=>fn({t:'rc:pvp:accept',duelId,from:'stub-rival',to:m.from||this.id,actorPeerId:this.id,turn:1,state:null})); }, 350); }
+      return false;
+    } },
   chain:{}, log:(m)=>log(m),
   onBossTrigger(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('boss',{id}); return; } log('A boss stirs ('+id+'). Returning to the parish.'); exitEngineMode(); },
   onExit(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('exit',{id}); return; } log('Stage cleared ('+id+').'); exitEngineMode({completed:true}); },
   onCreatureDefeated(){}, onWaveSpawn(w){ if(w&&w.id)log('Wave incoming: '+w.id); },
   onZoneCleared(id){ log('Safe ground secured: '+id); }, onMeleeHit(){},
-  onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from,m&&m.duelId); },
+  onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from,m&&m.duelId,m); },
   onDuelResult(r){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('duel',r); return; } log('Duel: '+((r&&r.reason)||'over')); },
   onBossComplete(script){ const e=bossEncounterEnemy; log((script&&script.name||'The boss')+' is overcome.'); endBossSequence(); if(e&&!e.dead)killEnemy(e); } };
 function engineInput(){
@@ -973,10 +978,10 @@ function updateEngineMode(dt){
 /* Segment sequencer (F3): chains play-styles into one boss encounter, above the mode manager. */
 /* F2.3: real-time battlefield initiates a PvP encounter (rc:pvp handshake); on accept,
    both combatants transition into the turn-based mode to resolve it. */
-function startTurnDuel(peerName, duelId){
+function startTurnDuel(peerName, duelId, serverFrame){
   if(state.mode!=='battlefield'||!RCEngine||!RCEngine.createTurnBasedMode)return;
   const ep=engineApi.player; player.hp=Math.round(ep.hp); player.sta=ep.sta;
-  const enc={id:duelId||'pvp-duel',name:'Duel',peerId:peerName||'stub-rival',duelId:duelId||null,opponent:{name:(peerName||'Rival')+' Recorded',hp:90,attack:11,defense:1,color:'#6f7db0',sprite:'phantom'}};
+  const enc={id:duelId||'pvp-duel',name:'Duel',peerId:peerName||'stub-rival',duelId:duelId||null,actorPeerId:serverFrame&&serverFrame.actorPeerId,turn:serverFrame&&serverFrame.turn,state:serverFrame&&serverFrame.state,opponent:{name:(peerName||'Rival')+' Recorded',hp:90,attack:11,defense:1,color:'#6f7db0',sprite:'phantom'}};
   const mode=turnbasedMode=RCEngine.createTurnBasedMode(enc);
   modeManager.setMode(mode, ctx, engineApi); state.mode='turnbased'; Net.updatePeers();
   log('Settling accounts — a turn-based duel begins. (T to leave)');
@@ -1173,6 +1178,7 @@ function flashBar(id){ const el=document.getElementById(id); el.style.filter='br
 const Net=(function(){
   let ws=null, connected=false, accountReady=false, accountCredential=null, id=Math.random().toString(36).slice(2,8), sendTimer=0, activeWork=null, submittedWork=null, awaitingWork=false, pendingSource=null;
   const rewardQueue=[];
+  const gameHandlers={};
   function credentialPayload(){
     return {
       type: accountCredential.type,
@@ -1190,6 +1196,20 @@ const Net=(function(){
     clearRewardWork();
     log(message);
     try{ ws.close(); }catch(_){}
+  }
+  function onGameMessage(type, fn){
+    (gameHandlers[type]||(gameHandlers[type]=[])).push(fn);
+    return ()=>{ gameHandlers[type]=(gameHandlers[type]||[]).filter(handler=>handler!==fn); };
+  }
+  function emitGameMessage(message){
+    const handlers=gameHandlers[message.t]||[];
+    for(const fn of handlers)fn(message);
+  }
+  function sendGameMessage(message){
+    if(!message||!message.t||!/^rc:pvp:/.test(message.t))return false;
+    if(!connected||!accountReady||!ws||ws.readyState!==1)return false;
+    ws.send(JSON.stringify(message));
+    return true;
   }
   function connect(){
     try{
@@ -1237,6 +1257,8 @@ const Net=(function(){
         if(m.t==='account'){
           const character=m.character||{};
           id=m.peerId||id;
+          engineApi.net.id=id;
+          engineApi.player.id=id;
           player.accountId=m.accountId||accountCredential.accountId||null;
           player.characterId=character.id||null;
           player.address=character.address||player.characterId||player.name;
@@ -1260,6 +1282,7 @@ const Net=(function(){
           r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0; r.mode=m.mode||'town'; r.encounter=m.encounter||null;
           if(oldMode!==r.mode||oldEncounter!==r.encounter)updatePeers();
         }
+        if(m.t&&/^rc:pvp:/.test(m.t))emitGameMessage(m);
         if(m.t==='leave'){ delete remotes[m.id]; updatePeers(); }
         if(m.t==='block'&&Chain.acceptRemote(m.block))log('Received a mined block from a peer.');
         if(m.t==='mine:work'){
@@ -1356,8 +1379,9 @@ const Net=(function(){
     if(!connected&&!rs.length){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot local"></span>Solo mode'; el.appendChild(d); return; }
     for(const r of rs){ const d=document.createElement('div'); d.className='peerline'; const inEncounter=r.mode&&r.mode!=='town'; d.innerHTML='<span class="dot '+(inEncounter?'encounter':'')+'"></span>'+esc(r.name)+'<span class="peerstate">'+esc(inEncounter?'in '+(r.encounter||'encounter'):'town')+'</span>'; el.appendChild(d); }
   }
-  return {connect,tick,mineAuthorized,requestRuneReward,updatePeers,get connected(){return connected;},get authenticated(){return accountReady;}};
+  return {connect,tick,mineAuthorized,requestRuneReward,sendGameMessage,onGameMessage,updatePeers,get connected(){return connected;},get authenticated(){return accountReady;}};
 })();
+window.Net=Net;
 
 /* ----------------------------- Update loop ------------------------------ */
 function updatePlayer(dt){

@@ -1,5 +1,6 @@
 export const PVP_TYPES={
   challenge:'rc:pvp:challenge',
+  challengeCreated:'rc:pvp:challenge:created',
   accept:'rc:pvp:accept',
   decline:'rc:pvp:decline',
   state:'rc:pvp:state',
@@ -69,7 +70,8 @@ export function createBattlefieldMode(level={}){
   }
 
   function send(msg){
-    if(api&&api.net&&typeof api.net.send==='function')api.net.send({...msg, from:msg.from||localId()});
+    if(api&&api.net&&typeof api.net.send==='function')return api.net.send({...msg, from:msg.from||localId()})===true;
+    return false;
   }
 
   function on(type, fn){
@@ -80,6 +82,7 @@ export function createBattlefieldMode(level={}){
 
   function listen(){
     on(PVP_TYPES.challenge, onChallenge);
+    on(PVP_TYPES.challengeCreated, onChallengeCreated);
     on(PVP_TYPES.accept, onAccept);
     on(PVP_TYPES.decline, onDecline);
     on(PVP_TYPES.state, onPeerState);
@@ -340,10 +343,13 @@ export function createBattlefieldMode(level={}){
   function acceptDuel(duelId){
     const ch=pending[duelId];
     if(!ch)return false;
-    duel={id:duelId, peerId:ch.from, status:'active', startedAt:elapsed, peer:null, result:null};
+    duel={id:duelId, peerId:ch.from, status:'accepting', startedAt:elapsed, peer:null, result:null};
     delete pending[duelId];
-    send({t:PVP_TYPES.accept, duelId, to:duel.peerId});
-    call(api, 'onDuelAccepted', {t:PVP_TYPES.accept, duelId, from:duel.peerId, to:localId()}, {mode:'battlefield', acceptedBy:localId()});
+    const sent=send({t:PVP_TYPES.accept, duelId, to:duel.peerId});
+    if(!sent){
+      duel.status='active';
+      call(api, 'onDuelAccepted', {t:PVP_TYPES.accept, duelId, from:duel.peerId, to:localId()}, {mode:'battlefield', acceptedBy:localId()});
+    }
     call(api, 'log', 'Duel accepted: '+duelId+'.');
     return true;
   }
@@ -376,6 +382,13 @@ export function createBattlefieldMode(level={}){
     pending[m.duelId]=m;
     call(api, 'onDuelChallenge', m, {mode:'battlefield'});
     call(api, 'log', 'Incoming duel challenge from '+m.from+'.');
+  }
+
+  function onChallengeCreated(m){
+    if(!duel||duel.status!=='challenged')return;
+    if(m.from&&m.from!==localId())return;
+    if(m.duelId)duel.id=m.duelId;
+    if(m.to)duel.peerId=m.to;
   }
 
   function onAccept(m){

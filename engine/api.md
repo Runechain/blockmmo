@@ -179,35 +179,63 @@ When every creature assigned to a spawned zone is cleared, the zone becomes a
 temporary safe zone until `safeUntil`. While the player stands inside it, the mode
 calls `api.player.regen(zone.regen, dt, data)`.
 
-## PvP relay messages
+## PvP turn arbitration messages (Q-S2c)
 
-Battlefield PvP is opt-in and contains no power transfer or loss. The host relay only
-broadcasts messages; the mode's adapter listens by `t`.
+Battlefield PvP is opt-in and contains no power transfer or loss. The battlefield mode
+still initiates the duel, but live connected realms do not relay damage, forfeit, or
+result claims from clients. The server owns the accepted duel session, mints the canonical
+`duelId`, chooses the first actor deterministically (challenger first for this first
+protocol slice), computes every turn, and sends targeted frames to the two participants.
+Observers do not receive duel state.
 
 Introduced `t:` message types:
 
 - `rc:pvp:challenge`
+- `rc:pvp:challenge:created`
 - `rc:pvp:accept`
 - `rc:pvp:decline`
-- `rc:pvp:state`
-- `rc:pvp:hit`
-- `rc:pvp:forfeit`
+- `rc:pvp:turn:submit`
+- `rc:pvp:turn:forfeit`
+- `rc:pvp:turn:state`
 - `rc:pvp:result`
+- `rc:pvp:error`
 
 Shapes:
 
 ```js
-{ t:"rc:pvp:challenge", duelId, from, to, areaId }
-{ t:"rc:pvp:accept", duelId, from, to }
+// Client input. Server ignores client-authored from/actor/damage/result fields.
+{ t:"rc:pvp:challenge", to, areaId }
+{ t:"rc:pvp:accept", duelId }
 { t:"rc:pvp:decline", duelId, from, to, reason }
-{ t:"rc:pvp:state", duelId, from, to, x, y, hp, stamina }
-{ t:"rc:pvp:hit", duelId, from, to, amount, at }
-{ t:"rc:pvp:forfeit", duelId, from, to }
-{ t:"rc:pvp:result", duelId, from, winner, loser, reason }
+{ t:"rc:pvp:turn:submit", duelId, turn, action, submissionId }
+{ t:"rc:pvp:turn:forfeit", duelId, turn, submissionId }
+
+// Server output.
+{ t:"rc:pvp:challenge:created", duelId, from, to, areaId }
+{ t:"rc:pvp:challenge", duelId, from, to, areaId }
+{ t:"rc:pvp:accept", duelId, from, to, sequence, challengerPeerId, challengedPeerId,
+  turn, actorPeerId, deadlineAt, state }
+{ t:"rc:pvp:turn:state", duelId, sequence, turn, actorPeerId, action, submissionId,
+  events, nextTurn, nextActorPeerId, deadlineAt, state }
+{ t:"rc:pvp:result", duelId, sequence, turn, winner, loser, reason, action,
+  submissionId, state }
+{ t:"rc:pvp:error", duelId, error, expectedTurn?, expectedActorPeerId? }
 ```
 
-The current `server.js` dumb relay can pass these through unchanged once the host
-adapter exposes `net.send` and routes incoming messages to `net.on(type, handler)`.
+`action` is currently `strike`, `guard`, `focus`, or `flee`. Ordering is strict
+alternation by `actorPeerId`; stale turns, wrong actors, repeated `submissionId`s, and
+repeated `(duelId, actor, turn)` submissions are rejected without broadcasting another
+state frame. Each active turn has `deadlineAt`; `server.js` exposes a testable
+`sweepPvpTurnTimeouts()` seam and the live stale-client sweep also resolves overdue
+turns. Timeout and explicit `flee` both produce a server-authored terminal
+`rc:pvp:result`.
+
+For participant-targeted accept frames, `from` is the receiver's opponent and `to` is the
+receiver. The shared `challengerPeerId` / `challengedPeerId` fields preserve the canonical
+duel roles.
+
+Legacy `rc:pvp:hit`, `rc:pvp:forfeit`, and client-authored `rc:pvp:result` remain blocked
+with `authoritative_message_requires_server`.
 
 ## Server authority boundary
 
@@ -217,9 +245,9 @@ They surface events (`onCreatureDefeated`, `onZoneCleared`, `onBossTrigger`,
 Connected realms enforce the S2/U7 authority split in `server.js`:
 
 - **Authoritative:** economy state, RUNE credit/debit, leveling, death, character/season
-  state, and PvP outcomes are server-owned. Raw client `block` messages are rejected;
-  ledger changes append only from server-issued mining candidates re-validated with
-  `validateBlockCandidate`.
+  state, and PvP outcomes are server-owned. Raw client `block` messages and client-authored
+  PvP hit/forfeit/result claims are rejected; ledger changes append only from server-issued
+  mining candidates re-validated with `validateBlockCandidate`.
 - **Validated:** solo segment outcomes can run client-side for responsiveness, but any
   ledger-touching reward must be proposed through `segment:complete`. The server validates
   the outcome shape/proof, builds the exact Chainwell transaction, then accepts only the
@@ -229,8 +257,9 @@ Connected realms enforce the S2/U7 authority split in `server.js`:
   as economy or combat authority.
 
 Authority policy is exported as `AUTHORITY_TIERS` for deterministic verification and server
-tests. Client-authored PvP result/hit/forfeit messages are rejected until a server-arbitrated
-turn protocol is implemented.
+tests. Client-authored PvP result/hit/forfeit messages stay rejected even after the
+server-arbitrated turn protocol exists; clients may only submit turns into the active
+server-owned duel session.
 
 ## Chainwell block validation rules (Q-S2a)
 
@@ -279,9 +308,10 @@ Hero wins initiative ties, so existing encounters remain hero-first unless confi
 
 PvP resolution (F2.3): the real-time battlefield initiates via `rc:pvp:challenge`/`accept`;
 on `api.onDuelAccepted`, the host swaps the mode manager into the turn-based mode with the
-peer as opponent and preserves the accepted `duelId` on the local encounter result.
-Server-authoritative turn arbitration over the live relay (Q-S2c) is open; the mode resolves
-locally for boss phases and the solo demo.
+peer as opponent and preserves the server `duelId`, actor, turn, and state snapshot. When
+`peerId`/`duelId`, `actorPeerId`, a server `state` snapshot, and `api.net.send/on` are present, `turnbased.js` submits
+`rc:pvp:turn:submit` and waits for server `rc:pvp:turn:state` / `rc:pvp:result`. Without a
+server adapter, scripted boss phases and the solo demo continue to resolve locally.
 
 ## Segment sequencer (`sequencer.js`, PRD F3)
 

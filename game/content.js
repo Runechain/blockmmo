@@ -317,7 +317,42 @@ const SKINS = [
   { id:'verdant', name:'Verdant Knight', price:180, body:'#1f472f', trim:'#57c77a', skin:'#cfa982' },
   { id:'azure', name:'Azure Witness', price:240, body:'#233d73', trim:'#7aa7ff', skin:'#cfa982' },
   { id:'gilded', name:'Gilded Champion', price:500, body:'#4d3c17', trim:'#f1c75b', skin:'#d5c596' },
-  { id:'void', name:'Voidwalker', price:800, body:'#17141f', trim:'#9b74ff', skin:'#77718f' }
+  { id:'void', name:'Voidwalker', price:800, body:'#17141f', trim:'#9b74ff', skin:'#77718f' },
+  // Exploration-exclusive cosmetic: not sold for Gold (secret:true hides it from the wardrobe shop).
+  // Granted only by finding the hidden Unrecorded Vault off the parish path — rewarded curiosity,
+  // never power, never purchasable. See AREA1_LORE 'unrecorded-vault' + index.html lore wiring.
+  { id:'unrecorded', name:'Unrecorded Pilgrim', price:0, secret:true, body:'#2b2622', trim:'#b9a06a', skin:'#bfae8c' }
+];
+
+/* ---- Area 1 — off-path lore (issue #25, world & content lane) ------------- */
+/* Rewarded curiosity for Gracefall Parish: discoveries sit OFF the q01-q05 quest corridor
+   (which clusters near y in [-140,140]). Each records a lore fragment in the player's Codex;
+   none gate quests or grant power. The hidden 'unrecorded-vault' dead-end (reward:'unrecorded')
+   grants the exploration-only cosmetic. The index.html host consumes this via LORE markers,
+   nearestLore()/discoverLore() and the Codex counter. */
+const AREA1_LORE=[
+  { id:'pilgrim-cairn', title:'The Pilgrim Cairn', x:240, y:-320, kind:'cairn',
+    lines:[
+      'A cairn of unpaid debtors, stacked north of the parish where no road leads.',
+      'Scratched into the topmost stone: "We walked here to NOT be recorded. The Chainwell found us anyway."'
+    ] },
+  { id:'drowned-ledger', title:'The Drowned Ledger', x:520, y:320, kind:'ledger',
+    lines:[
+      'A ledger-book bloats in the southern marsh, ink running into the reeds.',
+      'The last legible line: "Balance forgiven — see Mother Tallow." The entry below it has been burned away.'
+    ] },
+  { id:'west-milestone', title:'The West Milestone', x:-380, y:120, kind:'milestone',
+    lines:[
+      'A milestone at the dead end of the western track. The mileage was chiselled off.',
+      'Beneath, a newer hand: "Hearthlight is not the first parish. Ask the Archivist what stood here before."'
+    ] },
+  // Hidden dead-end. Concealed NW of the chapel behind the bramble wall; grants the cosmetic.
+  { id:'unrecorded-vault', title:'The Unrecorded Vault', x:-600, y:-300, kind:'vault', reward:'unrecorded',
+    lines:[
+      'A collapsed strong-room the Chainwell never indexed. Dust here has never been counted.',
+      'In a niche: a pilgrim\'s ash-grey shroud, unworn, unrecorded. You take it — the ledger does not notice.',
+      'COSMETIC UNLOCKED: Unrecorded Pilgrim (wardrobe, B).'
+    ] }
 ];
 
 const ASSETS={
@@ -705,7 +740,7 @@ const NPCS=[
 ];
 
   return {
-    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL,
+    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
     AREA2_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,

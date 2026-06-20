@@ -571,6 +571,17 @@ const AREA1_ENCOUNTERS={
     {mode:'turnbased',name:'Mother Tallow',payload:TURN_TALLOW,beatText:'She melts toward you.',complete:{event:'duel'}}
   ]}
 };
+/* ---- World-to-interior portals (issue #19 / Q-N1) ------------------------- */
+/* The connective tissue the top-down world was missing: descend an overworld entrance and a
+   platformer interior loads inline; reach its exit (or leave via T) and re-emerge at the same
+   spot. Reuses the segment-free engine path (host: enterPortal/exitEngineMode) and validated
+   platformer geometry — bespoke interior layouts are a follow-up. `level` must expose an `exit`
+   so the player can always climb back out. */
+const WORLD_PORTALS=[
+  { id:'undercroft', x:-250, y:-188, label:'the Sunken Undercroft', kind:'cave',
+    intro:'A stair drops beneath the parish into a flooded receipts-tunnel.',
+    level:PLAT_LEVEL }
+];
 /* ---- Area 2 — The Shroud Vaults ---------------------------------------- */
 const AREA2_TOWN={id:'a2-vault-anteroom',name:'Vault Anteroom / Forklight Hearthlight',
   hearthlight:{id:'forklight',free:true,safe:true},
@@ -796,7 +807,7 @@ const NPCS=[
 ];
 
   return {
-    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES,
+    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, WORLD_PORTALS,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
     AREA2_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,

@@ -244,7 +244,7 @@
 const Content = window.RUNECHAIN_CONTENT;
 if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT) throw new Error('RUNECHAIN core scripts failed to load');
 const {
-  ECON, STORY, RELICS, SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES,
+  ECON, STORY, RELICS, SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, WORLD_PORTALS,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
@@ -498,7 +498,7 @@ let player={
   skinId:'tarnished', pal:skinPal('tarnished')
 };
 const enemies=[], particles=[], projectiles=[], remotes={};
-const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set()};
+const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set(), portals:new Set()};
 
 function recalcStats(fullHeal){
   const b=itemBonuses();
@@ -810,7 +810,7 @@ addEventListener('keyup',e=>{ keys[e.code]=false; released[e.code]=true; });
 /* Codex's standalone engine modules (engine/*.js) loaded dynamically and driven
    through a host adapter. Town stays the existing top-down game; P enters the
    demo platformer, O the battlefield, T returns to Hearthlight. */
-let modeManager=null, platformerMode=null, battlefieldMode=null, turnbasedMode=null, bossSeq=null, bossEncounterEnemy=null, RCEngine=null;
+let modeManager=null, platformerMode=null, battlefieldMode=null, turnbasedMode=null, bossSeq=null, bossEncounterEnemy=null, RCEngine=null, activePortal=null;
 const engineCam={x:0,y:0,w:VIEW_W,h:VIEW_H};
 const engineApi={
   viewW:VIEW_W, viewH:VIEW_H, camera:engineCam,
@@ -846,7 +846,7 @@ const engineApi={
     send(m){ if(m&&m.t==='rc:pvp:challenge'){ const h=this._h; setTimeout(()=>{ (h['rc:pvp:accept']||[]).forEach(fn=>fn({t:'rc:pvp:accept',duelId:m.duelId,from:'stub-rival',to:m.from})); }, 350); } } },
   chain:{}, log:(m)=>log(m),
   onBossTrigger(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('boss',{id}); return; } log('A boss stirs ('+id+'). Returning to the parish.'); exitEngineMode(); },
-  onExit(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('exit',{id}); return; } log('Stage cleared ('+id+').'); exitEngineMode(); },
+  onExit(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('exit',{id}); return; } log('Stage cleared ('+id+').'); exitEngineMode({completed:true}); },
   onCreatureDefeated(){}, onWaveSpawn(w){ if(w&&w.id)log('Wave incoming: '+w.id); },
   onZoneCleared(id){ log('Safe ground secured: '+id); }, onMeleeHit(){},
   onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from,m&&m.duelId); },
@@ -870,12 +870,34 @@ function enterEngineMode(name){
   modeManager.setMode(mode, ctx, engineApi); state.mode=name; Net.updatePeers();
   log(name==='battlefield'?'Mempool Yard — survive the waves. (T to leave)':name==='turnbased'?'A duel begins — Up/Down choose, J/Space confirm. (T to leave)':'Parish Road Receipts — reach the gate. (T to leave)');
 }
-function exitEngineMode(){
+function exitEngineMode(opts){
+  opts=opts||{};
   if(state.mode==='sequencer'){ endBossSequence(); return; }
   if(state.mode==='town')return;
   if(modeManager)modeManager.setMode(null, ctx, engineApi);
   player.hp=Math.max(1,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;
+  if(activePortal){
+    // Re-emerge in the overworld exactly at the entrance we descended through (issue #19).
+    player.x=activePortal.x; player.y=activePortal.y;
+    if(opts.completed)progress.portals.add(activePortal.id);
+    state.mode='town'; Net.updatePeers();
+    log(opts.completed?('You climb back out of '+esc(activePortal.label)+', the receipts settled behind you.'):('You retreat from '+esc(activePortal.label)+'.'));
+    activePortal=null;
+    return;
+  }
   state.mode='town'; Net.updatePeers(); log('Returned to Hearthlight.');
+}
+// Descend an overworld entrance into its platformer interior (issue #19 / Q-N1). Uses the
+// segment-free engine path; exitEngineMode handles the return + re-emergence position.
+function enterPortal(p){
+  if(!modeManager||!RCEngine||!RCEngine.createPlatformerMode||!p||!p.level||!state.started||player.dead||state.mode!=='town')return;
+  if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
+  const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;
+  activePortal=p;
+  const mode=platformerMode=RCEngine.createPlatformerMode(p.level);
+  modeManager.setMode(mode, ctx, engineApi); state.mode='platformer'; Net.updatePeers();
+  if(p.intro)log('<span style="color:#bcae8c">'+esc(p.intro)+'</span>');
+  log('You descend into '+esc(p.label)+'. Reach the far exit, or press <b>T</b> to climb back out.');
 }
 function updateEngineMode(dt){
   modeManager.update(dt, engineInput());
@@ -1392,6 +1414,7 @@ function drawDecor(){
   drawInteractables();
   drawLore();
   drawPuzzles();
+  drawPortals();
   const g=worldToScreen(GRACE.x,GRACE.y);
   ctx.globalAlpha=.14; ctx.fillStyle='#f1c75b'; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS*1.25,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
   ctx.strokeStyle='rgba(241,199,91,.55)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS,0,Math.PI*2); ctx.stroke();
@@ -1591,8 +1614,33 @@ function doInteract(){
   if(lore){ discoverLore(lore); return; }
   const pz=nearestPuzzleTarget();
   if(pz){ if(pz.clue) readPuzzleClue(pz.puzzle); else stampPuzzle(pz.puzzle,pz.node); return; }
+  const portal=nearestPortal();
+  if(portal){ enterPortal(portal); return; }
   const n=nearestNpc();
   if(n)Dialogue.open(n);
+}
+/* ---- World-to-interior portals (issue #19): walk to an entrance, press E to descend -------- */
+const PORTALS=(WORLD_PORTALS||[]);
+function nearestPortal(){
+  let best=null, bestD=30;
+  for(const p of PORTALS){ const d=Math.hypot(player.x-p.x,player.y-p.y); if(d<bestD){ best=p; bestD=d; } }
+  return best;
+}
+function drawPortals(){
+  const near=(state.mode==='town'&&!Dialogue.isOpen())?nearestPortal():null;
+  for(const p of PORTALS){
+    const s=worldToScreen(p.x,p.y), cleared=progress.portals.has(p.id);
+    // a dark cave mouth set into a stone arch
+    rect(s.x-13,s.y-4,26,8,'#3b3f3a');
+    rect(s.x-11,s.y-18,22,16,'#2a2d2b');
+    ctx.fillStyle=cleared?'#10130f':'#070809'; ctx.beginPath(); ctx.ellipse(s.x,s.y-6,8,10,0,0,Math.PI*2); ctx.fill();
+    rect(s.x-13,s.y-20,26,3,'#4c5149');
+    if(near===p){
+      ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#cbe0bc';
+      ctx.fillText('E',s.x,s.y-24);
+    }
+  }
+  ctx.textAlign='left';
 }
 /* ---- Off-path lore / Codex (issue #25): rewarded curiosity, never power ---- */
 const LORE=(AREA1_LORE||[]);
@@ -1959,11 +2007,13 @@ function updateHud(){
   const near=nearestInteractable();
   const lore=state.mode==='town'?nearestLore():null;
   const pz=state.mode==='town'?nearestPuzzleTarget():null;
+  const portal=state.mode==='town'?nearestPortal():null;
   const npc=state.mode==='town'?nearestNpc():null;
   if(bossEnc){ prompt.style.display='block'; prompt.innerHTML='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>'; }
   else if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
   else if(lore){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to examine <b>'+esc(lore.title)+'</b>'; }
   else if(pz){ prompt.style.display='block'; prompt.innerHTML=pz.clue?('Press <b>E</b> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <b>E</b> to stamp <b>'+esc(pz.node.label)+'</b>'); }
+  else if(portal){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to descend into <b>'+esc(portal.label)+'</b>'; }
   else if(npc){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to speak with <b>'+esc(npc.name)+'</b>'; }
   else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
   else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }

@@ -11,6 +11,7 @@ function loadFactory(rel, name) {
 }
 
 const createModeManager = loadFactory('engine/mode.js', 'createModeManager');
+const createBattlefieldMode = loadFactory('engine/battlefield.js', 'createBattlefieldMode');
 const createTurnBasedMode = loadFactory('engine/turnbased.js', 'createTurnBasedMode');
 const createSegmentSequencer = loadFactory('engine/sequencer.js', 'createSegmentSequencer');
 
@@ -76,6 +77,28 @@ function makeApi(opts = {}) {
     onExit(id, data) { this.exits.push({ id, data }); },
   };
   return api;
+}
+
+function attachServerNet(api, id = 'local-peer', opts = {}) {
+  const handlers = {};
+  api.net = {
+    id,
+    sent: [],
+    on(type, fn) {
+      (handlers[type] || (handlers[type] = [])).push(fn);
+      return () => {
+        handlers[type] = (handlers[type] || []).filter((handler) => handler !== fn);
+      };
+    },
+    send(message) {
+      this.sent.push(message);
+      return opts.sendResult !== false;
+    },
+    emit(message) {
+      for (const fn of handlers[message.t] || []) fn(message);
+    },
+  };
+  return api.net;
 }
 
 function withPinnedRandom(fn) {
@@ -159,6 +182,7 @@ withPinnedRandom(() => {
 withPinnedRandom(() => {
   const ctx = makeCtx();
   const api = makeApi({ meleeDamage: 30 });
+  const net = attachServerNet(api, 'local-peer', { sendResult: false });
   const mode = createTurnBasedMode({
     id: 'verify-duel',
     duelId: 'duel-verify',
@@ -167,6 +191,7 @@ withPinnedRandom(() => {
   });
   mode.enter(ctx, api);
   finishWithStrike(mode, api);
+  assert.strictEqual(net.sent.length, 0, 'non-authoritative local PvP should not submit relay turns');
   assert.strictEqual(api.duelResults.length, 1, 'duel result fired once');
   assert.deepStrictEqual(api.duelResults[0].data, { mode: 'turnbased' });
   assert.strictEqual(api.duelResults[0].result.duelId, 'duel-verify');
@@ -178,6 +203,86 @@ withPinnedRandom(() => {
   mode.update(0.05, {});
   assert.strictEqual(api.duelResults.length, 1, 'finished duel is idempotent');
   ok('1v1 PvP-shaped duel resolves end-to-end with stable result');
+});
+
+// Connected battlefield acceptance waits for the server-authored accept frame.
+{
+  const ctx = makeCtx();
+  const api = makeApi();
+  api.duelAccepts = [];
+  api.onDuelAccepted = function onDuelAccepted(message, data) {
+    this.duelAccepts.push({ message, data });
+  };
+  const net = attachServerNet(api, 'bob');
+  const mode = createBattlefieldMode({ id: 'verify-field', rivals: 0, waves: [] });
+  mode.enter(ctx, api);
+  net.emit({ t: 'rc:pvp:challenge', duelId: 'duel-server-accept', from: 'alice', to: 'bob' });
+  assert.strictEqual(mode.getState().pending['duel-server-accept'].from, 'alice');
+  assert.strictEqual(mode.acceptDuel('duel-server-accept'), true);
+  assert.strictEqual(net.sent[0].t, 'rc:pvp:accept');
+  assert.strictEqual(api.duelAccepts.length, 0, 'live accept should wait for server accept frame');
+  assert.strictEqual(mode.getState().duel.status, 'accepting');
+  net.emit({
+    t: 'rc:pvp:accept',
+    duelId: 'duel-server-accept',
+    from: 'alice',
+    to: 'bob',
+    actorPeerId: 'alice',
+    turn: 1,
+    state: { participants: {} },
+  });
+  assert.strictEqual(api.duelAccepts.length, 1, 'server accept frame starts the duel once');
+  assert.strictEqual(api.duelAccepts[0].message.from, 'alice');
+  assert.strictEqual(mode.getState().duel.peerId, 'alice');
+  ok('connected battlefield PvP waits for relay-owned accept frames');
+}
+
+// Server-arbitrated PvP submits turns to the relay and does not resolve locally.
+withPinnedRandom(() => {
+  const ctx = makeCtx();
+  const api = makeApi({ meleeDamage: 60 });
+  const net = attachServerNet(api, 'local-peer');
+  const mode = createTurnBasedMode({
+    id: 'server-duel',
+    duelId: 'duel-server-verify',
+    peerId: 'peer-1',
+    actorPeerId: 'local-peer',
+    turn: 1,
+    state: {
+      participants: {
+        'local-peer': { name: 'Recorded', hp: 100, maxHp: 100, sta: 100, maxSta: 100 },
+        'peer-1': { name: 'Peer Recorded', hp: 24, maxHp: 90, sta: 100, maxSta: 100 },
+      },
+    },
+    opponent: { name: 'Peer Recorded', hp: 24, attack: 1, defense: 0 },
+  });
+  mode.enter(ctx, api);
+  selectAction(mode, 'strike');
+  assert.strictEqual(net.sent.length, 1, 'PvP action should submit exactly one server turn');
+  assert.strictEqual(net.sent[0].t, 'rc:pvp:turn:submit');
+  assert.strictEqual(net.sent[0].duelId, 'duel-server-verify');
+  assert.strictEqual(net.sent[0].turn, 1);
+  assert.strictEqual(net.sent[0].action, 'strike');
+  tick(mode, 30, {});
+  assert.strictEqual(api.duelResults.length, 0, 'server PvP should not resolve locally while waiting');
+  net.emit({
+    t: 'rc:pvp:result',
+    duelId: 'duel-server-verify',
+    winner: 'local-peer',
+    loser: 'peer-1',
+    reason: 'defeat',
+    state: {
+      participants: {
+        'local-peer': { name: 'Recorded', hp: 100, maxHp: 100, sta: 100, maxSta: 100 },
+        'peer-1': { name: 'Peer Recorded', hp: 0, maxHp: 90, sta: 100, maxSta: 100 },
+      },
+    },
+  });
+  runUntil(mode, () => mode.getState().finished || api.duelResults.length > 0, 'server duel finish', 100);
+  assert.strictEqual(api.duelResults.length, 1, 'server result should be the only PvP finish path');
+  assert.strictEqual(api.duelResults[0].result.reason, 'defeat');
+  assert.strictEqual(api.duelResults[0].result.winner, 'local-peer');
+  ok('server-arbitrated PvP waits for relay-owned turn results');
 });
 
 // Boss RPG phase is usable from the segment sequencer.
@@ -224,7 +329,7 @@ withPinnedRandom(() => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert(battlefield.includes("call(api, 'onDuelAccepted'") && battlefield.includes('acceptedBy:localId()'),
     'acceptDuel should surface the accepted handshake to the host');
-  assert(index.includes('startTurnDuel(m&&m.from,m&&m.duelId)'), 'host should pass accepted duelId into turn duel');
+  assert(index.includes('startTurnDuel(m&&m.from,m&&m.duelId,m)'), 'host should pass accepted server duel frame into turn duel');
   assert(index.includes('duelId:duelId||null'), 'turn duel encounter should retain PvP duelId');
   assert(!pkg.scripts || !pkg.scripts.build, 'no build step should be introduced');
   ok('PvP challenge/accept handoff remains local and buildless');

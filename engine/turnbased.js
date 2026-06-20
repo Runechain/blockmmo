@@ -1,14 +1,16 @@
 // Turn-based RPG battle mode (PRD F2.4). Same enter/exit/update/render interface as
 // the platformer/battlefield modes, so it slots into the existing mode manager and
 // can also serve as a boss RPG segment (F3). Two combatants, strict alternating turns,
-// a command menu, server-validatable outcomes surfaced through api.onDuelResult.
+// a command menu, and server-validatable outcomes surfaced through api.onDuelResult.
 //
 // Encounter payload:
 //   { id, name, opponent:{ name, hp, attack, defense?, color? },
 //     peerId?, duelId? }   // peerId/duelId set => resolved from the rc:pvp handshake (F2.3)
 //
-// PvP turn arbitration over the live relay (Q-S2c, server-authoritative) is OPEN; this
-// resolves locally vs. a scripted/AI opponent, which also covers the boss-RPG case.
+// PvP turn arbitration over the live relay (Q-S2c) is server-authoritative when an
+// encounter supplies peerId/duelId plus an accepted server state snapshot, and the host
+// adapter supplies api.net.send/on. Scripted, offline, and boss-RPG encounters still
+// resolve locally for responsiveness.
 
 const ACTIONS = [
   { key: 'strike', label: 'Strike', hint: 'a measured cut' },
@@ -39,6 +41,7 @@ export function createTurnBasedMode(encounter = {}) {
   let phase = 'intro', timer = 0, menuIndex = 0, logLine = '', result = null;
   let hero = null, foe = null, pending = null, shakeT = 0, heroFlash = 0, foeFlash = 0;
   let initiative = null, turnNumber = 1, actor = 'hero', submittedAction = null, finished = false;
+  let serverDuel = false, submissionNonce = 0, unsubs = [];
   const prev = { up: false, down: false, confirm: false, flee: false };
 
   function reset() {
@@ -58,11 +61,54 @@ export function createTurnBasedMode(encounter = {}) {
                  b: { hp: dc.b.hp, maxHp: dc.b.hp, label: dc.b.label || 'B', color: dc.b.color || '#4ecb7a' } };
       foe.crossHeal = !!dc.crossHeal;
     } else if (o.phase2) { foe.phase2 = o.phase2; }
+    serverDuel = isServerDuel();
+    if (serverDuel) applyServerState(encounter.state);
     initiative = rollInitiative(p, o);
     phase = 'intro'; timer = 0.9; menuIndex = 0; pending = null; submittedAction = null; result = null; finished = false;
-    turnNumber = 1; actor = initiative.first;
+    turnNumber = Math.max(1, Math.trunc(num(encounter.turn, 1)));
+    actor = serverDuel ? (encounter.actorPeerId && encounter.actorPeerId !== localPeerId() ? 'foe' : 'hero') : initiative.first;
     shakeT = 0; heroFlash = 0; foeFlash = 0;
-    logLine = (encounter.peerId ? 'A duel begins — ' : 'You face ') + foe.name + '.';
+    logLine = (encounter.peerId ? 'A duel begins - ' : 'You face ') + foe.name + '.';
+  }
+
+  function isServerDuel() {
+    return !!(encounter.peerId && encounter.duelId && encounter.actorPeerId && encounter.state && api && api.net &&
+      typeof api.net.send === 'function' && typeof api.net.on === 'function');
+  }
+
+  function localPeerId() {
+    return (api && api.net && api.net.id) || (api && api.player && api.player.id) ||
+      (api && api.player && api.player.name) || 'local';
+  }
+
+  function applyServerState(state) {
+    if (!state || !state.participants) return;
+    const localId = localPeerId();
+    const local = state.participants[localId];
+    const remote = state.participants[encounter.peerId] ||
+      Object.keys(state.participants).map((id) => state.participants[id]).find((participant) => participant && participant.peerId !== localId);
+    if (local) {
+      hero.name = local.name || hero.name;
+      hero.hp = num(local.hp, hero.hp);
+      hero.maxHp = num(local.maxHp, hero.maxHp);
+      hero.sta = num(local.sta, hero.sta);
+      hero.maxSta = num(local.maxSta, hero.maxSta);
+      hero.guarding = !!local.guarding;
+      syncHeroHp();
+    }
+    if (remote) {
+      foe.name = remote.name || foe.name;
+      foe.hp = num(remote.hp, foe.hp);
+      foe.maxHp = num(remote.maxHp, foe.maxHp);
+      foe.guarding = !!remote.guarding;
+    }
+  }
+
+  function listenServerDuel() {
+    if (!serverDuel) return;
+    unsubs.push(api.net.on('rc:pvp:turn:state', onServerTurnState));
+    unsubs.push(api.net.on('rc:pvp:result', onServerResult));
+    unsubs.push(api.net.on('rc:pvp:error', onServerError));
   }
 
   function rollInitiative(player, opponent) {
@@ -89,10 +135,15 @@ export function createTurnBasedMode(encounter = {}) {
     camera = { x: 0, y: 0, w: (ctx && ctx.canvas && ctx.canvas.width) || api.viewW || 640,
       h: (ctx && ctx.canvas && ctx.canvas.height) || api.viewH || 360 };
     reset();
+    listenServerDuel();
     call(api, 'log', 'Turn-based battle: ' + foe.name + '. (Up/Down choose, J/Space confirm)');
   }
 
-  function exit() { call(api, 'log', 'Leaving the duel.'); }
+  function exit() {
+    for (const off of unsubs) if (typeof off === 'function') off();
+    unsubs = [];
+    call(api, 'log', 'Leaving the duel.');
+  }
 
   function heroAttack() {
     const p = api && api.player;
@@ -118,6 +169,7 @@ export function createTurnBasedMode(encounter = {}) {
   function activeActions() { return foe && foe.dc ? DUAL_ACTIONS : ACTIONS; }
 
   function chooseAction(key) {
+    if (serverDuel) { submitServerAction(key); return; }
     pending = key; submittedAction = key; actor = 'hero'; phase = 'heroResolve'; timer = 0.4;
     if (key === 'strike') logLine = 'You strike at ' + foe.name + '.';
     else if (key === 'strikeA') logLine = 'You strike the ' + foe.dc.a.label + ' chain.';
@@ -126,6 +178,62 @@ export function createTurnBasedMode(encounter = {}) {
     else if (key === 'guard') logLine = 'You raise your guard.';
     else if (key === 'focus') logLine = 'You focus your strength...';
     else if (key === 'flee') logLine = 'You break away from the duel.';
+  }
+
+  function submitServerAction(key) {
+    const action = key === 'flee' ? 'flee' : key;
+    submissionNonce += 1;
+    const submissionId = [encounter.duelId, localPeerId(), turnNumber, submissionNonce].join(':');
+    pending = action;
+    submittedAction = action;
+    actor = 'none';
+    phase = 'waiting';
+    timer = 0;
+    logLine = 'Awaiting the Chainwell ruling...';
+    api.net.send({
+      t: 'rc:pvp:turn:submit',
+      duelId: encounter.duelId,
+      turn: turnNumber,
+      action,
+      submissionId,
+    });
+  }
+
+  function onServerTurnState(message) {
+    if (!message || message.duelId !== encounter.duelId) return;
+    applyServerState(message.state);
+    turnNumber = Math.max(1, Math.trunc(num(message.nextTurn, turnNumber + 1)));
+    actor = message.nextActorPeerId === localPeerId() ? 'hero' : 'foe';
+    pending = null;
+    submittedAction = message.action || submittedAction;
+    phase = actor === 'hero' ? 'menu' : 'waiting';
+    logLine = actor === 'hero' ? 'The ruling is recorded. Choose your move.' : 'The ruling is recorded. Awaiting your opponent.';
+  }
+
+  function onServerResult(message) {
+    if (!message || message.duelId !== encounter.duelId) return;
+    applyServerState(message.state);
+    result = {
+      duelId: message.duelId,
+      reason: message.reason,
+      winner: message.winner,
+      loser: message.loser,
+    };
+    actor = 'none';
+    pending = null;
+    phase = message.winner === localPeerId() ? 'win' : 'lose';
+    timer = 0.05;
+    logLine = message.reason === 'timeout' ? 'The turn timer expires.' :
+      message.reason === 'forfeit' ? 'The duel is conceded.' : 'The duel is decided.';
+  }
+
+  function onServerError(message) {
+    if (!message || message.duelId !== encounter.duelId) return;
+    pending = null;
+    actor = 'hero';
+    phase = 'menu';
+    const code = message.error && message.error.code || 'pvp_error';
+    logLine = 'Server rejected the turn: ' + code + '.';
   }
 
   function resolveHero() {
@@ -250,7 +358,10 @@ export function createTurnBasedMode(encounter = {}) {
     if (phase === 'intro') {
       timer -= dt;
       if (timer <= 0) {
-        if (initiative && initiative.first === 'foe') {
+        if (serverDuel) {
+          phase = actor === 'hero' ? 'menu' : 'waiting';
+          logLine = actor === 'hero' ? 'Choose your move.' : 'Awaiting your opponent.';
+        } else if (initiative && initiative.first === 'foe') {
           actor = 'foe'; phase = 'foeWindup'; timer = 0.55; logLine = foe.name + ' has initiative.';
         } else {
           actor = 'hero'; phase = 'menu'; logLine = 'Choose your move.';
@@ -258,6 +369,7 @@ export function createTurnBasedMode(encounter = {}) {
       }
       return;
     }
+    if (phase === 'waiting') return;
     if (phase === 'menu') {
       const A = activeActions();
       if (menuIndex >= A.length) menuIndex = 0;

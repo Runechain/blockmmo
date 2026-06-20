@@ -539,8 +539,13 @@ const BOSS_SCRIPT={id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,se
 /* Area 1 bosses as story-gated, multi-play-style encounters (bible: Gracefall Parish). */
 const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b',sprite:'sexton'}};
 const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff',sprite:'mempool'}};
-/* Mother Tallow hp = 260 is canon (DESIGN-BIBLE.md Area 1: "hp 260, dmg 22..."); matches the index.html registry. */
-const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:260,attack:18,defense:3,color:'#f1c75b',sprite:'tallow'}};
+/* Mother Tallow hp = 260 is canon (DESIGN-BIBLE.md Area 1: "hp 260, dmg 22..."); matches the index.html registry.
+   Phase 2 (smoke split): at 50% HP she sheds her waxen body and a smoke echo, becoming a dual-chain foe
+   (engine/turnbased.js resolveFoe). Both halves must be cut down; they slowly re-merge each foe turn unless
+   the hero holds the split open with Strike Both. This is the Area-1 introduction to the dual-chain mechanic
+   the Canon/Schism bosses lean on later — gentler halves and merge than the final Ledger-Bound. */
+const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:260,attack:18,defense:3,color:'#f1c75b',sprite:'tallow',
+  phase2:{threshold:0.5,aHp:72,bHp:72,aLabel:'WAXEN',bLabel:'SMOKE',aColor:'#f1c75b',bColor:'#9a8f7a',mergePerTurn:4}}};
 /* Tallow House: vertical wax-choked interior, rising lift, dripping-wax hazards — distinct from the Parish Road climb. */
 const PLAT_TALLOW_HOUSE={id:'a1-tallow-house',name:'Tallow House',width:1080,height:720,spawn:{x:60,y:616},physics:{maxRun:195,jump:445},
   platforms:[{id:'ground',x:0,y:660,w:1080,h:60,type:'solid'},{id:'shelf-a',x:90,y:580,w:130,h:12,type:'oneWay'},{id:'mid-floor',x:320,y:560,w:260,h:14,type:'solid'},{id:'wax-lift',x:510,y:510,w:110,h:14,type:'solid',vy:32,minY:400,maxY:520},{id:'shelf-b',x:120,y:460,w:160,h:12,type:'oneWay'},{id:'walkway',x:650,y:430,w:200,h:14,type:'solid'},{id:'step-a',x:200,y:360,w:120,h:14,type:'solid'},{id:'step-b',x:750,y:340,w:140,h:12,type:'oneWay'},{id:'upper',x:380,y:270,w:260,h:14,type:'solid'},{id:'altar',x:700,y:190,w:230,h:14,type:'solid'}],

@@ -23,6 +23,7 @@ const {
   validateChain,
 } = require('./game/chain.js');
 const { ENEMY_REWARDS, STORY, RELICS, LEVELING, BOSS_SIGILS } = require('./game/content.js');
+const { createAnnounceFeed } = require('./game/announce.js');
 
 const DEFAULT_PORT = process.env.PORT || 8080;
 const DEFAULT_SEASON_ID = 'preseason-1';
@@ -72,6 +73,7 @@ function createRealmServer(options = {}) {
   const pendingMining = new Map();
   const validatedOutcomes = new Set();
   const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, seasonId, now });
+  const announceFeed = options.announceFeed || createAnnounceFeed({ seasonId });
   let saveTimer = null;
   let sweepInterval = null;
   let masterChain = loadLedger();
@@ -81,6 +83,12 @@ function createRealmServer(options = {}) {
     if (req.url === '/healthz') {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       return res.end('ok');
+    }
+
+    if (announceFeed.enabled && req.url.split('?')[0] === '/announce-feed') {
+      const since = Number(new URL(req.url, 'http://realm').searchParams.get('since')) || 0;
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify(announceFeed.since(since)));
     }
 
     const route = req.url.split('?')[0];
@@ -319,6 +327,7 @@ function createRealmServer(options = {}) {
     masterChain.push(block);
     log(`chain block #${block.index} accepted - ${block.txs ? block.txs.length : 0} tx`);
     saveLedger();
+    announceFeed.recordBlock(block);
     return { ok: true, block };
   }
 

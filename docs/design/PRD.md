@@ -436,6 +436,65 @@ Builders now follow the bible's updated rulings 7–10 on these points.
 
 ---
 
+## Legal & Compliance Stance
+
+> **Not legal advice, and not a determination.** This section consolidates the **project's
+> positions** as structured **inputs for legal counsel** (issue Q-L3 / #39). It does not assert
+> that any framing is legally sufficient; counsel review is a hard precondition on production
+> go-live (F6.3). Sections above remain the design source of truth.
+
+**Posture.** RUNECHAIN takes real value in (wSOL → Gold, with a 15% operator fee, F6) and lets
+real value out at exactly one boundary (selling a season-complete character, U5/F7). That
+"money-in + value-out" shape requires review regardless of any "art / collectible / deflationary"
+framing. The design intentionally narrows the surface; it does not assume the surface away.
+
+**Framing arguments (logged as inputs to review, not determinations).**
+- **No guaranteed financial outcome.** Participation is at the player's own risk under
+  terms/disclaimer; the project does not promise returns or guarantee resale value.
+- **Characters as collectibles.** Sale price is discovered **off-platform, peer-to-peer**; the
+  project does not set, guarantee, or operate a price-making market.
+- **Gold as a deflationary sink, not an investment.** Gold buys cosmetics only (U3, Ruling 7);
+  the wSOL purchase routes a **true SPL burn** (F6.2) with no yield, buyback, or redemption.
+- **Marketing bucket is not a prize pool.** The 35% is operator-discretion spend (F5.4), not a
+  committed player-facing payout (avoids tournament/gambling structure — see non-goals).
+- **No loss-based wagering.** Death drops nothing (F4 / Ruling 8); there is no stake-to-lose loop.
+
+**Design guardrails that support the stance.** No paid advantage (U1), money never skips the
+grind (U2), one real-value exit only (U5), one character per account per season (U6), only
+*earned* value is tradeable (U4 / F7.4), server-authoritative value (U7).
+
+**Sequencing.** Build proceeds in three steps; only the last is legal-gated:
+1. **Prototype / devnet** — all design, contracts, and integration on devnet. *Unblocked.*
+2. **Hardening** — server authority, anti-cheat, sybil-resistance (Q-A1 / #40), audits. *Unblocked.*
+3. **Production go-live flip** — enabling real F6 settlement and F7 sales with real funds.
+   **Gated** on counsel sign-off of R1 + R8 (#39) and the Q-A1 decision (#40). The programs
+   ship `paused = true` and stay off until an admin flips them post-sign-off (see
+   `contracts/BUILD.md`).
+
+---
+
+## Risk Register
+
+> Consolidated risk inputs for the Q-L3 review (#39) and the Q-A1 compliance decision (#40).
+> **Status** is the *project's* working assessment, **not** a legal conclusion. "Mitigated by
+> design" means a guardrail is in place that counsel should still validate.
+
+| ID | Risk | Primary mitigation(s) | Status |
+|---|---|---|---|
+| **R1** | Money-in path (taking wSOL, minting spendable Gold, collecting a 15% fee) may implicate money-transmission / money-services regulation. | Off-platform price discovery; deflationary burn framing (F6.2); operator fee is a service fee, not a deposit; **production go-live legal-gated (F6.3)**. | **Open — gates go-live.** Counsel review required (#39). |
+| **R2** | Gold construed as an investment/security. | Cosmetics-only (U3, Ruling 7); true-burn sink, no yield/buyback/redemption (F6.2); not transferable for cash (U5). | Mitigated by design; confirm with counsel. |
+| **R3** | 35% marketing bucket read as a gambling prize pool. | Operator-discretion spend, **not** a committed payout (F5.4); explicit non-goal. | Mitigated by design; confirm with counsel. |
+| **R4** | Loss-based mechanics read as wagering. | No item/currency loss on death (F4 / Ruling 8); no stake-to-lose loop. | Mitigated by design. |
+| **R5** | Player financial-outcome liability. | Terms/disclaimer; participation at own risk; value set off-platform, not guaranteed. | Open — counsel to confirm sufficiency. |
+| **R6** | One-character-per-season cap (U6) trivially circumvented via multiple wallets/accounts, weakening guardrail G5 and the legal case. | Cap binds to a browser-local P-256 game-account credential, server-verified (Q-A1, prototype soft cap); stronger identity binding / KYC is an option under review. | **Open — ties to #40.** Implementation in the Foundations lane. |
+| **R7** | If KYC/identity binding is adopted (R6), it creates a new data-retention / privacy compliance surface (e.g. GDPR). | Conditional: scope data minimization + retention policy + provider DPA **if** KYC is chosen; avoided entirely if wallet/game-acct binding is deemed sufficient. | Open — conditional on the R6 decision (#40). |
+| **R8** | Cash-out concentration: a secondary market in completed characters reopens securities / gambling / tax questions (the **#1** legal-review item, F7 risk note). | U6 caps the market to ≤1 sale per account per season; U4 / F7.4 make only *earned* (not purchased) value tradeable; settlement is off-platform peer-to-peer; **F7 go-live legal-gated**. | **Open — gates F7 go-live.** Counsel review required (#39). |
+
+These risks are referenced from the design above (notably F6.3, F7 risk note, U5/U6, Q-A1) and
+from issues #39 (R1, R5, R8) and #40 (R6, R7).
+
+---
+
 ## Out of scope / non-goals (current)
 
 - A custom L1 / app-chain. The "blockchain" is the in-game Chainwell (S1) plus Solana at the

@@ -31,8 +31,11 @@ browser shares one world and one ledger.
 Online realms create a local browser game account with Web Crypto and bind one
 character to that account per season. Characters are **conditionally-transferable**
 on-chain assets: they are transfer-locked while a season is open and unlock for sale
-on completion. No wallet is required for the prototype; production character sales
-are gated by legal/compliance review.
+on completion. No wallet is required for the prototype. For any production
+sale-capable season, the project stance is that wallet-only binding is insufficient:
+the sale-capable account must be linked to one verified identity per season, and
+wallets remain payment/settlement rails only. Production character sales are still
+gated by legal/compliance review.
 
 ## Controls
 

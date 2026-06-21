@@ -37,8 +37,10 @@ strong sybil resistance. Clearing browser storage, changing browser profiles, or
 different device can create another game account.
 
 That is acceptable for the local prototype and internal playtests. Production real-money
-sales still need the legal/compliance identity decision tracked separately before any
-cash-out market is enabled.
+sales do **not** rely on this account alone: the project stance is that wallet-binding or
+browser-only binding is insufficient for the U6 legal case, so any production
+sale-capable season adds a verified-identity link before the cash-out market is enabled
+(see `Q-A1-compliance-ruling.md`).
 
 ## Server Protocol
 
@@ -65,15 +67,15 @@ out-of-band migration before persistent/public playtests.
 - Q-F7a is intentionally not resolved here: a character whose season window closes with
   unfinished tasks remains incomplete. No penalty, lock, or auto-reset is applied by this
   slice.
-- Q-A1 is intentionally not resolved here: buyer/seller operations use existing prototype
-  account ids. Production identity, wallet linkage, escrow, and compliance controls remain
-  separate work.
+- Q-A1 is resolved at the policy level, not in this prototype implementation: buyer/seller
+  operations use the existing prototype account ids here, while production sale-capable
+  seasons add verified-identity gating as described in `Q-A1-compliance-ruling.md`.
 - Open/close windows are deterministic server configuration, not a client clock. Tests use
   injected timestamps so carry/reset behavior is replayable without external chain calls.
 
 ## Follow-Ups
 
-- Confirm whether production keeps this as the low-friction account layer or adds wallet
-  and verified-identity gates at the sale boundary.
+- Keep this as the low-friction account layer for prototype/non-cash play while adding the
+  verified-identity gate only to production sale-capable seasons.
 - Add an account recovery flow before persistent player progress matters.
 - Decide season id source and migration rules before public seasons.

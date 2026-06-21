@@ -6,8 +6,8 @@
  * module with zero game-logic changes (A3). Buildless: no bundler, no wallet SDK dependency (A1).
  *
  * Transaction-construction seam (F6.4): the authoritative server BUILDS and serializes the
- * transaction; the client adapter only SIGNS (and optionally submits) it. Adapters therefore take
- * an already-serialized transaction and must never construct one.
+ * transaction; the client adapter only SIGNS/SUBMITS it. Adapters therefore take an
+ * already-serialized transaction message and must never construct one.
  */
 (function (root, factory) {
   const wallet = factory(root);
@@ -16,7 +16,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
 
   // The contract every wallet adapter must satisfy. Game code depends ONLY on this shape.
-  const ADAPTER_METHODS = ['connect', 'disconnect', 'getPublicKey', 'signTransaction'];
+  const ADAPTER_METHODS = ['connect', 'disconnect', 'getPublicKey', 'signTransaction', 'signAndSendTransaction'];
 
   function isAdapter(a) {
     return !!a && typeof a.name === 'string' && ADAPTER_METHODS.every((m) => typeof a[m] === 'function');
@@ -51,6 +51,18 @@
         if (!pubkey) throw new Error('connect() before signing');
         return p.signTransaction(tx);
       },
+      async signAndSendTransaction(message, options) {
+        if (!p) throw new Error('Phantom wallet not found');
+        if (!pubkey) throw new Error('connect() before signing');
+        if (typeof p.request !== 'function') throw new Error('Phantom request API not found');
+        return p.request({
+          method: 'signAndSendTransaction',
+          params: {
+            message,
+            ...(options ? { options } : {}),
+          },
+        });
+      },
     };
   }
 
@@ -69,6 +81,10 @@
       async signTransaction(tx) {
         if (!pubkey) throw new Error('connect() before signing');
         return { signedBy: pubkey, payload: tx, mock: true };
+      },
+      async signAndSendTransaction(message) {
+        if (!pubkey) throw new Error('connect() before signing');
+        return { signature: 'MOCK_SIGNATURE_' + pubkey, payload: message, mock: true };
       },
     };
   }
@@ -106,6 +122,10 @@
       async signTransaction(tx) {
         if (!active) throw new Error('no wallet connected');
         return active.signTransaction(tx);
+      },
+      async signAndSendTransaction(message, options) {
+        if (!active) throw new Error('no wallet connected');
+        return active.signAndSendTransaction(message, options);
       },
     };
   }

@@ -121,6 +121,9 @@
   .econrow{display:flex;gap:8px;margin:11px 0}
   .econbtn{flex:1;padding:9px;color:#eadfc8}
   .econbtn.pay{color:var(--gold);border-color:#756137}
+  .wallet-actions{display:flex;gap:8px;margin:8px 0}
+  .wallet-actions .econbtn{padding:7px;font-size:11px}
+  #walletSig{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .econnote{color:#807866;font-size:10.5px;line-height:1.45;margin-top:10px}
   .skin{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #272b2f}
   .skin.equipped{background:rgba(241,199,91,.08)}
@@ -165,6 +168,12 @@
   <div class="row split"><span>Burned wSOL</span><b id="burned">0.0000</b></div>
   <div class="row"><span>Marketing fund</span><b id="marketingpool">0.0000</b></div>
   <div class="row"><span>Ops fee</span><b id="opspool">0.0000</b></div>
+  <div class="row split"><span>Solana wallet</span><b id="walletStatus">Disconnected</b></div>
+  <div class="row"><span>Last signature</span><b id="walletSig">--</b></div>
+  <div class="wallet-actions">
+    <button id="walletConnect" class="econbtn">Connect Phantom</button>
+    <button id="walletPing" class="econbtn pay">Sign devnet ping</button>
+  </div>
   <div id="chain"></div>
 </div>
 
@@ -205,10 +214,10 @@
     <div class="lvrow"><span>RUNE grind</span><b id="wRune">0.00</b></div>
     <div class="econrow">
       <button id="wConv" class="econbtn">Convert RUNE to Gold</button>
-      <button id="wBuy" class="econbtn pay">Buy Gold - 1 wSOL</button>
+      <button id="wBuy" class="econbtn pay">Sign devnet ping</button>
     </div>
     <div id="wlist" class="wlist"></div>
-    <div class="econnote">Direct purchase, no loot boxes. Gold buys cosmetics only. Each mock wSOL split is 50% burn, 35% marketing, 15% ops fee. Devnet mock only.</div>
+    <div class="econnote">Direct purchase, no loot boxes. Gold buys cosmetics only. Real settlement stays disabled until the on-chain F6 gate; devnet ping proves wallet signing only.</div>
     <button id="wclose">Close (B)</button>
   </div>
 </div>
@@ -235,6 +244,7 @@
 <script src="game/chain.js"></script>
 <script src="game/content.js"></script>
 <script src="game/account.js"></script>
+<script src="game/wallet.js"></script>
 <script>
 /* ============================================================================
    RUNECHAIN PIXEL - single-file browser MMO demo
@@ -1164,10 +1174,67 @@ function buySkin(s){
   player.skinId=s.id; player.pal=skinPal(s.id); refreshWardrobe();
 }
 document.getElementById('wConv').onclick=()=>{ const g=Econ.convertRuneToGold(valueAddress(),Chain.spendable(valueAddress(),'RUNE')); if(g>0)log('Converting '+g.toFixed(2)+' Gold from RUNE.'); refreshWardrobe(); };
-document.getElementById('wBuy').onclick=()=>{ const g=Econ.buyGoldWithSol(valueAddress(),1); log('Bought '+g.toFixed(2)+' Gold in the devnet mock.'); refreshWardrobe(); };
+const WalletRuntime=(function(){
+  const api=typeof RUNECHAIN_WALLET!=='undefined'?RUNECHAIN_WALLET:null;
+  const manager=api?RUNECHAIN_WALLET.createWalletManager({adapters:[RUNECHAIN_WALLET.createPhantomAdapter()]}):null;
+  let lastSignature='';
+  function short(v){ return v&&v.length>12?v.slice(0,6)+'...'+v.slice(-6):(v||'--'); }
+  function setText(id,value){ const el=document.getElementById(id); if(el)el.textContent=value; }
+  function refresh(){
+    const key=manager&&manager.getPublicKey();
+    setText('walletStatus',key?short(key):(manager?'Disconnected':'Unavailable'));
+    setText('walletSig',short(lastSignature));
+    const connect=document.getElementById('walletConnect'), ping=document.getElementById('walletPing');
+    if(connect)connect.disabled=!manager||!!key;
+    if(ping)ping.disabled=!manager||!key;
+  }
+  async function connect(){
+    if(!manager){ log('Wallet adapter unavailable.'); refresh(); return null; }
+    try{
+      const key=await manager.connect('phantom');
+      log('Phantom connected '+short(key)+'.');
+      refresh();
+      return key;
+    }catch(err){
+      log(err&&err.message?err.message:'Wallet connection failed.');
+      refresh();
+      return null;
+    }
+  }
+  async function signDevnetPing(){
+    if(!manager){ log('Wallet adapter unavailable.'); refresh(); return null; }
+    let key=manager.getPublicKey();
+    if(!key)key=await connect();
+    if(!key)return null;
+    try{
+      const res=await fetch('/api/wallet/devnet-ping',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({publicKey:key}),
+      });
+      const payload=await res.json();
+      if(!res.ok)throw new Error(payload&&payload.error&&payload.error.message?payload.error.message:'Wallet transaction request failed.');
+      const result=await manager.signAndSendTransaction(payload.params.message,payload.params.options);
+      lastSignature=result&&result.signature?result.signature:String(result||'');
+      log('Devnet wallet ping submitted '+short(lastSignature)+'.');
+      refresh();
+      return lastSignature;
+    }catch(err){
+      log(err&&err.message?err.message:'Devnet wallet ping failed.');
+      refresh();
+      return null;
+    }
+  }
+  return {connect,signDevnetPing,refresh};
+})();
+document.getElementById('walletConnect').onclick=()=>WalletRuntime.connect();
+document.getElementById('walletPing').onclick=()=>WalletRuntime.signDevnetPing();
+document.getElementById('wBuy').onclick=()=>WalletRuntime.signDevnetPing();
+WalletRuntime.refresh();
 function toggleWallet(){
   state.wallet=!state.wallet;
   document.getElementById('wallet').style.display=state.wallet?'block':'none';
+  WalletRuntime.refresh();
 }
 function lootFlash(html){
   const el=document.getElementById('lootflash');

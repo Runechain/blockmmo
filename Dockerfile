@@ -2,10 +2,12 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# no dependencies to install — just copy the runtime source the client loads:
+# install server runtime dependencies, then copy the client/runtime source:
 # index.html pulls in game/*.js (scripts) and engine/*.js (dynamic imports),
 # and the renderer fetches assets/pixel/*. assets/source/ is raw art, not served.
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
 COPY server.js ./
 COPY index.html ./
 COPY game/ ./game/

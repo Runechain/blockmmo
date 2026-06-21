@@ -12,7 +12,9 @@
 const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
+const https = require('https');
 const path = require('path');
+const bs58 = require('bs58');
 
 const sha256 = require('./game/sha256.js');
 const {
@@ -28,6 +30,11 @@ const DEFAULT_PORT = process.env.PORT || 8080;
 const DEFAULT_SEASON_ID = 'preseason-1';
 const ACCOUNT_CREDENTIAL_TYPE = 'browser-p256-v1';
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
+const WALLET_DEVNET_CLUSTER = 'devnet';
+const WALLET_DEVNET_COMMITMENT = 'confirmed';
+const WALLET_DEVNET_MEMO = 'runechain wallet adapter devnet ping';
+const WALLET_DEVNET_RPC_URL = process.env.SOLANA_DEVNET_RPC_URL || 'https://api.devnet.solana.com';
+const SOLANA_MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const AUDITOR_ENDING_BY_ID = new Map((AUDITOR_ENDINGS || []).map((ending) => [ending.id, ending]));
 const AUTHORITY_TIERS = Object.freeze({
   authoritative: Object.freeze([
@@ -83,6 +90,210 @@ const PVP_DUEL_DEFAULTS = Object.freeze({
   guardRegen: 10,
 });
 
+function walletApiError(status, code, message) {
+  const err = new Error(message);
+  err.status = status;
+  err.code = code;
+  return err;
+}
+
+function writeJson(res, status, obj) {
+  const body = Buffer.from(JSON.stringify(obj));
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Content-Length': body.length,
+  });
+  res.end(body);
+}
+
+function readJsonBody(req, maxBytes = 8192) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(walletApiError(413, 'request_too_large', 'Wallet request body is too large.'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('error', reject);
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8').trim();
+      if (!raw) return resolve({});
+      try {
+        resolve(JSON.parse(raw));
+      } catch (_) {
+        reject(walletApiError(400, 'invalid_json', 'Wallet request body must be valid JSON.'));
+      }
+    });
+  });
+}
+
+function decodeBase58Bytes(value, code, label) {
+  try {
+    const bytes = Buffer.from(bs58.decode(value));
+    if (bytes.length !== 32) throw new Error('expected 32 bytes');
+    return bytes;
+  } catch (_) {
+    throw walletApiError(400, code, `Invalid ${label}.`);
+  }
+}
+
+function parseWalletPublicKey(publicKey) {
+  if (typeof publicKey !== 'string' || !publicKey.trim()) {
+    throw walletApiError(400, 'invalid_wallet_public_key', 'Missing wallet public key.');
+  }
+  const key = publicKey.trim();
+  return {
+    key,
+    bytes: decodeBase58Bytes(key, 'invalid_wallet_public_key', 'wallet public key'),
+  };
+}
+
+function encodeShortVecLength(value) {
+  const out = [];
+  let n = value;
+  do {
+    let elem = n & 0x7f;
+    n >>= 7;
+    if (n) elem |= 0x80;
+    out.push(elem);
+  } while (n);
+  return Buffer.from(out);
+}
+
+function createMemoTransactionMessage({ feePayer, recentBlockhash, memo }) {
+  const memoProgram = decodeBase58Bytes(SOLANA_MEMO_PROGRAM_ID, 'invalid_memo_program', 'memo program id');
+  const blockhash = decodeBase58Bytes(recentBlockhash, 'invalid_recent_blockhash', 'recent blockhash');
+  const data = Buffer.from(memo, 'utf8');
+  return Buffer.concat([
+    // Header: 1 required signer, 0 readonly signed accounts, 1 readonly unsigned account.
+    Buffer.from([1, 0, 1]),
+    encodeShortVecLength(2),
+    feePayer.bytes,
+    memoProgram,
+    blockhash,
+    encodeShortVecLength(1),
+    Buffer.from([1]),
+    encodeShortVecLength(1),
+    Buffer.from([0]),
+    encodeShortVecLength(data.length),
+    data,
+  ]);
+}
+
+function rpcPostJson(rpcUrl, payload) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(rpcUrl);
+    const transport = url.protocol === 'http:' ? http : https;
+    const body = Buffer.from(JSON.stringify(payload));
+    const req = transport.request({
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'http:' ? 80 : 443),
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': body.length,
+      },
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => {
+        const text = Buffer.concat(chunks).toString('utf8');
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch (_) {
+          reject(walletApiError(502, 'invalid_devnet_rpc_response', 'Devnet RPC returned invalid JSON.'));
+          return;
+        }
+        if (res.statusCode < 200 || res.statusCode >= 300 || parsed.error) {
+          const message = parsed.error && parsed.error.message ? parsed.error.message : `Devnet RPC failed with HTTP ${res.statusCode}.`;
+          reject(walletApiError(502, 'devnet_rpc_failed', message));
+          return;
+        }
+        resolve(parsed.result);
+      });
+    });
+    req.setTimeout(8000, () => {
+      req.destroy(walletApiError(504, 'devnet_rpc_timeout', 'Devnet RPC request timed out.'));
+    });
+    req.on('error', reject);
+    req.end(body);
+  });
+}
+
+async function getLatestDevnetBlockhash(rpcUrl, commitment = WALLET_DEVNET_COMMITMENT) {
+  const result = await rpcPostJson(rpcUrl, {
+    jsonrpc: '2.0',
+    id: 'runechain-wallet-devnet-ping',
+    method: 'getLatestBlockhash',
+    params: [{ commitment }],
+  });
+  if (!result || !result.value || !result.value.blockhash) {
+    throw walletApiError(502, 'missing_devnet_blockhash', 'Devnet RPC response did not include a blockhash.');
+  }
+  return result.value;
+}
+
+async function createWalletDevnetPingRequest(options = {}) {
+  const feePayer = parseWalletPublicKey(options.publicKey);
+  const memo = options.memo || WALLET_DEVNET_MEMO;
+  const rpcUrl = options.rpcUrl || WALLET_DEVNET_RPC_URL;
+  const latest = options.connection
+    ? await options.connection.getLatestBlockhash(WALLET_DEVNET_COMMITMENT)
+    : await getLatestDevnetBlockhash(rpcUrl, WALLET_DEVNET_COMMITMENT);
+  const message = createMemoTransactionMessage({
+    feePayer,
+    recentBlockhash: latest.blockhash,
+    memo,
+  });
+
+  return {
+    cluster: WALLET_DEVNET_CLUSTER,
+    rpcUrl,
+    method: 'signAndSendTransaction',
+    params: {
+      message: bs58.encode(message),
+      options: { preflightCommitment: WALLET_DEVNET_COMMITMENT },
+    },
+    feePayer: feePayer.key,
+    recentBlockhash: latest.blockhash,
+    lastValidBlockHeight: latest.lastValidBlockHeight,
+    memo,
+  };
+}
+
+async function handleWalletDevnetPing(req, res, options = {}) {
+  if (req.method !== 'POST') {
+    writeJson(res, 405, { ok: false, error: { code: 'method_not_allowed', message: 'POST required.' } });
+    return;
+  }
+  try {
+    const body = await readJsonBody(req);
+    const request = await createWalletDevnetPingRequest({
+      publicKey: body.publicKey,
+      connection: options.connection,
+      rpcUrl: options.rpcUrl,
+    });
+    writeJson(res, 200, request);
+  } catch (err) {
+    const status = err.status || 500;
+    writeJson(res, status, {
+      ok: false,
+      error: {
+        code: err.code || 'wallet_devnet_request_failed',
+        message: err.message || 'Wallet devnet transaction request failed.',
+      },
+    });
+  }
+}
+
 function createRealmServer(options = {}) {
   const port = options.port == null ? DEFAULT_PORT : options.port;
   const ledgerFile = options.ledgerFile || path.join(__dirname, 'ledger.json');
@@ -101,6 +312,8 @@ function createRealmServer(options = {}) {
   const miningTtlMs = options.miningTtlMs == null ? 30000 : options.miningTtlMs;
   const staleThresholdMs = options.staleThresholdMs == null ? 10000 : options.staleThresholdMs;
   const pvpTurnTimeoutMs = options.pvpTurnTimeoutMs == null ? 30000 : options.pvpTurnTimeoutMs;
+  const walletConnection = options.walletConnection || null;
+  const walletRpcUrl = options.walletRpcUrl || WALLET_DEVNET_RPC_URL;
   const quiet = !!options.quiet;
   const clients = new Set();
   const pendingMining = new Map();
@@ -114,12 +327,17 @@ function createRealmServer(options = {}) {
   let peerNonce = 0;
 
   const server = http.createServer((req, res) => {
-    if (req.url === '/healthz') {
+    const route = req.url.split('?')[0];
+    if (route === '/healthz') {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       return res.end('ok');
     }
 
-    const route = req.url.split('?')[0];
+    if (route === '/api/wallet/devnet-ping') {
+      handleWalletDevnetPing(req, res, { connection: walletConnection, rpcUrl: walletRpcUrl });
+      return;
+    }
+
     const file = route === '/' ? '/index.html' : route;
     const full = path.join(__dirname, path.normalize(file).replace(/^(\.\.[/\\])+/, ''));
     fs.readFile(full, (err, data) => {
@@ -2059,6 +2277,9 @@ if (require.main === module) {
 module.exports = {
   AUTHORITY_TIERS,
   CHAINWELL_BLOCK_RULES,
+  WALLET_DEVNET_CLUSTER,
+  WALLET_DEVNET_MEMO,
+  createWalletDevnetPingRequest,
   createRealmServer,
   createAccountRegistry,
   decodeFrame,

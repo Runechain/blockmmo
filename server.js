@@ -43,6 +43,7 @@ const AUTHORITY_TIERS = Object.freeze({
   ]),
   nonAuthoritative: Object.freeze([
     'movement-relay',
+    'chat-relay',
   ]),
 });
 const SERVER_ARBITRATED_MESSAGE_TYPES = new Set([
@@ -188,6 +189,15 @@ function createRealmServer(options = {}) {
         broadcast(state, client);
         return { ok: true };
       }
+      case 'chat': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        const text = sanitizeText(message.text, 160);
+        if (!text) return { ok: false, error: { code: 'empty_chat', message: 'Chat message is empty.' } };
+        // Non-authoritative proximity chat: relayed verbatim, never recorded to the ledger.
+        broadcast({ t: 'chat', id: client.id, name: client.name, text, interior: sanitizeText(message.interior || '', 40) || null }, client);
+        return { ok: true };
+      }
       case 'block': {
         const account = requireAccount(client);
         if (!account.ok) return account;
@@ -285,6 +295,10 @@ function createRealmServer(options = {}) {
       z: finiteNumber(message.z),
       yaw: finiteNumber(message.yaw),
       moving: !!message.moving,
+      // Presence so peers can show who is in an encounter and co-locate inside interiors.
+      mode: sanitizeText(message.mode || 'town', 24) || 'town',
+      encounter: sanitizeText(message.encounter || '', 24) || null,
+      interior: sanitizeText(message.interior || '', 40) || null,
     };
   }
 

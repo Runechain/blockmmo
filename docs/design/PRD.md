@@ -61,8 +61,9 @@ These hold across every feature below. They exist once, here, so they cannot dri
 - **U6 — One character per account per season. [DECIDED]** A hard cap of one. For the
   prototype, "account" binds to a browser-local P-256 game-account credential verified
   by a server challenge. This is a low-friction pseudonymous cap, not proof of one human.
-  Stronger sybil resistance and production compliance remain gated by legal/compliance
-  work before any real-money character-sale market.
+  For any production season that allows real-money character sales, the cap keys to a
+  **verified identity**, not a wallet: one verified person may enable at most one
+  sale-capable character per season, while wallets remain settlement/payment rails only.
 - **U7 — Server is authoritative for all value. [DECIDED]** Clients propose; the server
   disposes. The "trust the client" relay posture is retired for anything touching the
   ledger or PvP outcomes (see [Server Authority](#system--server-authority--anti-cheat)).
@@ -298,12 +299,15 @@ to F6.3). *Not legal advice; flagged so it is not a silent omission.*
   Carried as "failed"? (Needs an explicit rule; the gate must handle this state.)
 - **Q-F7b [OPEN]** `NonTransferable` is unusable for F7.2 — confirm transfer-hook vs.
   escrow-program as the gating mechanism.
-- **Q-A1 [DECIDED FOR PROTOTYPE][LEGAL OPEN]** (also U6) The one-per-season cap binds
-  to a browser-local P-256 game account credential. The server owns the binding, issues a
-  challenge, verifies the signature, and keys Chainwell value to the season character id
-  instead of a display name. This is deliberately soft sybil resistance for prototype
-  playtests; verified identity, wallet linkage, or sale-boundary controls remain a
-  separate compliance decision before production cash-out.
+- **Q-A1 [DECIDED]** (also U6) Prototype play keeps the browser-local P-256 game account
+  credential: the server owns the binding, issues a challenge, verifies the signature,
+  and keys Chainwell value to the season character id instead of a display name. That
+  remains deliberately soft sybil resistance for prototype playtests only. For any
+  production season that enables real-money character sales, **wallet-binding is not
+  treated as sufficient** for the legal case; the sale-capable account layer binds to
+  **one verified identity per season**, with the wallet serving only as the payment/
+  settlement instrument. Sumsub is the planning-baseline provider, and the hosted KYC
+  flow is deferred until a player opts into a production sale-capable season.
 
 ---
 
@@ -414,6 +418,7 @@ Consolidated. Each is referenced inline above.
 | Q-F6b | CLOSED: settlement uses the SPL Token Program native wSOL mint `So11111111111111111111111111111111111111112` | Architecture |
 | Q-F7a | Status of a character whose window closed with tasks unfinished | Design (gate) |
 | Q-F7b | Transfer-gating mechanism: transfer-hook vs. escrow-program | Architecture |
+| Q-A1 | CLOSED: prototype uses server-verified browser game accounts; production sale-capable seasons require one verified identity per season, not wallet-only binding | Compliance/Architecture |
 | Q-S2a | CLOSED: authoritative Chainwell validates server-issued `mine:submit` blocks only | Architecture |
 | Q-S2c | Turn-arbitration protocol for turn-based PvP | Architecture |
 
@@ -459,6 +464,26 @@ framing. The design intentionally narrows the surface; it does not assume the su
   committed player-facing payout (avoids tournament/gambling structure — see non-goals).
 - **No loss-based wagering.** Death drops nothing (F4 / Ruling 8); there is no stake-to-lose loop.
 
+**Q-A1 production compliance stance.**
+- **Wallet-binding is not sufficient for the legal case around U6.** A wallet is cheap to
+  multiply, so it cannot be the project's relied-on sybil-resistance layer for any
+  real-money character-sale market.
+- **Prototype vs. production split.** Prototype/internal play keeps the low-friction
+  browser-local game account. A production **sale-capable** season instead requires a
+  verified-identity link, and the one-character-per-season cap binds to that identity.
+- **Friction target.** No KYC at first launch or for non-cash playtests. Identity review is
+  deferred until a player opts into a production sale-capable season; players who do not
+  opt in can still play, but cannot create a sale-capable character.
+- **Provider baseline.** Sumsub is the planning baseline for production costing
+  (~$1.35–$1.85 / verification benchmark already logged in issue #40). Replace only if
+  another hosted-verification provider offers materially lower cost without expanding the
+  project's data-handling surface.
+- **Privacy / retention rule.** If verified identity is enabled, the game service stores
+  only provider reference ids, decision state, jurisdiction/region if needed, and audit
+  timestamps — **not** raw ID images/selfies. Production go-live additionally requires a
+  provider DPA, a published retention/deletion schedule, and a user-facing support path
+  for access/erasure requests.
+
 **Design guardrails that support the stance.** No paid advantage (U1), money never skips the
 grind (U2), one real-value exit only (U5), one character per account per season (U6), only
 *earned* value is tradeable (U4 / F7.4), server-authoritative value (U7).
@@ -486,8 +511,8 @@ grind (U2), one real-value exit only (U5), one character per account per season 
 | **R3** | 35% marketing bucket read as a gambling prize pool. | Operator-discretion spend, **not** a committed payout (F5.4); explicit non-goal. | Mitigated by design; confirm with counsel. |
 | **R4** | Loss-based mechanics read as wagering. | No item/currency loss on death (F4 / Ruling 8); no stake-to-lose loop. | Mitigated by design. |
 | **R5** | Player financial-outcome liability. | Terms/disclaimer; participation at own risk; value set off-platform, not guaranteed. | Open — counsel to confirm sufficiency. |
-| **R6** | One-character-per-season cap (U6) trivially circumvented via multiple wallets/accounts, weakening guardrail G5 and the legal case. | Cap binds to a browser-local P-256 game-account credential, server-verified (Q-A1, prototype soft cap); stronger identity binding / KYC is an option under review. | **Open — ties to #40.** Implementation in the Foundations lane. |
-| **R7** | If KYC/identity binding is adopted (R6), it creates a new data-retention / privacy compliance surface (e.g. GDPR). | Conditional: scope data minimization + retention policy + provider DPA **if** KYC is chosen; avoided entirely if wallet/game-acct binding is deemed sufficient. | Open — conditional on the R6 decision (#40). |
+| **R6** | One-character-per-season cap (U6) trivially circumvented via multiple wallets/accounts, weakening guardrail G5 and the legal case. | Prototype cap stays on the browser-local P-256 game account, but any production sale-capable season binds the cap to **one verified identity per season**; wallet is explicitly **not** the identity layer. | Mitigated by design; counsel must confirm the production stance (#40). |
+| **R7** | Verified-identity binding (R6) creates a new data-retention / privacy compliance surface (e.g. GDPR). | Minimize retained data to provider reference ids + outcomes only; no raw identity docs on game servers; require provider DPA, retention/deletion policy, and user request handling before go-live. | Open operational compliance work if production sales are enabled (#40). |
 | **R8** | Cash-out concentration: a secondary market in completed characters reopens securities / gambling / tax questions (the **#1** legal-review item, F7 risk note). | U6 caps the market to ≤1 sale per account per season; U4 / F7.4 make only *earned* (not purchased) value tradeable; settlement is off-platform peer-to-peer; **F7 go-live legal-gated**. | **Open — gates F7 go-live.** Counsel review required (#39). |
 
 These risks are referenced from the design above (notably F6.3, F7 risk note, U5/U6, Q-A1) and

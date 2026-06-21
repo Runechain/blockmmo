@@ -16,6 +16,8 @@ mutable display name or transient WebSocket peer id.
 - Character id: `char_` plus the first 24 hex chars of SHA-256 over
   `accountId|seasonId`.
 - Cap: one character per account key per season.
+- Sale cap: at most one character sale per account key per season; once sold, that season's
+  character cannot be sold again.
 - Season state: the realm server persists `{ id, opensAt, closesAt, mandatoryTasks }`
   in `accounts.json`. Timestamps are real-world epoch milliseconds supplied by the
   operator/config for this prototype.

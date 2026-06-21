@@ -1510,6 +1510,9 @@ function createAccountRegistry(options = {}) {
   function canSellCharacter(accountId, at = now(), characterId) {
     const found = characterId ? findCharacterById(characterId) : findCurrentCharacter(accountId);
     if (!found || found.account.id !== accountId) return accountError('unknown_character', 'Seller does not own that character.');
+    if (hasRecordedSaleInSeason(found.account, found.character.seasonId)) {
+      return accountError('season_sale_limit_reached', 'Account already sold a character this season.');
+    }
     const season = registry.seasons[found.character.seasonId];
     if (isSeasonOpen(season, at)) return accountError('season_open', 'Cannot sell while the season window is open.');
     if (!isSeasonComplete(found.character, season)) {
@@ -1755,6 +1758,13 @@ function createAccountRegistry(options = {}) {
   function isSeasonComplete(character, season) {
     normalizeCharacterState(character);
     return !!character.seasonComplete && isWithinSeason(character.completedAt, season) && allMandatoryTasksComplete(character, season);
+  }
+
+  function hasRecordedSaleInSeason(account, idSeason) {
+    normalizeAccountState(account);
+    return Object.values(account.characters || {}).some((character) =>
+      character && character.seasonId === idSeason && !!character.sale
+    );
   }
 
   function applyCharacterProgress(character, progress) {

@@ -53,6 +53,7 @@ let nowMs = 1100;
 const keeperCredential = makeCredential();
 const sellerCredential = makeCredential();
 const buyerCredential = makeCredential();
+const buyerTwoCredential = makeCredential();
 const lateCredential = makeCredential();
 
 const seasonOne = createAccountRegistry({
@@ -72,6 +73,7 @@ ok('season clock and mandatory task config persist server-side');
 const keeperJoin = join(seasonOne, keeperCredential, 'Keeper');
 const sellerJoin = join(seasonOne, sellerCredential, 'Seller');
 const buyerJoin = join(seasonOne, buyerCredential, 'Buyer');
+const buyerTwoJoin = join(seasonOne, buyerTwoCredential, 'Buyer Two');
 const lateJoin = join(seasonOne, lateCredential, 'Late');
 
 assert.strictEqual(keeperJoin.character.seasonComplete, false, 'new character should not start complete');
@@ -120,8 +122,10 @@ seasonOne.recordCharacterProgress(sellerJoin.accountId, {
 seasonOne.completeMandatoryTask(sellerJoin.accountId, 'q01', 1250);
 seasonOne.completeMandatoryTask(sellerJoin.accountId, 'q05', 1350);
 assert.strictEqual(seasonOne.recordCharacterSale(sellerJoin.accountId, buyerJoin.accountId, { at: 2100 }).ok, true);
+assertRejected(seasonOne.canSellCharacter(sellerJoin.accountId, 2101), 'season_sale_limit_reached');
+assertRejected(seasonOne.recordCharacterSale(sellerJoin.accountId, buyerTwoJoin.accountId, { at: 2101 }), 'season_sale_limit_reached');
 assertRejected(seasonOne.recordCharacterSale(lateJoin.accountId, buyerJoin.accountId, { at: 2100 }), 'season_tasks_unfinished');
-ok('sale gate requires closed season and completed mandatory tasks');
+ok('sale gate requires closed season, completed mandatory tasks, and at most one sale per account per season');
 
 // Q-F7a: a character mid-task when the window closes ends 'failed' — keeps collection, cannot sell.
 // Give Late a collection + ONE of the two mandatory tasks done inside the window.

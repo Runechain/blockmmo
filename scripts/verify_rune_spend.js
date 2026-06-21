@@ -1,7 +1,7 @@
 /* Verifies issue #32 — server-authoritative RUNE earning + spending (Hearthlight power-sink).
-   Drives the realm server end-to-end: earn RUNE from a kill, spend it on leveling and relic
-   forging, and confirm every transaction lands as a Chainwell block with no client-side
-   balance manipulation accepted. */
+   Drives the realm server end-to-end: earn RUNE from a validated kill outcome, spend it on
+   leveling and relic forging, and confirm every transaction lands as a Chainwell block with no
+   client-side balance manipulation accepted. */
 const assert = require('assert');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -141,10 +141,18 @@ assert.strictEqual(broke.error.code, 'insufficient_rune');
 readMessages(client);
 assert.strictEqual(balance(), 0, 'rejected spend must not touch the ledger');
 
-// --- 2. Earn RUNE from a kill (Hollow Debtor) ---
+// --- 2. Earn RUNE from a validated kill outcome (Hollow Debtor) ---
 const reward = ENEMY_REWARDS.hollow.rune;
-let r = runCandidate(realm, client, { t: 'mine:reward', source: { type: 'enemy', key: 'hollow' } }, difficulty);
-assert.strictEqual(r.accepted.ok, true, 'kill reward should be accepted onto the ledger');
+let r = runCandidate(realm, client, {
+  t: 'segment:complete',
+  outcome: {
+    mode: 'platformer',
+    segmentId: 'seg-spend-hollow',
+    source: { type: 'enemy', key: 'hollow' },
+    proof: { completed: true, kills: [{ key: 'hollow', count: 1 }] },
+  },
+}, difficulty);
+assert.strictEqual(r.accepted.ok, true, 'validated kill reward should be accepted onto the ledger');
 readMessages(client);
 assert.strictEqual(balance(), reward, `killing a Hollow Debtor should credit ${reward} RUNE`);
 
@@ -170,7 +178,15 @@ assert.strictEqual(tooPoor.error.code, 'insufficient_rune');
 readMessages(client);
 
 // --- 5. Client cannot forge a cheaper block: tamper the amount and submission is rejected ---
-const issued = realm.handleParsedMessage(client, { t: 'mine:reward', source: { type: 'enemy', key: 'knight' } });
+const issued = realm.handleParsedMessage(client, {
+  t: 'segment:complete',
+  outcome: {
+    mode: 'platformer',
+    segmentId: 'seg-spend-knight',
+    source: { type: 'enemy', key: 'knight' },
+    proof: { completed: true, kills: [{ key: 'knight', count: 1 }] },
+  },
+});
 assert.strictEqual(issued.ok, true);
 readMessages(client);
 const tampered = mineWork(issued.work, difficulty);
@@ -192,7 +208,7 @@ readMessages(client);
 const honestKnight = mineWork(issued.work, difficulty);
 assert.strictEqual(realm.handleParsedMessage(client, {
   t: 'mine:submit', candidateId: issued.work.candidateId, block: honestKnight,
-}).ok, true, 'the honest knight reward should still be claimable');
+}).ok, true, 'the honest validated knight reward should still be claimable');
 readMessages(client);
 
 // --- 6. Forge a relic, then confirm it cannot be double-forged ---

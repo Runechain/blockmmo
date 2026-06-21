@@ -751,6 +751,11 @@ function createRealmServer(options = {}) {
   }
 
   function issueRewardMiningWork(client, source) {
+    if (source && source.type === 'enemy') {
+      const result = blockError('invalid_reward_source', 'Direct enemy reward claims require a validated solo segment outcome.');
+      send(client, { t: 'mine:error', error: result.error });
+      return result;
+    }
     const reward = resolveRewardSource(source);
     if (!reward.ok) {
       send(client, { t: 'mine:error', error: reward.error });

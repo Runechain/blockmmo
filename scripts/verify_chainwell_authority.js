@@ -149,6 +149,7 @@ assert.strictEqual(
 );
 
 const serverApi = require(path.join(root, 'server.js'));
+const { ENEMY_REWARDS, BOSS_SIGILS } = require(path.join(root, 'game', 'content.js'));
 assert.strictEqual(typeof serverApi.createRealmServer, 'function', 'server should export createRealmServer');
 assert.strictEqual(typeof serverApi.decodeFrame, 'function', 'server should export decodeFrame');
 assert(serverApi.CHAINWELL_BLOCK_RULES && typeof serverApi.CHAINWELL_BLOCK_RULES === 'object', 'server should export Chainwell block validation rules');
@@ -353,11 +354,18 @@ for (const txs of forgedAssetMints) {
 }
 
 nowMs = 4000;
-const rewardRequest = realm.handleParsedMessage(submitter, {
+const directEnemyReward = realm.handleParsedMessage(submitter, {
   t: 'mine:reward',
   source: { type: 'enemy', key: 'hollow' },
 });
-assert.strictEqual(rewardRequest.ok, true, 'server should issue mining work for a known RUNE reward source');
+assertRejected(directEnemyReward, 'invalid_reward_source');
+assert.strictEqual(readMessages(submitter)[0].error.code, 'invalid_reward_source');
+
+const rewardRequest = realm.handleParsedMessage(submitter, {
+  t: 'mine:reward',
+  source: { type: 'boss', key: 'tallow' },
+});
+assert.strictEqual(rewardRequest.ok, true, 'server should issue mining work for a known boss reward source');
 const rewardWork = readMessages(submitter)[0];
 assert.strictEqual(rewardWork.t, 'mine:work');
 assert.strictEqual(rewardWork.work.difficulty, 1);
@@ -365,13 +373,14 @@ assert.strictEqual(rewardWork.work.block.index, 1);
 assert.strictEqual(rewardWork.work.block.prev, serverGenesis.hash);
 assert.deepStrictEqual(rewardWork.work.block.txs, [{
   to: submitterJoin.account.character.address,
-  amt: 14,
-  note: 'Hollow Debtor slain',
+  amt: ENEMY_REWARDS.tallow.rune,
+  note: 'Mother Tallow defeated — ' + BOSS_SIGILS.tallow,
   cur: 'RUNE',
   id: rewardWork.work.candidateId,
   auth: {
-    type: 'server-reward',
-    source: 'enemy:hollow',
+    type: 'server-boss-reward',
+    source: 'boss:tallow',
+    sigilId: BOSS_SIGILS.tallow,
     accountId: submitterJoin.account.accountId,
     characterId: submitterJoin.account.character.id,
     seasonId: 'test-season',
@@ -380,7 +389,7 @@ assert.deepStrictEqual(rewardWork.work.block.txs, [{
 
 const duplicateRewardRequest = realm.handleParsedMessage(submitter, {
   t: 'mine:reward',
-  source: { type: 'enemy', key: 'auditor' },
+  source: { type: 'boss', key: 'auditor', choiceC: true },
 });
 assertRejected(duplicateRewardRequest, 'mining_candidate_pending');
 assert.strictEqual(realm.getChain().length, 1, 'pending reward work should cap each client at one candidate');

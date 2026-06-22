@@ -9,3 +9,7 @@
 ## 2025-05-20 - [High-Frequency UI Performance]
 **Learning:** In browser-based game loops, updating the DOM on every frame (even if the value is the same) can lead to layout thrashing and unnecessary CPU overhead. Caching elements and checking for content changes before updating is a crucial optimization for a smooth 60FPS HUD.
 **Action:** Cache high-frequency HUD elements in a global `UI` object and use simple string comparison checks before modifying `innerHTML` or `textContent`.
+
+## 2025-05-25 - [Async Button Feedback]
+**Learning:** In single-page MMOs, wallet interactions (connecting, signing) can take unpredictable amounts of time. Without visual feedback, users may click multiple times or assume the app is broken.
+**Action:** Always disable buttons, use `aria-busy="true"`, and change the button text (e.g., "Connecting...", "Processing...") during asynchronous operations, restoring the original state in a `finally` block. Also, ensure disabled buttons use `cursor: not-allowed` for clear visual cues.

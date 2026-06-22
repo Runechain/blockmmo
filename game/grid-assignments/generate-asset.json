@@ -1,0 +1,32 @@
+{
+  "type": "runechain-generate-asset",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Convert a region art specification into PixelLab top-down tileset generation arguments.",
+  "prompt_template": "You are converting a RUNECHAIN region art spec into PixelLab create_topdown_tileset arguments. Return exactly one JSON object containing the API call args; do not call PixelLab and do not include generated images. Mirror the request-body style used in scripts/gen-pixellab-assets.js: include a rich description, image_size with width and height, high_top_down view, thin dark outline, simple shading, medium detail, a dark gothic muted color_palette, no_background, and any tileset-specific fields needed to describe terrain, props, edges, walls, floors, hazards, and landmark motifs. If the region art spec includes a style reference or palette anchor, express it as an optional directions or reference field following the same plain-object request-body convention used by the script. Preserve RUNECHAIN invariants: Gold may only describe cosmetic reward flavor or visual dressing and must never imply power, speed, combat advantage, progression acceleration, sale eligibility, wallet activity, signing, or funds movement.",
+  "gold_reward": 15,
+  "output_schema": {
+    "description": "string",
+    "image_size": {
+      "width": "number",
+      "height": "number"
+    },
+    "view": "string",
+    "outline": "string",
+    "shading": "string",
+    "detail": "string",
+    "color_palette": "string",
+    "no_background": "boolean",
+    "tileset": {
+      "terrain": "array",
+      "props": "array",
+      "edges": "array",
+      "walls": "array",
+      "floors": "array",
+      "hazards": "array",
+      "landmarks": "array"
+    },
+    "reference": "object"
+  }
+}

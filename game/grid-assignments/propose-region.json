@@ -1,0 +1,41 @@
+{
+  "type": "runechain-propose-region",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Propose a candidate RUNECHAIN season region manifest with tilemap, entities, and exits.",
+  "prompt_template": "You are proposing one candidate RUNECHAIN season region. Return exactly one JSON object shaped like a season region manifest with id, label, tilemap, entities, and exits. The id must be a stable kebab-case identifier and label must be player-readable. tilemap must describe the playable top-down map, including width, height, tile_size, palette or tileset intent, terrain layers, collision or blocked-tile rules, spawn points, and notable landmarks. entities must be an array of NPCs, enemies, interactables, pickups, or bosses with stable ids, type, label, position, behavior or dialogue intent, and any quest/canon hooks. exits must be an array of exits with stable ids, label, from position or bounds, target region or target marker, and traversal requirements. Preserve RUNECHAIN economy and canon invariants: Gold is cosmetic-only and never grants power, speed, progression skips, combat advantage, or sale eligibility; RUNE and earned play remain the power path. Do not include implementation code, API calls, secrets, wallet actions, or live publishing steps.",
+  "gold_reward": 20,
+  "output_schema": {
+    "id": "string",
+    "label": "string",
+    "tilemap": {
+      "width": "number",
+      "height": "number",
+      "tile_size": "number",
+      "tileset": "string",
+      "layers": "array",
+      "collision": "object",
+      "spawns": "array",
+      "landmarks": "array"
+    },
+    "entities": [
+      {
+        "id": "string",
+        "type": "string",
+        "label": "string",
+        "position": "object",
+        "behavior": "string"
+      }
+    ],
+    "exits": [
+      {
+        "id": "string",
+        "label": "string",
+        "from": "object",
+        "target": "string",
+        "requirements": "array"
+      }
+    ]
+  }
+}

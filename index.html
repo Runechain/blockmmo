@@ -109,6 +109,7 @@
   kbd{display:inline-block;padding:1px 4px;font-family:inherit;font-size:10px;background:var(--ink);
     border:1px solid var(--gold);border-bottom-width:2px;border-radius:2px;color:var(--gold);
     line-height:1.1;margin:0 2px;vertical-align:baseline;font-weight:bold}
+  abbr[title]{cursor:help;text-decoration:none}
   @keyframes low-hp-pulse{
     0%{filter:brightness(1)}
     50%{filter:brightness(1.4)}
@@ -147,7 +148,7 @@
   <div id="hp" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="120" aria-valuemax="120" aria-label="Health"><i></i></div>
   <div class="lab">Stamina</div>
   <div id="sta" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="100" aria-valuemax="100" aria-label="Stamina"><i></i></div>
-  <div class="statline">VGR <b id="sVgr">10</b> / END <b id="sEnd">10</b> / STR <b id="sStr">10</b> / DMG <b id="sDmg">34</b></div>
+  <div class="statline"><abbr title="Vigor">VGR</abbr> <b id="sVgr">10</b> / <abbr title="Endurance">END</abbr> <b id="sEnd">10</b> / <abbr title="Strength">STR</abbr> <b id="sStr">10</b> / <abbr title="Damage">DMG</abbr> <b id="sDmg">34</b></div>
   <div id="runes" class="statline"></div>
 </div>
 
@@ -158,7 +159,7 @@
 </div>
 
 <div id="wallet" class="hud">
-  <h3>Runechain Wallet</h3>
+  <h3>Runechain Wallet <kbd>M</kbd></h3>
   <div class="row"><span>Wallet</span><b id="wStatus">Not connected</b></div>
   <button id="wConnect" class="econbtn" style="width:100%;margin:2px 0 8px">Connect Wallet</button>
   <div class="row"><span>Confirmed RUNE</span><b id="bal">0.00</b></div>
@@ -198,13 +199,13 @@
     <button class="statbtn" data-stat="endurance"><span>Endurance <small>+ max stamina</small></span><span class="cost" id="cEnd"></span></button>
     <button class="statbtn" data-stat="strength"><span>Strength <small>+ attack damage</small></span><span class="cost" id="cStr"></span></button>
     <div class="itemlist" id="itemlist"></div>
-    <button id="lvclose">Leave Hearthlight (G)</button>
+    <button id="lvclose">Leave Hearthlight <kbd>G</kbd></button>
   </div>
 </div>
 
 <div id="wardrobe">
   <div class="panel">
-    <h2>Wardrobe</h2>
+    <h2>Wardrobe <kbd>B</kbd></h2>
     <div class="gsub">Cosmetics only. Looks, never power. Soulbound and recorded on-chain.</div>
     <div class="lvrow"><span>Gold <small id="wGoldPend" style="color:#9a8a5a"></small></span><b id="wGold">0.00</b></div>
     <div class="lvrow"><span>RUNE grind</span><b id="wRune">0.00</b></div>
@@ -214,7 +215,7 @@
     </div>
     <div id="wlist" class="wlist"></div>
     <div class="econnote">Direct purchase, no loot boxes. Gold buys cosmetics only. Each mock wSOL split is 50% burn, 35% marketing, 15% ops fee. Devnet mock only.</div>
-    <button id="wclose">Close (B)</button>
+    <button id="wclose">Close <kbd>B</kbd></button>
   </div>
 </div>
 
@@ -1218,7 +1219,12 @@ function buySkin(s){
   }
   player.skinId=s.id; player.pal=skinPal(s.id); refreshWardrobe();
 }
-document.getElementById('wConv').onclick=()=>{ const g=Econ.convertRuneToGold(valueAddress(),Chain.spendable(valueAddress(),'RUNE')); if(g>0)log('Converting '+g.toFixed(2)+' Gold from RUNE.'); refreshWardrobe(); };
+document.getElementById('wConv').onclick=()=>{
+  if(!confirm('Convert all spendable RUNE to Gold? This is one-way and reduces your power-progression balance.')) return;
+  const g=Econ.convertRuneToGold(valueAddress(),Chain.spendable(valueAddress(),'RUNE'));
+  if(g>0)log('Converting '+g.toFixed(2)+' Gold from RUNE.');
+  refreshWardrobe();
+};
 function updateWalletConnUI(){
   const s=document.getElementById('wStatus'), b=document.getElementById('wConnect');
   if(!s||!b)return;

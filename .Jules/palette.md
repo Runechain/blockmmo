@@ -9,3 +9,11 @@
 ## 2025-05-20 - [High-Frequency UI Performance]
 **Learning:** In browser-based game loops, updating the DOM on every frame (even if the value is the same) can lead to layout thrashing and unnecessary CPU overhead. Caching elements and checking for content changes before updating is a crucial optimization for a smooth 60FPS HUD.
 **Action:** Cache high-frequency HUD elements in a global `UI` object and use simple string comparison checks before modifying `innerHTML` or `textContent`.
+
+## 2025-05-22 - [Terminology Clarity via Semantic Abbreviations]
+**Learning:** In RPGs with abbreviated stat names (VGR, END, STR), providing semantic `<abbr>` tags with `title` attributes allows for effortless terminology discovery via tooltips without cluttering the compact HUD.
+**Action:** Wrap stat abbreviations in `<abbr>` tags and ensure they use `cursor: help` for visual feedback.
+
+## 2025-05-22 - [Currency Conversion Safeguards]
+**Learning:** One-way currency conversions (especially from power-currency to cosmetic-currency) are high-stakes actions. A simple `confirm()` dialog prevents irreversible accidental progression loss and respects the user's grind.
+**Action:** Always wrap one-way or destructive economic actions in a confirmation prompt.

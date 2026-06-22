@@ -1,0 +1,12 @@
+{
+  "type": "runechain-build-telemetry",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Dispatch the first-only S1 telemetry bootstrap work that builds game/telemetry.js per epic 101.",
+  "prompt_template": "This is the first-only S1 bootstrap dispatch for RUNECHAIN telemetry. Do not implement telemetry inside this grid assignment spec. Instead, create a focused implementation PR for epic 101 that builds game/telemetry.js and the required server ingest path. The telemetry implementation should provide a non-blocking emit(eventType, payload) API that buffers events, flushes every 30 seconds or on logout, includes accountId, regionId, timestamp, and session_id on each event, and supports the S1 signals: time per region across overworld and interiors, quest abandonment by quest step, death and retry counts per platformer section, NPC interaction rate and dialogue tree reads, path choices at forks and exits taken, logout location with last region and coordinates, boss re-attempt counts per boss per account, chat density by region, action timing variance, action diversity per session, and Gold earning rate versus the population baseline. The server-side work should receive batched telemetry events, validate account binding before storage, avoid personally identifiable data beyond accountId, and add verification such as scripts/verify_telemetry.js. Return only the PR URL for the telemetry implementation.",
+  "gold_reward": 25,
+  "output_schema": {
+    "pr_url": "string"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "type": "runechain-score-season",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Score a passing candidate season against S1 telemetry fitness signals and rank it against prior seasons.",
+  "prompt_template": "You are scoring a RUNECHAIN season candidate that has already passed validation. Use the S1 telemetry fitness signals from epic 101 as inputs: time per region across overworld and interiors, quest abandonment by quest step, death and retry counts per platformer section, NPC interaction rate and dialogue tree reads, path choices at forks and exits taken, logout location with last region and coordinates, boss re-attempt counts per boss per account, chat density by region, action timing variance, action diversity per session, and Gold earning rate versus the population baseline. Compare the candidate against prior seasons and produce a numeric score, a rank, and a recommendation. The rationale must preserve the economy and canon invariants: Gold is cosmetic-only and must never be rewarded as power or progression acceleration; RUNE is the only power currency and is earned through the grind loop; on-chain, Chainwell, and canon state must never be rewritten or retroactively altered. Reward healthy engagement, traversability, fair challenge, readable fork choices, and low fraud risk without encouraging pay-to-win or canonical history edits.",
+  "gold_reward": 25,
+  "output_schema": {
+    "score": "number",
+    "rank": "number",
+    "recommendation": "string"
+  }
+}

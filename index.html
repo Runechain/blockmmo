@@ -1225,15 +1225,23 @@ function updateWalletConnUI(){
   if(Wallet.address){ s.textContent=Wallet.active+' · '+shortPk(Wallet.address); b.textContent='Disconnect Wallet'; }
   else { s.textContent='Not connected'; b.textContent='Connect Wallet'; }
 }
-document.getElementById('wConnect').onclick=async()=>{
+document.getElementById('wConnect').onclick=async function(){
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = Wallet.address ? 'Disconnecting...' : 'Connecting...';
   try{
     if(Wallet.address){ await Wallet.disconnect(); log('Wallet disconnected.'); }
     else { const c=await Wallet.connect(); log('Connected '+c.name+' wallet ('+shortPk(c.pk)+').'); }
   }catch(err){ log('Wallet: '+esc(err.message||String(err))); }
+  btn.disabled = false;
   updateWalletConnUI();
 };
-document.getElementById('wBuy').onclick=async()=>{
+document.getElementById('wBuy').onclick=async function(){
   const sol=1;
+  const btn = this;
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
   try{
     if(!Wallet.address){ await Wallet.connect(); updateWalletConnUI(); }
     // Server builds + serializes the settlement tx (U7); the adapter only signs it (F6.4).
@@ -1245,6 +1253,7 @@ document.getElementById('wBuy').onclick=async()=>{
     log('Settled '+sol+' wSOL via '+Wallet.active+' wallet; credited '+g.toFixed(2)+' Gold (devnet mock).');
     refreshWardrobe();
   }catch(err){ log('Purchase failed: '+esc(err.message||String(err))); }
+  finally { btn.disabled = false; btn.textContent = oldText; }
 };
 function toggleWallet(){
   state.wallet=!state.wallet;

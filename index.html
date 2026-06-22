@@ -106,6 +106,9 @@
   button:disabled{opacity:.42;cursor:default}
   button:focus-visible, input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   button:active{transform:translateY(1px);filter:brightness(.9)}
+  kbd{display:inline-block;padding:1px 4px;font-family:inherit;font-size:10px;background:var(--ink);
+    border:1px solid var(--gold);border-bottom-width:2px;border-radius:2px;color:var(--gold);
+    line-height:1.1;margin:0 2px;vertical-align:baseline;font-weight:bold}
   @keyframes low-hp-pulse{
     0%{filter:brightness(1)}
     50%{filter:brightness(1.4)}
@@ -225,8 +228,8 @@
   <div class="sub">GRACEFALL PARISH - PIXEL MMO PROTOTYPE</div>
   <p>Top-down pixel combat in a ruined parish: safe Hearthlight, readable monsters, RUNE drops, proof-of-work blocks, relic forging, cosmetics, and same-origin MMO sync.</p>
   <div class="keys">
-    <b>WASD</b> move / <b>Mouse</b> aim / <b>Click</b>, <b>Space</b>, or <b>L</b> attack / <b>Shift</b> dash /
-    <b>Q</b> target nearest / <b>E</b> interact / <b>G</b> Hearthlight / <b>B</b> wardrobe / <b>M</b> wallet
+    <kbd>WASD</kbd> move / <kbd>Mouse</kbd> aim / <kbd>Click</kbd>, <kbd>Space</kbd>, or <kbd>L</kbd> attack / <kbd>Shift</kbd> dash /
+    <kbd>Q</kbd> target nearest / <kbd>E</kbd> interact / <kbd>G</kbd> Hearthlight / <kbd>B</kbd> wardrobe / <kbd>M</kbd> wallet
   </div>
   <input id="name" maxlength="14" placeholder="name the Recorded" aria-label="Name the Recorded" />
   <button id="go">Enter Gracefall</button>
@@ -2239,8 +2242,22 @@ function draw(){
 }
 
 /* ------------------------------- HUD ------------------------------------ */
-const hpFill=document.querySelector('#hp>i'), staFill=document.querySelector('#sta>i');
-const hpEl=document.getElementById('hp'), staEl=document.getElementById('sta');
+const UI={
+  hpFill:document.querySelector('#hp>i'),
+  staFill:document.querySelector('#sta>i'),
+  hpEl:document.getElementById('hp'),
+  staEl:document.getElementById('sta'),
+  prompt:document.getElementById('prompt'),
+  lvl:document.getElementById('lvl'),
+  bal:document.getElementById('bal'),
+  sVgr:document.getElementById('sVgr'),
+  sEnd:document.getElementById('sEnd'),
+  sStr:document.getElementById('sStr'),
+  sDmg:document.getElementById('sDmg'),
+  runes:document.getElementById('runes')
+};
+const hpFill=UI.hpFill, staFill=UI.staFill;
+const hpEl=UI.hpEl, staEl=UI.staEl;
 function log(html){
   const l=document.getElementById('log'), d=document.createElement('div');
   d.innerHTML=html; l.appendChild(d);
@@ -2249,42 +2266,45 @@ function log(html){
 }
 function updateHud(){
   const hpPct=player.hp/player.maxHp, staPct=player.sta/player.maxSta;
-  hpFill.style.width=(hpPct*100)+'%';
-  staFill.style.width=(staPct*100)+'%';
-  hpEl.setAttribute('aria-valuenow', Math.round(player.hp));
-  hpEl.setAttribute('aria-valuemax', Math.round(player.maxHp));
-  staEl.setAttribute('aria-valuenow', Math.round(player.sta));
-  staEl.setAttribute('aria-valuemax', Math.round(player.maxSta));
-  hpEl.classList.toggle('low-hp', hpPct < 0.25);
-  document.getElementById('lvl').textContent=player.level;
-  document.getElementById('sVgr').textContent=player.vigor;
-  document.getElementById('sEnd').textContent=player.endurance;
-  document.getElementById('sStr').textContent=player.strength;
-  document.getElementById('sDmg').textContent=player.dmg;
+  if(UI.hpFill.style.width!==(hpPct*100)+'%')UI.hpFill.style.width=(hpPct*100)+'%';
+  if(UI.staFill.style.width!==(staPct*100)+'%')UI.staFill.style.width=(staPct*100)+'%';
+  UI.hpEl.setAttribute('aria-valuenow', Math.round(player.hp));
+  UI.hpEl.setAttribute('aria-valuemax', Math.round(player.maxHp));
+  UI.staEl.setAttribute('aria-valuenow', Math.round(player.sta));
+  UI.staEl.setAttribute('aria-valuemax', Math.round(player.maxSta));
+  UI.hpEl.classList.toggle('low-hp', hpPct < 0.25);
+  if(UI.lvl.textContent!==String(player.level))UI.lvl.textContent=player.level;
+  if(UI.sVgr.textContent!==String(player.vigor))UI.sVgr.textContent=player.vigor;
+  if(UI.sEnd.textContent!==String(player.endurance))UI.sEnd.textContent=player.endurance;
+  if(UI.sStr.textContent!==String(player.strength))UI.sStr.textContent=player.strength;
+  if(UI.sDmg.textContent!==String(player.dmg))UI.sDmg.textContent=player.dmg;
   const grs=Chain.greatRunesOf(valueAddress());
-  document.getElementById('runes').textContent=grs.length?'Boss Sigil: '+grs.map(g=>g.name).join(', '):'';
+  const rText=grs.length?'Boss Sigil: '+grs.map(g=>g.name).join(', '):'';
+  if(UI.runes.textContent!==rText)UI.runes.textContent=rText;
   Story.updateHud();
   updateWallet();
-  const prompt=document.getElementById('prompt');
+  const prompt=UI.prompt;
   if(Dialogue.isOpen()){ prompt.classList.remove('on'); }
   else{
-  const bossEnc=state.mode==='town'?nearestBossEncounter():null;
-  const near=nearestInteractable();
-  const entry=state.mode==='town'?nearestWorldEntry():null;
-  const lore=state.mode==='town'?nearestLore():null;
-  const pz=state.mode==='town'?nearestPuzzleTarget():null;
-  const portal=state.mode==='town'?nearestPortal():null;
-  const npc=state.mode==='town'?nearestNpc():null;
-  if(bossEnc){ prompt.style.display='block'; prompt.innerHTML='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>'; }
-  else if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
-  else if(entry){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to enter <b>'+esc(entry.title||entry.label)+'</b>'; }
-  else if(lore){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to examine <b>'+esc(lore.title)+'</b>'; }
-  else if(pz){ prompt.style.display='block'; prompt.innerHTML=pz.clue?('Press <b>E</b> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <b>E</b> to stamp <b>'+esc(pz.node.label)+'</b>'); }
-  else if(portal){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to descend into <b>'+esc(portal.label)+'</b>'; }
-  else if(npc){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to speak with <b>'+esc(npc.name)+'</b>'; }
-  else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
-  else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }
-  else prompt.style.display='none';
+    const bossEnc=state.mode==='town'?nearestBossEncounter():null;
+    const near=nearestInteractable();
+    const entry=state.mode==='town'?nearestWorldEntry():null;
+    const lore=state.mode==='town'?nearestLore():null;
+    const pz=state.mode==='town'?nearestPuzzleTarget():null;
+    const portal=state.mode==='town'?nearestPortal():null;
+    const npc=state.mode==='town'?nearestNpc():null;
+    let html='';
+    if(bossEnc) html='Press <kbd>F</kbd> to face <b>'+esc(bossEnc.type.name)+'</b>';
+    else if(near) html='Press <kbd>E</kbd> - '+esc(near.label);
+    else if(entry) html='Press <kbd>E</kbd> to enter <b>'+esc(entry.title||entry.label)+'</b>';
+    else if(lore) html='Press <kbd>E</kbd> to examine <b>'+esc(lore.title)+'</b>';
+    else if(pz) html=pz.clue?('Press <kbd>E</kbd> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <kbd>E</kbd> to stamp <b>'+esc(pz.node.label)+'</b>');
+    else if(portal) html='Press <kbd>E</kbd> to descend into <b>'+esc(portal.label)+'</b>';
+    else if(npc) html='Press <kbd>E</kbd> to speak with <b>'+esc(npc.name)+'</b>';
+    else if(nearGrace()&&!state.graceOpen&&!player.dead) html='Safe Hearthlight - press <kbd>G</kbd> to rest, level, forge';
+    else if(player.lock&&!player.lock.dead) html='Target: <b>'+esc(player.lock.type.name)+'</b>';
+    if(html){ if(prompt.innerHTML!==html)prompt.innerHTML=html; prompt.classList.add('on'); }
+    else prompt.classList.remove('on');
   }
   const boss=enemies.find(e=>e.type.boss&&!e.dead);
   const box=document.getElementById('bossbar');

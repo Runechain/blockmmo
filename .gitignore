@@ -9,8 +9,10 @@ Thumbs.db
 .idea/
 *.swp
 .superpowers/
+.claude/worktrees/
 .playwright-cli/
 output/
+.vercel/
 
 # env / secrets — never commit keys (esp. once Solana/treasury keys exist)
 .env

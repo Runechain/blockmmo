@@ -241,6 +241,11 @@
     <b>Q</b> target nearest / <b>E</b> interact / <b>G</b> Hearthlight / <b>B</b> wardrobe / <b>M</b> wallet
   </div>
   <input id="name" maxlength="14" placeholder="name the Recorded" aria-label="Name the Recorded" />
+  <div id="signin" hidden>
+    <button id="google-signin" type="button">Sign in with Google</button>
+    <button id="wallet-connect" type="button">Connect Solana wallet</button>
+    <div id="signin-status" class="mini" aria-live="polite"></div>
+  </div>
   <button id="go">Enter Gracefall</button>
   <div class="mini">This opens safe. One weak Hollow waits outside Hearthlight. The road, graveyard, and boss gates unlock as the ledger records you.</div>
 </div>
@@ -248,7 +253,10 @@
 <script src="game/sha256.js"></script>
 <script src="game/chain.js"></script>
 <script src="game/content.js"></script>
+<script src="game/overworld.js"></script>
 <script src="game/account.js"></script>
+<script src="game/wallet.js"></script>
+<script src="game/signin.js"></script>
 <script>
 /* ============================================================================
    RUNECHAIN PIXEL - single-file browser MMO demo
@@ -258,7 +266,9 @@
 
 /* ------------------------- Core data/runtime ----------------------------- */
 const Content = window.RUNECHAIN_CONTENT;
-if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT) throw new Error('RUNECHAIN core scripts failed to load');
+const Overworld = window.RUNECHAIN_OVERWORLD;
+if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT || !window.RUNECHAIN_WALLET || !window.RUNECHAIN_SIGNIN) throw new Error('RUNECHAIN core scripts failed to load');
+if (!Overworld) throw new Error('RUNECHAIN overworld failed to load');
 const {
   ECON, STORY, RELICS, SIGILS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, WORLD_PORTALS,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
@@ -368,6 +378,31 @@ const Story=(function(){
   }
   return {state,event,updateHud,currentQuest,currentStep,questReached,stepMatchesMonster};
 })();
+
+/* --------------------------- Overworld layer ---------------------------- */
+/* Hybrid integration of the Gameworld overworld kit (game/overworld.js).
+   The parish/moor west of OVERWORLD_SEAM_X keeps its authored PixelLab Wang
+   terrain and decor and its original collision-free movement. East of the seam
+   (the long, previously-empty corridor out to the Auditor at x=2280) the kit
+   owns ground, props, quest gates, and collision. The seam sits on the kit's
+   Mempool Moor -> Shroud Vaults boundary (x=860), which is also where the live
+   game's authored decor ends and the north branch to the Shroud Vaults begins,
+   so the kit's q07 Shroud gate (x=842) is intentionally left to the existing
+   north-path gate and only the deep q10/q12/q13 gates are enforced here. */
+const OVERWORLD_SEAM_X = 860;
+const overworldOptions = {
+  solidProps: true,
+  waterIsSolid: true,
+  blockLockedGates: true,
+  drawGates: true,
+  questReached: id => Story.questReached(id)
+};
+/* Kit collision applies only east of the seam; the authored zone keeps the
+   game's original free movement. */
+function moveOverworldActor(actor, dx, dy){
+  if(actor.x < OVERWORLD_SEAM_X){ actor.x+=dx; actor.y+=dy; return {hitX:false,hitY:false}; }
+  return Overworld.moveCircle(actor, dx, dy, overworldOptions);
+}
 
 /* --------------------------- Dialogue subsystem -------------------------- */
 /* Branching, multi-line, repeatable NPC conversations. Data-driven from each
@@ -486,7 +521,7 @@ const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 const keys={}, pressed={}, released={}, mouse={x:VIEW_W/2,y:VIEW_H/2,worldX:0,worldY:0,down:false};
 const camera={x:0,y:0};
-const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false,mode:'town'};
+const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false,mapOpen:false,mode:'town'};
 const ASSET_PROOF_MODE=new URLSearchParams(location.search).get('assets')||'';
 const GRACE={x:0,y:0};
 for(const k in ASSETS){
@@ -768,7 +803,7 @@ function updateEnemies(dt){
       const hd=Math.hypot(e.x-e.homeX,e.y-e.homeY);
       if(hd>3){
         const n=norm(e.homeX-e.x,e.homeY-e.y);
-        e.x+=n.x*enemySpeed(e)*.45*dt; e.y+=n.y*enemySpeed(e)*.45*dt;
+        moveOverworldActor(e, n.x*enemySpeed(e)*.45*dt, n.y*enemySpeed(e)*.45*dt);
       } else {
         e.roam+=dt;
         e.x=e.homeX+Math.cos(e.roam*.7)*4;
@@ -780,15 +815,15 @@ function updateEnemies(dt){
     const toP=norm(player.x-e.x,player.y-e.y);
     applyAct1BossBehavior(e,dt,d,toP);
     if(e.type.ranged){
-      if(d>78){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
-      else if(d<44){ e.x-=toP.x*enemySpeed(e)*dt; e.y-=toP.y*enemySpeed(e)*dt; }
+      if(d>78){ moveOverworldActor(e, toP.x*enemySpeed(e)*dt, toP.y*enemySpeed(e)*dt); }
+      else if(d<44){ moveOverworldActor(e, -toP.x*enemySpeed(e)*dt, -toP.y*enemySpeed(e)*dt); }
       if(d<e.type.reach && e.castCd<=0){ e.castCd=e.castRate||2.0; spawnProjectile(e,toP); }
       continue;
     }
     const reach=e.type.reach;
     if(d>reach+3){
       const crowdHold=attackers>2 && d<42 && !e.type.boss;
-      if(!crowdHold){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
+      if(!crowdHold){ moveOverworldActor(e, toP.x*enemySpeed(e)*dt, toP.y*enemySpeed(e)*dt); }
     } else {
       attackers++;
       if(e.windup>0){
@@ -880,6 +915,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyG'&&!e.repeat){ state.graceOpen?closeGrace():openGrace(); }
   if(e.code==='KeyB'&&!e.repeat){ state.wardrobeOpen?closeWardrobe():openWardrobe(); }
   if(e.code==='KeyM'&&!e.repeat)toggleWallet();
+  if(e.code==='KeyN'&&!e.repeat)state.mapOpen=!state.mapOpen;
   if(e.code==='KeyP'&&!e.repeat)enterEngineMode('platformer');
   if(e.code==='KeyO'&&!e.repeat)enterEngineMode('battlefield');
   if(e.code==='KeyU'&&!e.repeat)enterEngineMode('turnbased');
@@ -1196,11 +1232,28 @@ function flashBar(id){ const el=document.getElementById(id); el.style.filter='br
 const Net=(function(){
   let ws=null, connected=false, accountReady=false, accountCredential=null, id=Math.random().toString(36).slice(2,8), sendTimer=0, activeWork=null, submittedWork=null, awaitingWork=false, pendingSource=null;
   const rewardQueue=[];
+  // Sign-in legs beyond the device key: SSO session state + the connected Solana wallet.
+  const Signin=window.RUNECHAIN_SIGNIN, Wallet=window.RUNECHAIN_WALLET;
+  const walletManager=Wallet.createWalletManager({adapters:[Wallet.createPhantomAdapter()]});
+  let authState=Signin.parseSession({}), signinWallet=null, pendingJoin=null;
   function credentialPayload(){
     return {
       type: accountCredential.type,
       publicKey: accountCredential.publicKey,
     };
+  }
+  // Send the join once the device (and, when required, wallet) legs are signed.
+  function sendJoin(walletProof){
+    if(!ws||ws.readyState!==1||!pendingJoin)return;
+    ws.send(JSON.stringify({
+      t:'join', id, name:player.name,
+      credential:{...credentialPayload(),challengeId:pendingJoin.challengeId,signature:pendingJoin.signature},
+      wallet:walletProof||undefined,
+    }));
+  }
+  async function connectWalletForSignin(){
+    if(!signinWallet)signinWallet=await Signin.connectWallet(walletManager);
+    return signinWallet;
   }
   function clearRewardWork(){
     awaitingWork=false;
@@ -1246,16 +1299,27 @@ const Net=(function(){
             closeForAccountError('Account challenge signing failed: '+esc(err.message||'unknown'));
             return;
           }
-          ws.send(JSON.stringify({
-            t:'join',
-            id,
-            name:player.name,
-            credential:{
-              ...credentialPayload(),
-              challengeId:m.challengeId,
-              signature,
-            },
-          }));
+          pendingJoin={challengeId:m.challengeId,signature};
+          // Wallet leg: required when the server enforces identity (or a wallet is already connected).
+          if(Signin.needsWalletLeg(authState,!!signinWallet)){
+            try{
+              await connectWalletForSignin();
+              ws.send(JSON.stringify({t:'wallet:challenge',wallet:{address:signinWallet.address}}));
+            }catch(err){
+              closeForAccountError('Wallet connect failed: '+esc(err.message||'unknown'));
+            }
+            return;
+          }
+          sendJoin(null);
+        }
+        if(m.t==='wallet:challenge'){
+          if(!pendingJoin||!signinWallet){ closeForAccountError('Wallet challenge arrived out of order.'); return; }
+          try{
+            const signRes=await signinWallet.signMessage(m.message);
+            sendJoin(Signin.buildWalletProof(m,signRes));
+          }catch(err){
+            closeForAccountError('Wallet signing failed: '+esc(err.message||'unknown'));
+          }
         }
         if(m.t==='account'){
           const character=m.character||{};
@@ -1271,6 +1335,7 @@ const Net=(function(){
         }
         if(m.t==='join:error'){
           const code=m.error&&m.error.code;
+          if(typeof showSigninGate==='function')showSigninGate(Signin.joinErrorMessage(code));
           closeForAccountError('Realm account rejected: '+esc(code||'unknown'));
           return;
         }
@@ -1392,7 +1457,7 @@ const Net=(function(){
     if(!connected&&!rs.length){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot local"></span>Solo mode'; el.appendChild(d); return; }
     for(const r of rs){ const d=document.createElement('div'); d.className='peerline'; const away=r.mode&&r.mode!=='town'; d.innerHTML='<span class="dot '+(away?'encounter':'')+'"></span>'+esc(r.name)+'<span class="peerstate">'+esc(presenceLabel(r.mode,r.encounter,r.interior))+'</span>'; el.appendChild(d); }
   }
-  return {connect,tick,mineAuthorized,requestRuneReward,updatePeers,sendChat,get connected(){return connected;},get authenticated(){return accountReady;}};
+  return {connect,tick,mineAuthorized,requestRuneReward,updatePeers,sendChat,connectWalletForSignin,setAuthState:(s)=>{authState=s||authState;},getAuthState:()=>authState,get connected(){return connected;},get authenticated(){return accountReady;}};
 })();
 
 /* ----------------------------- Presence helpers ------------------------- */
@@ -1497,14 +1562,16 @@ function updatePlayer(dt){
 
   if(player.dash>0){
     player.dash-=dt;
-    player.x+=player.vx*dt; player.y+=player.vy*dt;
+    const md=moveOverworldActor(player, player.vx*dt, player.vy*dt);
+    if(md.hitX)player.vx=0; if(md.hitY)player.vy=0;
   } else {
     const mx=(keys.KeyD?1:0)-(keys.KeyA?1:0), my=(keys.KeyS?1:0)-(keys.KeyW?1:0);
     player.moving=!!(mx||my);
     let spd=player.moving?PLAYER_SPEED:0;
     const n=player.moving?norm(mx,my):{x:0,y:0};
     player.vx=n.x*spd; player.vy=n.y*spd;
-    player.x+=player.vx*dt; player.y+=player.vy*dt;
+    const mw=moveOverworldActor(player, player.vx*dt, player.vy*dt);
+    if(mw.hitX)player.vx=0; if(mw.hitY)player.vy=0;
   }
   player.x=clamp(player.x,-WORLD_LIMIT,WORLD_LIMIT); player.y=clamp(player.y,-WORLD_LIMIT,WORLD_LIMIT);
 }
@@ -1585,11 +1652,29 @@ function drawWang(cx,cy,sx,sy){
 function drawTerrain(){
   const sh=maybeShake(); ctx.save(); ctx.translate(Math.round(sh.x),Math.round(sh.y));
   ctx.fillStyle='#15311f'; ctx.fillRect(0,0,VIEW_W,VIEW_H);
-  const startX=Math.floor((camera.x-VIEW_W/2)/TILE)-1, endX=Math.floor((camera.x+VIEW_W/2)/TILE)+1;
-  const startY=Math.floor((camera.y-VIEW_H/2)/TILE)-1, endY=Math.floor((camera.y+VIEW_H/2)/TILE)+1;
-  for(let ty=startY;ty<=endY;ty++)for(let tx=startX;tx<=endX;tx++){
-    const s=worldToScreen(tx*TILE,ty*TILE); drawWang(tx,ty,s.x,s.y);
+  // Hybrid ground: authored PixelLab Wang terrain west of the seam, deterministic
+  // overworld-kit regions east of it. The seam tracks with the camera (and shake,
+  // since we are inside the shake translate) so the boundary stays world-anchored.
+  const seamSX=worldToScreen(OVERWORLD_SEAM_X,0).x;
+  if(seamSX<VIEW_W){                                   // east: overworld-kit ground
+    const ex=Math.max(0,seamSX);
+    ctx.save(); ctx.beginPath(); ctx.rect(ex,0,VIEW_W-ex,VIEW_H); ctx.clip();
+    Overworld.drawGround(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
+    Overworld.drawProps(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
+    ctx.restore();
   }
+  if(seamSX>0){                                        // west: authored Wang terrain
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,Math.min(seamSX,VIEW_W),VIEW_H); ctx.clip();
+    const startX=Math.floor((camera.x-VIEW_W/2)/TILE)-1, endX=Math.floor((camera.x+VIEW_W/2)/TILE)+1;
+    const startY=Math.floor((camera.y-VIEW_H/2)/TILE)-1, endY=Math.floor((camera.y+VIEW_H/2)/TILE)+1;
+    for(let ty=startY;ty<=endY;ty++)for(let tx=startX;tx<=endX;tx++){
+      const s=worldToScreen(tx*TILE,ty*TILE); drawWang(tx,ty,s.x,s.y);
+    }
+    ctx.restore();
+  }
+  // Decor and gameplay markers stay unclipped: authored terrain decor all sits west
+  // of the seam, while NPCs, lore, puzzles, portals, and the north gate must remain
+  // visible wherever they are, drawing on top of whichever ground owns that tile.
   drawDecor();
   ctx.restore();
 }
@@ -2293,6 +2378,12 @@ function draw(){
   drawParticles();
   drawAim();
   drawChatBubbles();
+  if(state.mapOpen){
+    Overworld.drawMinimap(ctx, VIEW_W-196, VIEW_H-76, 184, 64, player, {
+      onlyUnlocked:true,
+      questReached:id=>Story.questReached(id)
+    });
+  }
   if(Dialogue.isOpen())Dialogue.render();
 }
 
@@ -2367,6 +2458,10 @@ function updateWallet(){
 }
 function startGame(){
   if(state.started)return;
+  // When the realm enforces identity, the device key alone is not enough — gate on SSO + wallet.
+  const auth=Net.getAuthState();
+  if(auth.requireIdentity&&auth.ssoEnabled&&!auth.signedIn){ showSigninGate(window.RUNECHAIN_SIGNIN.joinErrorMessage('sso_required')); return; }
+  if(auth.requireIdentity&&!walletReady){ showSigninGate(window.RUNECHAIN_SIGNIN.joinErrorMessage('wallet_required')); return; }
   player.name=(document.getElementById('name').value.trim()||'Recorded').slice(0,14);
   player.address=player.characterId||player.name;
   document.getElementById('charname').textContent=player.name;
@@ -2378,6 +2473,47 @@ function startGame(){
 }
 document.getElementById('go').onclick=startGame;
 document.getElementById('name').addEventListener('keydown',e=>{ if(e.code==='Enter')startGame(); });
+
+// ---- Sign-in gate UI: SSO (Google) + Solana wallet, layered on the device key ----
+const signinEl=document.getElementById('signin');
+const signinStatusEl=document.getElementById('signin-status');
+const googleBtn=document.getElementById('google-signin');
+const walletBtn=document.getElementById('wallet-connect');
+const goBtn=document.getElementById('go');
+let walletReady=false;
+function refreshSigninUI(){
+  const a=Net.getAuthState();
+  const gated=!!(a.requireIdentity&&a.ssoEnabled);
+  if(signinEl)signinEl.hidden=!gated;
+  if(!gated){ if(goBtn)goBtn.disabled=false; return; } // legacy/open mode: no extra gate
+  const bits=[];
+  bits.push(a.signedIn?('Signed in'+(a.sso&&a.sso.email?(' as '+esc(a.sso.email)):'')):'Step 1 — sign in with Google');
+  bits.push(walletReady?'Wallet connected':'Step 2 — connect your wallet');
+  if(signinStatusEl)signinStatusEl.innerHTML=bits.join(' &middot; ');
+  if(googleBtn)googleBtn.disabled=!!a.signedIn;
+  if(walletBtn)walletBtn.disabled=walletReady;
+  if(goBtn)goBtn.disabled=!(a.signedIn&&walletReady);
+}
+function showSigninGate(message){
+  const startEl=document.getElementById('start');
+  if(startEl){ startEl.style.display=''; document.body.classList.remove('playing'); }
+  if(typeof state==='object'&&state)state.started=false;
+  if(signinEl)signinEl.hidden=false;
+  if(signinStatusEl&&message)signinStatusEl.textContent=message;
+}
+if(googleBtn)googleBtn.onclick=()=>window.RUNECHAIN_SIGNIN.beginGoogleSignIn(location);
+if(walletBtn)walletBtn.onclick=async()=>{
+  if(signinStatusEl)signinStatusEl.textContent='Connecting wallet…';
+  try{ await Net.connectWalletForSignin(); walletReady=true; refreshSigninUI(); }
+  catch(err){ if(signinStatusEl)signinStatusEl.textContent='Wallet connect failed: '+(err&&err.message||'unknown'); }
+};
+(async function bootSignin(){
+  try{
+    const f=(typeof window.fetch==='function')?window.fetch.bind(window):null;
+    Net.setAuthState(await window.RUNECHAIN_SIGNIN.loadSession(f));
+  }catch(_){}
+  refreshSigninUI();
+})();
 document.getElementById('respawn').onclick=()=>{
   player.x=0; player.y=0; player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false; player.invuln=1; player.lock=null;
   document.getElementById('death').style.display='none';

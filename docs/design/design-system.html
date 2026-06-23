@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RUNECHAIN — Design System</title>
+<style>
+  :root {
+    /* === CORE TOKENS === */
+    --ink:    #090b0f;
+    --panel:  rgba(13,15,18,.9);
+    --panel2: #171b1e;
+    --line:   #30343a;
+    --gold:   #f1c75b;
+    --rune:   #a7e36f;
+    --blood:  #e24a4a;
+    --sta:    #57c77a;
+    --mana:   #7aa7ff;
+    --txt:    #f1ead8;
+    --muted:  #a9a08c;
+
+    /* Design system page tokens */
+    --ds-bg:      #07080b;
+    --ds-section: #0f1114;
+    --ds-border:  #22262b;
+    --ds-gap:     32px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--ds-bg);
+    color: var(--txt);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .ds-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(9,11,15,.96);
+    border-bottom: 1px solid var(--ds-border);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding: 0 24px;
+  }
+  .ds-nav a {
+    display: block;
+    padding: 14px 16px;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .1s, border-color .1s;
+  }
+  .ds-nav a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+
+  .ds-wordmark {
+    font-size: 13px;
+    letter-spacing: .2em;
+    color: var(--gold);
+    text-transform: uppercase;
+    padding-right: 24px;
+    border-right: 1px solid var(--ds-border);
+    margin-right: 8px;
+    white-space: nowrap;
+  }
+
+  .ds-page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+
+  /* ── Section ── */
+  .ds-section {
+    margin-bottom: 64px;
+  }
+  .ds-section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ds-border);
+  }
+  .ds-section-head h2 {
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .ds-section-head .ds-anchor { color: var(--ds-border); font-size: 11px; text-decoration: none; }
+  .ds-section-head .ds-anchor:hover { color: var(--gold); }
+
+  /* ── Grid ── */
+  .ds-grid { display: grid; gap: 12px; }
+  .ds-grid-2 { grid-template-columns: 1fr 1fr; }
+  .ds-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .ds-grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .ds-grid-auto { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+
+  /* ── Token Chip ── */
+  .ds-token {
+    background: var(--ds-section);
+    border: 1px solid var(--ds-border);
+    padding: 14px;
+  }
+  .ds-token-swatch {
+    height: 48px;
+    margin-bottom: 10px;
+  }
+  .ds-token-name {
+    font-size: 12px;
+    color: var(--gold);
+    margin-bottom: 2px;
+  }
+  .ds-token-value {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .ds-token-desc {
+    font-size: 10px;
+    color: #5c5a54;
+    line-height: 1.4;
+  }
+
+  /* ── Area palette ── */
+  .ds-area {
+    background: var(--ds-section);
+    border: 1px solid var(--ds-border);
+    padding: 16px;
+  }
+  .ds-area-name {
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 3px;
+  }
+  .ds-area-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  .ds-area-swatches {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 3px;
+    margin-bottom: 10px;
+  }
+  .ds-area-swatch {
+    height: 28px;
+    position: relative;
+  }
+  .ds-area-swatch:hover::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #050607;
+    border: 1px solid var(--ds-border);
+    color: var(--txt);
+    font-size: 9px;
+    padding: 3px 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .ds-area-accent {
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 0;
+  }
+
+  /* ── Typography ── */
+  .ds-type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--ds-border);
+  }
+  .ds-type-meta {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .06em;
+  }
+  .ds-type-preview { color: var(--txt); }
+
+  /* ── Component cards ── */
+  .ds-component {
+    background: var(--ds-section);
+    border: 1px solid var(--ds-border);
+    padding: 20px;
+  }
+  .ds-component-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ds-border);
+  }
+
+  /* ── Spacer ── */
+  .ds-sp { height: 12px; }
+
+  /* ── Inline code ── */
+  code {
+    background: rgba(255,255,255,.06);
+    border: 1px solid var(--ds-border);
+    padding: 1px 5px;
+    font-size: 10px;
+    color: var(--rune);
+  }
+
+  /* ── Intro hero ── */
+  .ds-hero {
+    margin-bottom: 64px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--ds-border);
+  }
+  .ds-hero-eyebrow {
+    font-size: 10px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--rune);
+    margin-bottom: 14px;
+  }
+  .ds-hero h1 {
+    font-size: 36px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: 0 0 24px rgba(241,199,91,.25);
+    margin-bottom: 12px;
+  }
+  .ds-hero p {
+    max-width: 640px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.75;
+  }
+
+  /* ─────────────────────────────────────────────
+     GAME COMPONENTS (mirrored from index.html)
+  ───────────────────────────────────────────── */
+
+  /* Progress bars */
+  .bar { height: 14px; border: 2px solid #050607; background: #191b1d; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); margin: 4px 0 7px; }
+  .bar > i { display: block; height: 100%; width: 100%; transition: width .08s linear; }
+  .bar-hp > i  { background: linear-gradient(90deg, #7c1d22, #e24a4a); }
+  .bar-sta > i { background: linear-gradient(90deg, #236a44, #57c77a); }
+  .bar-mana > i { background: linear-gradient(90deg, #1b2c5f, #7aa7ff); }
+  .bar-boss > i { background: linear-gradient(90deg, #8f1f1f, #f2a541); }
+
+  .lab { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+  /* Buttons */
+  .btn-base {
+    pointer-events: auto;
+    background: #191d20;
+    color: #eadfc8;
+    border: 2px solid #363b42;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    padding: 10px 11px;
+  }
+  .btn-base:hover { border-color: var(--gold); background: #222820; }
+  .btn-base:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn-base:active { transform: translateY(1px); filter: brightness(.9); }
+  .btn-base:disabled { opacity: .42; cursor: default; }
+
+  .btn-gold { color: var(--gold); border-color: var(--gold); background: #2a2414; }
+  .btn-gold:hover { background: #3b321a; }
+  .btn-econ { flex: 1; padding: 9px; color: #eadfc8; }
+  .btn-econ.pay { color: var(--gold); border-color: #756137; }
+
+  /* Panel */
+  .panel-demo {
+    width: 100%;
+    max-width: 470px;
+    background: #111417;
+    border: 2px solid #615235;
+    box-shadow: 0 0 0 2px #050607, 0 16px 80px rgba(0,0,0,.7);
+    padding: 22px;
+  }
+  .panel-demo h2 { color: var(--gold); font-size: 19px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
+  .gsub { margin: 5px 0 14px; color: #9f967f; font-size: 12px; line-height: 1.45; }
+
+  /* Stat button */
+  .statbtn {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin: 8px 0;
+    padding: 10px 11px;
+    text-align: left;
+    background: #191d20;
+    color: #eadfc8;
+    border: 2px solid #363b42;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+  }
+  .statbtn small { display: block; color: #9f967f; font-size: 11px; margin-top: 2px; }
+  .statbtn .cost { color: var(--gold); }
+  .statbtn:hover { border-color: var(--gold); background: #222820; }
+
+  /* Item row */
+  .itemlist { border-top: 1px solid #34302a; padding-top: 10px; }
+  .itemrow { display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; padding: 8px 0; border-bottom: 1px solid #272b2f; }
+  .itemicon { width: 32px; height: 32px; background: #08090a; border: 1px solid #34302a; padding: 4px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 18px; }
+  .itemrow b { display: block; color: var(--gold); font-size: 13px; }
+  .itemrow small { display: block; color: #9f967f; font-size: 11px; line-height: 1.35; margin-top: 2px; }
+  .itemrow button { min-width: 86px; padding: 7px 9px; color: var(--gold); background: #191d20; border: 2px solid #363b42; font: inherit; cursor: pointer; }
+  .itemrow button:hover { border-color: var(--gold); background: #222820; }
+
+  /* Quest tracker */
+  .quest-demo {
+    padding: 9px 10px;
+    background: rgba(13,15,18,.9);
+    border: 2px solid rgba(241,199,91,.5);
+    box-shadow: 0 0 0 2px #050607;
+    max-width: 390px;
+  }
+  .quest-demo .qk { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--rune); }
+  .quest-demo .qt { font-size: 13px; color: var(--gold); margin-top: 2px; }
+  .quest-demo .qo { font-size: 12px; color: #d3cab5; margin-top: 4px; line-height: 1.35; }
+
+  /* Wallet */
+  .wallet-demo {
+    padding: 11px 12px;
+    background: rgba(13,15,18,.9);
+    border: 2px solid var(--line);
+    box-shadow: 0 0 0 2px #050607;
+    max-width: 335px;
+  }
+  .wallet-demo h3 { margin: 0 0 7px; font-size: 12px; letter-spacing: .12em; color: var(--gold); text-transform: uppercase; }
+  .row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: #d9d1be; margin: 4px 0; }
+  .row b { color: var(--gold); font-variant-numeric: tabular-nums; }
+  .row.split { border-top: 1px solid var(--line); padding-top: 7px; margin-top: 8px; }
+
+  /* Chat log */
+  .chatlog-demo { font-size: 11px; color: #d8d0bd; }
+  .chatlog-demo div {
+    margin: 0 0 3px;
+    padding: 3px 7px;
+    background: rgba(7,8,10,.6);
+    border-left: 2px solid rgba(122,167,255,.45);
+    word-wrap: break-word;
+  }
+  .chatlog-demo div b { color: var(--mana); }
+
+  /* Log flash */
+  .log-demo div {
+    display: inline-block;
+    max-width: 100%;
+    margin: 0 0 5px;
+    padding: 5px 7px;
+    background: rgba(7,8,10,.64);
+    border: 1px solid rgba(241,199,91,.25);
+    font-size: 11px;
+    color: #d8d0bd;
+  }
+
+  /* Peer dot */
+  .dot { width: 7px; height: 7px; display: inline-block; flex-shrink: 0; }
+  .dot-online  { background: var(--rune); box-shadow: 0 0 8px var(--rune); }
+  .dot-gold    { background: var(--gold); box-shadow: 0 0 8px rgba(241,199,91,.7); }
+  .dot-local   { background: #7a7f86; }
+  .peerline { display: flex; align-items: center; gap: 6px; margin: 3px 0; color: #d9d1be; font-size: 12px; }
+  .peerstate { margin-left: auto; color: #9f967f; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* Prompt bar */
+  .prompt-demo {
+    display: inline-block;
+    background: rgba(13,15,18,.9);
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 0 2px #050607;
+    padding: 7px 12px;
+    font-size: 12px;
+    color: var(--gold);
+    text-align: center;
+  }
+
+  /* Chain block */
+  .chain-demo { font-size: 10px; line-height: 1.4; color: #9f9a8c; }
+  .chain-demo .blk { margin: 3px 0; padding: 3px 5px; border-left: 3px solid var(--gold); background: rgba(255,255,255,.04); }
+  .chain-demo .mining { border-color: var(--rune); color: #c7f6a0; }
+
+  /* Start screen */
+  .start-demo {
+    padding: 36px;
+    background: radial-gradient(circle at 50% 35%, rgba(58,67,53,.75), rgba(5,6,8,.96) 64%), #050608;
+    text-align: center;
+    max-width: 500px;
+  }
+  .start-demo h1 { color: var(--gold); font-size: 38px; letter-spacing: .12em; text-shadow: 0 0 24px rgba(241,199,91,.35); margin-bottom: 8px; }
+  .start-demo .sub { color: var(--rune); font-size: 12px; letter-spacing: .18em; margin-bottom: 16px; }
+  .start-demo p { color: #cfc6b2; font-size: 13px; line-height: 1.65; margin-bottom: 16px; max-width: 400px; margin-left: auto; margin-right: auto; }
+
+  /* Name input */
+  .name-input {
+    padding: 11px 12px;
+    background: #090b0f;
+    border: 2px solid #3c4147;
+    color: var(--gold);
+    text-align: center;
+    font: inherit;
+    text-transform: uppercase;
+    width: 200px;
+  }
+  .name-input:focus { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* Chat input */
+  .chat-input {
+    width: 100%;
+    max-width: 300px;
+    background: rgba(7,8,10,.92);
+    border: 2px solid var(--mana);
+    color: var(--txt);
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 8px;
+    outline: none;
+  }
+  .chat-input:focus { outline: 2px solid var(--mana); outline-offset: 2px; }
+
+  /* Damage vignette demo */
+  .vignette-demo {
+    width: 200px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(226,74,74,0) 48%, rgba(226,74,74,.38) 100%);
+    border: 1px solid var(--ds-border);
+    position: relative;
+  }
+  .vignette-demo span { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 10px; color: var(--muted); }
+
+  /* Skin swatches */
+  .skin-row { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 1px solid #272b2f; }
+  .skin-row:last-child { border-bottom: none; }
+  .sw-body { width: 22px; height: 22px; box-shadow: 0 0 0 2px #050607; }
+  .sw-trim { width: 14px; height: 14px; box-shadow: 0 0 0 2px #050607; }
+  .sw-skin { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 2px #050607; }
+  .skin-name { flex: 1; font-size: 13px; }
+  .skin-price { font-size: 11px; color: var(--gold); min-width: 60px; text-align: right; }
+  .skin-secret { font-size: 10px; color: var(--muted); letter-spacing: .08em; }
+
+  /* Animations */
+  @keyframes logfade {
+    0%   { opacity: 0; transform: translateY(-5px); }
+    8%   { opacity: 1; transform: none; }
+    82%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes lootpop {
+    0%   { opacity: 0; transform: scale(.92); }
+    15%  { opacity: 1; transform: scale(1); }
+    82%  { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.04); }
+  }
+  @keyframes low-hp-pulse {
+    0%   { filter: brightness(1); }
+    50%  { filter: brightness(1.4); }
+    100% { filter: brightness(1); }
+  }
+  @keyframes loot-demo {
+    0%   { opacity: 0; transform: scale(.92); }
+    15%  { opacity: 1; transform: scale(1); }
+    90%  { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.04); }
+  }
+  .anim-logfade { animation: logfade 4s forwards; }
+  .anim-lootpop { font-size: 20px; text-transform: uppercase; letter-spacing: .08em; color: var(--gold); display: inline-block; }
+  .anim-lowHp   { animation: low-hp-pulse .8s infinite; }
+
+  .anim-demo { background: var(--ds-section); border: 1px solid var(--ds-border); padding: 16px 20px; }
+  .anim-name { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .anim-play { font-size: 10px; color: var(--rune); cursor: pointer; margin-top: 8px; text-decoration: underline; }
+
+  /* Boss bar demo */
+  .bossbar-demo { text-align: center; color: var(--gold); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .bossbar-demo .bar { height: 12px; margin-top: 5px; background: #170909; border-color: #050607; }
+  .bossbar-demo .bar > i { background: linear-gradient(90deg, #8f1f1f, #f2a541); }
+
+  /* Responsive */
+  @media (max-width: 720px) {
+    .ds-grid-3 { grid-template-columns: 1fr 1fr; }
+    .ds-grid-4 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .ds-grid-2, .ds-grid-3, .ds-grid-4 { grid-template-columns: 1fr; }
+    .ds-area-swatches { grid-template-columns: repeat(5, 1fr); }
+  }
+
+  /* Table */
+  .ds-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .ds-table th { text-align: left; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--ds-border); }
+  .ds-table td { padding: 8px 10px; border-bottom: 1px solid var(--ds-border); color: #d8d0bd; vertical-align: middle; }
+  .ds-table td:first-child { color: var(--gold); }
+  .ds-table tr:last-child td { border-bottom: none; }
+  .ds-table code { font-size: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="ds-nav">
+  <span class="ds-wordmark">RUNECHAIN</span>
+  <a href="#tokens">Tokens</a>
+  <a href="#areas">Areas</a>
+  <a href="#type">Typography</a>
+  <a href="#spacing">Spacing</a>
+  <a href="#bars">Bars</a>
+  <a href="#buttons">Buttons</a>
+  <a href="#panels">Panels</a>
+  <a href="#hud">HUD</a>
+  <a href="#overlays">Overlays</a>
+  <a href="#cosmetics">Cosmetics</a>
+  <a href="#motion">Motion</a>
+</nav>
+
+<div class="ds-page">
+
+  <!-- ── Hero ── -->
+  <div class="ds-hero">
+    <div class="ds-hero-eyebrow">Design System · v1.0</div>
+    <h1>RUNECHAIN</h1>
+    <p>
+      Cozy-gothic Soulslike with bureaucratic horror aesthetic. Monospace-first, pixel-perfect,
+      dark panels. Gold for economy, rune-green for power, blood-red for danger.
+      All tokens are CSS custom properties on <code>:root</code>.
+      No build step required — all styling lives in <code>index.html</code>.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: TOKENS
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="tokens">
+    <div class="ds-section-head">
+      <h2>Core Tokens</h2>
+      <a class="ds-anchor" href="#tokens">#</a>
+    </div>
+    <div class="ds-grid ds-grid-auto">
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#090b0f;border:1px solid #22262b"></div>
+        <div class="ds-token-name"><code>--ink</code></div>
+        <div class="ds-token-value">#090b0f</div>
+        <div class="ds-token-desc">Primary background. Canvas bg is slightly lighter (#0b1012).</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:rgba(13,15,18,.9);border:1px solid #22262b"></div>
+        <div class="ds-token-name"><code>--panel</code></div>
+        <div class="ds-token-value">rgba(13,15,18,.9)</div>
+        <div class="ds-token-desc">HUD overlay background. Semi-transparent for depth.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#171b1e;border:1px solid #22262b"></div>
+        <div class="ds-token-name"><code>--panel2</code></div>
+        <div class="ds-token-value">#171b1e</div>
+        <div class="ds-token-desc">Opaque panel variant. Modal interiors, deep inset areas.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#30343a;border:1px solid #22262b"></div>
+        <div class="ds-token-name"><code>--line</code></div>
+        <div class="ds-token-value">#30343a</div>
+        <div class="ds-token-desc">Borders, dividers, subtle structural lines.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#f1c75b"></div>
+        <div class="ds-token-name"><code>--gold</code></div>
+        <div class="ds-token-value">#f1c75b</div>
+        <div class="ds-token-desc">Economy. GOLD cosmetics, prices, wallet, headings, CTAs. Never used for power/stats.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#a7e36f"></div>
+        <div class="ds-token-name"><code>--rune</code></div>
+        <div class="ds-token-value">#a7e36f</div>
+        <div class="ds-token-desc">Power. RUNE currency, PoW mining, active quest label, online peer dot.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#e24a4a"></div>
+        <div class="ds-token-name"><code>--blood</code></div>
+        <div class="ds-token-value">#e24a4a</div>
+        <div class="ds-token-desc">Danger. HP bar, damage vignette, death screen, enemy trim.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#57c77a"></div>
+        <div class="ds-token-name"><code>--sta</code></div>
+        <div class="ds-token-value">#57c77a</div>
+        <div class="ds-token-desc">Stamina bar. Distinct from rune — cooler green, mid-brightness.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#7aa7ff"></div>
+        <div class="ds-token-name"><code>--mana</code></div>
+        <div class="ds-token-value">#7aa7ff</div>
+        <div class="ds-token-desc">Mana, chat. Player names in chat, chat input border, mana bar.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#f1ead8"></div>
+        <div class="ds-token-name"><code>--txt</code></div>
+        <div class="ds-token-value">#f1ead8</div>
+        <div class="ds-token-desc">Primary text. Warm off-white — avoids cold white on dark panels.</div>
+      </div>
+
+      <div class="ds-token">
+        <div class="ds-token-swatch" style="background:#a9a08c"></div>
+        <div class="ds-token-name"><code>--muted</code></div>
+        <div class="ds-token-value">#a9a08c</div>
+        <div class="ds-token-desc">Labels, secondary text, metadata. Used with <code>.lab</code> class.</div>
+      </div>
+
+    </div>
+
+    <div class="ds-sp"></div>
+    <p style="font-size:11px;color:var(--muted);line-height:1.6">
+      All tokens are declared on <code>:root</code> in the <code>&lt;style&gt;</code> block of <code>index.html</code>.
+      Structural colours not in <code>:root</code> — such as <code>#050607</code> (shadow/outline),
+      <code>#191b1d</code> (bar trough), <code>#191d20</code> (button bg) — are used literally
+      and intentionally kept unlabelled to avoid over-abstraction.
+    </p>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: AREA PALETTES
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="areas">
+    <div class="ds-section-head">
+      <h2>Area Palettes</h2>
+      <a class="ds-anchor" href="#areas">#</a>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Each overworld region has a frozen palette object in <code>game/overworld.js</code>.
+      Accent colour is the narrative signature; ground/road shades are used for terrain rendering.
+      Hover a swatch to see its role.
+    </p>
+    <div class="ds-grid" style="grid-template-columns:1fr 1fr">
+
+      <!-- Unrecorded Wold -->
+      <div class="ds-area">
+        <div class="ds-area-name">The Unrecorded Wold</div>
+        <div class="ds-area-sub">Bramble, erased milestones, and a vault the Chainwell missed.</div>
+        <div class="ds-area-swatches">
+          <div class="ds-area-swatch" style="background:#25261f" data-label="ground"></div>
+          <div class="ds-area-swatch" style="background:#2b2d23" data-label="groundAlt"></div>
+          <div class="ds-area-swatch" style="background:#554938" data-label="road"></div>
+          <div class="ds-area-swatch" style="background:#342f29" data-label="roadEdge"></div>
+          <div class="ds-area-swatch" style="background:#596042" data-label="detail"></div>
+          <div class="ds-area-swatch" style="background:#353c2a" data-label="prop"></div>
+          <div class="ds-area-swatch" style="background:#69734c" data-label="propHi"></div>
+          <div class="ds-area-swatch" style="background:#151713" data-label="shadow"></div>
+          <div class="ds-area-swatch" style="background:#b9a06a" data-label="accent ★"></div>
+        </div>
+        <div class="ds-area-accent" style="background:#b9a06a"></div>
+      </div>
+
+      <!-- Gracefall Parish -->
+      <div class="ds-area">
+        <div class="ds-area-name">Gracefall Parish</div>
+        <div class="ds-area-sub">A ruined parish kept warm by one stubborn Hearthlight.</div>
+        <div class="ds-area-swatches">
+          <div class="ds-area-swatch" style="background:#30342a" data-label="ground"></div>
+          <div class="ds-area-swatch" style="background:#363a2e" data-label="groundAlt"></div>
+          <div class="ds-area-swatch" style="background:#665641" data-label="road"></div>
+          <div class="ds-area-swatch" style="background:#40372f" data-label="roadEdge"></div>
+          <div class="ds-area-swatch" style="background:#6b7352" data-label="detail"></div>
+          <div class="ds-area-swatch" style="background:#4a4e3d" data-label="prop"></div>
+          <div class="ds-area-swatch" style="background:#7c8061" data-label="propHi"></div>
+          <div class="ds-area-swatch" style="background:#1c1f19" data-label="shadow"></div>
+          <div class="ds-area-swatch" style="background:#f1c75b" data-label="accent ★"></div>
+        </div>
+        <div class="ds-area-accent" style="background:#f1c75b"></div>
+      </div>
+
+      <!-- Mempool Moor -->
+      <div class="ds-area">
+        <div class="ds-area-name">Mempool Moor</div>
+        <div class="ds-area-sub">Rejected receipts drift through sour reeds and candle smoke.</div>
+        <div class="ds-area-swatches">
+          <div class="ds-area-swatch" style="background:#2b3029" data-label="ground"></div>
+          <div class="ds-area-swatch" style="background:#31372d" data-label="groundAlt"></div>
+          <div class="ds-area-swatch" style="background:#5e503e" data-label="road"></div>
+          <div class="ds-area-swatch" style="background:#38312b" data-label="roadEdge"></div>
+          <div class="ds-area-swatch" style="background:#52684f" data-label="detail"></div>
+          <div class="ds-area-swatch" style="background:#3d523c" data-label="prop"></div>
+          <div class="ds-area-swatch" style="background:#708366" data-label="propHi"></div>
+          <div class="ds-area-swatch" style="background:#171c17" data-label="shadow"></div>
+          <div class="ds-area-swatch" style="background:#70b0a2" data-label="accent ★"></div>
+        </div>
+        <div class="ds-area-accent" style="background:#70b0a2"></div>
+      </div>
+
+      <!-- Shroud Vaults -->
+      <div class="ds-area">
+        <div class="ds-area-name">The Shroud Vaults</div>
+        <div class="ds-area-sub">Debt sleeps in stone until somebody says its name.</div>
+        <div class="ds-area-swatches">
+          <div class="ds-area-swatch" style="background:#292b2c" data-label="ground"></div>
+          <div class="ds-area-swatch" style="background:#303234" data-label="groundAlt"></div>
+          <div class="ds-area-swatch" style="background:#57504a" data-label="road"></div>
+          <div class="ds-area-swatch" style="background:#353235" data-label="roadEdge"></div>
+          <div class="ds-area-swatch" style="background:#5f6264" data-label="detail"></div>
+          <div class="ds-area-swatch" style="background:#414448" data-label="prop"></div>
+          <div class="ds-area-swatch" style="background:#74787b" data-label="propHi"></div>
+          <div class="ds-area-swatch" style="background:#17181b" data-label="shadow"></div>
+          <div class="ds-area-swatch" style="background:#b9c2cf" data-label="accent ★"></div>
+        </div>
+        <div class="ds-area-accent" style="background:#b9c2cf"></div>
+      </div>
+
+      <!-- Archive Causeway -->
+      <div class="ds-area">
+        <div class="ds-area-name">Archive Causeway</div>
+        <div class="ds-area-sub">Every footstep becomes testimony before it fades.</div>
+        <div class="ds-area-swatches">
+          <div class="ds-area-swatch" style="background:#2d2b31" data-label="ground"></div>
+          <div class="ds-area-swatch" style="background:#34313a" data-label="groundAlt"></div>
+          <div class="ds-area-swatch" style="background:#5a5162" data-label="road"></div>
+          <div class="ds-area-swatch" style="background:#39323e" data-label="roadEdge"></div>
+          <div class="ds-area-swatch" style="background:#686070" data-label="detail"></div>
+          <div class="ds-area-swatch" style="background:#484151" data-label="prop"></div>
+          <div class="ds-area-swatch" style="background:#7b7188" data-label="propHi"></div>
+          <div class="ds-area-swatch" style="background:#19171c" data-label="shadow"></div>
+          <div class="ds-area-swatch" style="background:#b9a3cc" data-label="accent ★"></div>
+        </div>
+        <div class="ds-area-accent" style="background:#b9a3cc"></div>
+      </div>
+
+      <!-- Seized Grounds -->
+      <div class="ds-area">
+        <div class="ds-area-name">Seized Asset Grounds</div>
+        <div class="ds-area-sub">Everything here has an owner. None of them are alive.</div>
+        <div class="ds-area-swatches">
+          <div class="ds-area-swatch" style="background:#332c2b" data-label="ground"></div>
+          <div class="ds-area-swatch" style="background:#3a302f" data-label="groundAlt"></div>
+          <div class="ds-area-swatch" style="background:#625044" data-label="road"></div>
+          <div class="ds-area-swatch" style="background:#3d302d" data-label="roadEdge"></div>
+          <div class="ds-area-swatch" style="background:#75564a" data-label="detail"></div>
+          <div class="ds-area-swatch" style="background:#513b37" data-label="prop"></div>
+          <div class="ds-area-swatch" style="background:#8b675b" data-label="propHi"></div>
+          <div class="ds-area-swatch" style="background:#1e1717" data-label="shadow"></div>
+          <div class="ds-area-swatch" style="background:#d17a55" data-label="accent ★"></div>
+        </div>
+        <div class="ds-area-accent" style="background:#d17a55"></div>
+      </div>
+
+      <!-- Auditor's Verge -->
+      <div class="ds-area" style="grid-column:1/-1;max-width:calc(50% - 6px)">
+        <div class="ds-area-name">The Auditor's Verge</div>
+        <div class="ds-area-sub">The road narrows into a final, perfectly balanced line.</div>
+        <div class="ds-area-swatches">
+          <div class="ds-area-swatch" style="background:#2d2d2e" data-label="ground"></div>
+          <div class="ds-area-swatch" style="background:#353536" data-label="groundAlt"></div>
+          <div class="ds-area-swatch" style="background:#666261" data-label="road"></div>
+          <div class="ds-area-swatch" style="background:#414040" data-label="roadEdge"></div>
+          <div class="ds-area-swatch" style="background:#737173" data-label="detail"></div>
+          <div class="ds-area-swatch" style="background:#4f4e50" data-label="prop"></div>
+          <div class="ds-area-swatch" style="background:#858287" data-label="propHi"></div>
+          <div class="ds-area-swatch" style="background:#1a1a1b" data-label="shadow"></div>
+          <div class="ds-area-swatch" style="background:#f0f0e8" data-label="accent ★"></div>
+        </div>
+        <div class="ds-area-accent" style="background:#f0f0e8"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: TYPOGRAPHY
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="type">
+    <div class="ds-section-head">
+      <h2>Typography</h2>
+      <a class="ds-anchor" href="#type">#</a>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Font stack: <code>ui-monospace, SFMono-Regular, Menlo, Consolas, monospace</code>.<br>
+      All text is system monospace — no web fonts, no build step. Pixel-perfect on every OS.
+    </p>
+
+    <div class="ds-type-row">
+      <div class="ds-type-meta">44px · ls .12em<br>Game title</div>
+      <div class="ds-type-preview" style="font-size:44px;letter-spacing:.12em;color:var(--gold);text-shadow:0 0 24px rgba(241,199,91,.35);text-transform:uppercase">RUNECHAIN</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta">19px · ls .12em<br>Panel heading</div>
+      <div class="ds-type-preview" style="font-size:19px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase">Wardrobe</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta">14px · lh 1.65<br>Body / intro</div>
+      <div class="ds-type-preview" style="font-size:14px;color:#cfc6b2;line-height:1.65">The Chainwell does not forgive. It does not forget. It simply records — until you make it stop.</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta">13px<br>Primary UI</div>
+      <div class="ds-type-preview" style="font-size:13px;color:var(--txt)">Quest objective · Item names · Dialogue text · Stat values</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta">12px<br>Secondary UI</div>
+      <div class="ds-type-preview" style="font-size:12px;color:#d9d1be">Wallet rows · Peer list · Chat messages · Button labels</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta">11px · ls .08em<br><code>.lab</code> labels</div>
+      <div class="ds-type-preview" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Health · Stamina · Area</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta">10px · ls .12em<br>Quest key / micro</div>
+      <div class="ds-type-preview" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rune)">Main Quest</div>
+    </div>
+    <div class="ds-type-row">
+      <div class="ds-type-meta">9–10px<br>Footnotes</div>
+      <div class="ds-type-preview" style="font-size:10px;color:#797365;line-height:1.55">Character names are permanent. No refunds. All runs are public.</div>
+    </div>
+
+    <div class="ds-sp"></div>
+    <p style="font-size:11px;color:var(--muted);line-height:1.6">
+      <strong style="color:var(--txt)">Text shadow rule:</strong> All HUD text uses
+      <code>text-shadow: 0 2px 0 #000, 0 0 8px #000</code> for readability over terrain.
+      Headings in modals use <code>text-shadow: 0 0 24px rgba(241,199,91,.35)</code> for gold glow.
+    </p>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: SPACING
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="spacing">
+    <div class="ds-section-head">
+      <h2>Spacing &amp; Borders</h2>
+      <a class="ds-anchor" href="#spacing">#</a>
+    </div>
+
+    <div class="ds-grid ds-grid-2">
+      <div>
+        <table class="ds-table">
+          <thead><tr><th>Use</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Panel padding</td><td><code>22px</code></td></tr>
+            <tr><td>HUD padding</td><td><code>9–12px</code></td></tr>
+            <tr><td>Item row gap</td><td><code>9px</code></td></tr>
+            <tr><td>Row margin</td><td><code>4–8px 0</code></td></tr>
+            <tr><td>HUD positioning</td><td><code>12px</code> from edge</td></tr>
+            <tr><td>Chat bar offset</td><td><code>54px</code> from bottom</td></tr>
+            <tr><td>Boss bar width</td><td><code>min(520px, 58vw)</code></td></tr>
+            <tr><td>Panel max-width</td><td><code>min(470px, calc(100vw - 26px))</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <table class="ds-table">
+          <thead><tr><th>Use</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Panel border</td><td><code>2px solid #615235</code></td></tr>
+            <tr><td>HUD border</td><td><code>2px solid var(--line)</code></td></tr>
+            <tr><td>Quest border</td><td><code>2px solid rgba(241,199,91,.5)</code></td></tr>
+            <tr><td>Double-border shadow</td><td><code>box-shadow: 0 0 0 2px #050607</code></td></tr>
+            <tr><td>Button border</td><td><code>2px solid #363b42</code></td></tr>
+            <tr><td>Bar border</td><td><code>2px solid #050607</code></td></tr>
+            <tr><td>Progress bar height</td><td><code>14px</code> (boss: <code>12px</code>)</td></tr>
+            <tr><td>Pixel art rendering</td><td><code>image-rendering: pixelated</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ds-sp"></div>
+    <p style="font-size:11px;color:var(--muted);line-height:1.6">
+      <strong style="color:var(--txt)">Double-border pattern:</strong>
+      Nearly all panels use <code>border: 2px solid &lt;color&gt;</code>
+      + <code>box-shadow: 0 0 0 2px #050607</code> together.
+      This creates a dark gap between the border and content, reinforcing the pixel-exact aesthetic
+      without rounded corners.
+    </p>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: PROGRESS BARS
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="bars">
+    <div class="ds-section-head">
+      <h2>Progress Bars</h2>
+      <a class="ds-anchor" href="#bars">#</a>
+    </div>
+    <div class="ds-grid ds-grid-2">
+
+      <div class="ds-component">
+        <div class="ds-component-label">HP Bar — <code>#hp</code></div>
+        <div class="lab">Health</div>
+        <div class="bar bar-hp"><i style="width:72%"></i></div>
+        <div class="lab">Health · critical</div>
+        <div class="bar bar-hp anim-lowHp"><i style="width:18%"></i></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px">
+          Gradient: <code>#7c1d22 → #e24a4a</code><br>
+          Critical: <code>animation: low-hp-pulse .8s infinite</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Stamina Bar — <code>#sta</code></div>
+        <div class="lab">Stamina</div>
+        <div class="bar bar-sta"><i style="width:55%"></i></div>
+        <div class="lab">Mana</div>
+        <div class="bar bar-mana"><i style="width:88%"></i></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px">
+          Stamina: <code>#236a44 → #57c77a</code><br>
+          Mana: <code>#1b2c5f → #7aa7ff</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Boss Bar — <code>#bossbar</code></div>
+        <div class="bossbar-demo">
+          The Ledger-Bound
+          <div class="bar"><i style="width:63%"></i></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px">
+          Trough: <code>#170909</code> · Gradient: <code>#8f1f1f → #f2a541</code><br>
+          Width: <code>min(520px, 58vw)</code> · Height: <code>12px</code>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: BUTTONS
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="buttons">
+    <div class="ds-section-head">
+      <h2>Buttons</h2>
+      <a class="ds-anchor" href="#buttons">#</a>
+    </div>
+    <div class="ds-grid ds-grid-2">
+
+      <div class="ds-component">
+        <div class="ds-component-label">Primary (gold CTA) — <code>#go, #respawn</code></div>
+        <button class="btn-base btn-gold" style="padding:12px 24px;text-transform:uppercase">Enter the Chainwell</button>
+        <div class="ds-sp"></div>
+        <button class="btn-base btn-gold" style="padding:12px 24px;text-transform:uppercase">Respawn</button>
+        <div style="font-size:10px;color:var(--muted);margin-top:12px">
+          bg: <code>#2a2414</code> → hover <code>#3b321a</code><br>
+          border: <code>2px solid var(--gold)</code> + <code>box-shadow: 0 0 0 2px #050607</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Stat Button — <code>.statbtn</code></div>
+        <button class="statbtn">
+          <span>Vitality <small>+8 Max HP</small></span>
+          <span class="cost">4 RUNE</span>
+        </button>
+        <button class="statbtn">
+          <span>Endurance <small>+6 Stamina</small></span>
+          <span class="cost">4 RUNE</span>
+        </button>
+        <button class="statbtn" disabled>
+          <span>Dexterity <small>+5% Evade</small></span>
+          <span class="cost">8 RUNE</span>
+        </button>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Economy Buttons — <code>.econbtn</code></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button class="btn-base econbtn">Transfer</button>
+          <button class="btn-base econbtn pay">Pay 50 GOLD</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">
+          Default: neutral border · <code>.pay</code>: gold border <code>#756137</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Ghost / Base — <code>.itemrow button, .skinbtn</code></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-base" style="min-width:86px;padding:7px 9px;color:var(--gold)">Equip</button>
+          <button class="btn-base" style="min-width:86px;padding:7px 9px;color:var(--gold)">Inscribe</button>
+          <button class="btn-base" style="min-width:86px;padding:7px 9px;color:var(--gold)" disabled>Equipped</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          Shared class <code>.statbtn,.econbtn,.skinbtn,.itemrow button</code> — same base style, contextual overrides.
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Name Input — <code>#name</code></div>
+        <input class="name-input" type="text" placeholder="Pilgrim" maxlength="14">
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          bg: <code>#090b0f</code> · border: <code>2px solid #3c4147</code><br>
+          focus: <code>outline: 2px solid var(--gold)</code> · max-length: 14
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Chat Input — <code>#chatbar input</code></div>
+        <input class="chat-input" type="text" placeholder="Press T to chat...">
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          border: <code>2px solid var(--mana)</code><br>
+          focus: no outline (ring comes from border colour)
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: PANELS & MODALS
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="panels">
+    <div class="ds-section-head">
+      <h2>Panels &amp; Modals</h2>
+      <a class="ds-anchor" href="#panels">#</a>
+    </div>
+    <div class="ds-grid ds-grid-2">
+
+      <div class="ds-component">
+        <div class="ds-component-label">Modal Panel — <code>.panel</code></div>
+        <div class="panel-demo">
+          <h2>Level Up</h2>
+          <div class="gsub">You gained 1 level. Allocate your attribute points.</div>
+          <div style="display:flex;justify-content:space-between;gap:12px;margin:7px 0;color:#d8d0bd;font-size:13px">
+            <span>Level</span><span style="color:var(--gold)">12 → 13</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:12px;margin:7px 0;color:#d8d0bd;font-size:13px">
+            <span>Points Available</span><span style="color:var(--gold)">2</span>
+          </div>
+          <button class="statbtn" style="margin-top:8px">
+            <span>Vitality <small>+8 Max HP</small></span>
+            <span class="cost">1 pt</span>
+          </button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          bg: <code>#111417</code> · border: <code>2px solid #615235</code><br>
+          box-shadow: <code>0 0 0 2px #050607, 0 16px 80px rgba(0,0,0,.7)</code><br>
+          max-width: <code>min(470px, calc(100vw - 26px))</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Item List — <code>.itemlist, .itemrow</code></div>
+        <div class="itemlist">
+          <div class="itemrow">
+            <div class="itemicon">⚔</div>
+            <div><b>Tarnished Blade</b><small>Common · +12 ATK · 14 RUNE</small></div>
+            <button>Inscribe</button>
+          </div>
+          <div class="itemrow">
+            <div class="itemicon">🛡</div>
+            <div><b>Warden's Buckler</b><small>Rare · +18 DEF · 32 RUNE</small></div>
+            <button>Inscribe</button>
+          </div>
+          <div class="itemrow">
+            <div class="itemicon">💍</div>
+            <div><b>Ring of Mempool</b><small>Uncommon · +2% Mining · 22 RUNE</small></div>
+            <button disabled>Equipped</button>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          3-column grid: <code>auto 1fr auto</code> · icon: <code>32×32px</code>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: HUD
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="hud">
+    <div class="ds-section-head">
+      <h2>HUD Elements</h2>
+      <a class="ds-anchor" href="#hud">#</a>
+    </div>
+    <div class="ds-grid ds-grid-2">
+
+      <div class="ds-component">
+        <div class="ds-component-label">Vitals — <code>#vitals</code></div>
+        <div style="width:260px">
+          <div class="lab">Health</div>
+          <div class="bar bar-hp"><i style="width:68%"></i></div>
+          <div class="lab">Stamina</div>
+          <div class="bar bar-sta"><i style="width:90%"></i></div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:4px">
+            Lv.<b style="color:var(--gold)">11</b> ·
+            <b style="color:var(--gold)">340</b>/<b style="color:var(--gold)">340</b> HP ·
+            <b style="color:var(--gold)">148</b> RUNE ·
+            <b style="color:var(--gold)">22</b> GOLD
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Quest Tracker — <code>#quest</code></div>
+        <div class="quest-demo">
+          <div class="qk">Main Quest</div>
+          <div class="qt">The Wax and the Warrant</div>
+          <div class="qo">Speak with the Candle-Keeper at Gracefall Parish. Bring the Tallow Seal.</div>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Wallet — <code>#wallet</code></div>
+        <div class="wallet-demo">
+          <h3>Chainwell Ledger</h3>
+          <div class="row"><span>RUNE Balance</span><b>148 RUNE</b></div>
+          <div class="row"><span>GOLD Balance</span><b>22 GOLD</b></div>
+          <div class="row"><span>Sigils Held</span><b>2</b></div>
+          <div class="row split"><span>Chain Height</span><b>4,091</b></div>
+          <div class="row"><span>Mining Difficulty</span><b>0.0024</b></div>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Peer List — <code>#peers</code></div>
+        <div style="background:rgba(13,15,18,.78);border:2px solid var(--line);box-shadow:0 0 0 2px #050607;padding:10px;max-width:225px">
+          <div style="margin:0 0 7px;font-size:12px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase">Nearby</div>
+          <div class="peerline"><div class="dot dot-online"></div>Varek<div class="peerstate">Combat</div></div>
+          <div class="peerline"><div class="dot dot-gold"></div>Mirra<div class="peerstate">Shop</div></div>
+          <div class="peerline"><div class="dot dot-local"></div>You<div class="peerstate">Overworld</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          Online: <code>var(--rune)</code> w/ glow · Encounter: <code>var(--gold)</code> · Local: <code>#7a7f86</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Chat Log — <code>#chatlog</code></div>
+        <div class="chatlog-demo">
+          <div><b>Varek:</b> Anyone near the Tallow Gate?</div>
+          <div><b>Mirra:</b> Just cleared it — watch the left flank</div>
+          <div><b>Pilgrim:</b> On my way</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          Player names: <code>var(--mana)</code> · border-left: <code>2px solid rgba(122,167,255,.45)</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Action Log — <code>#log</code> · right-aligned flash</div>
+        <div class="log-demo">
+          <div style="display:block;margin-bottom:4px">Gained 12 RUNE</div>
+          <div style="display:block;margin-bottom:4px">Tarnished Blade inscribed</div>
+          <div style="display:block">Boss Sigil dropped!</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          These animate in/out with <code>logfade 4.6s</code>. Right-aligned, no max-width stacking.
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Prompt Bar — <code>#prompt</code></div>
+        <div class="prompt-demo">[E] Enter Gracefall Parish</div>
+        <div class="ds-sp"></div>
+        <div class="prompt-demo">[F] Interact · [Space] Attack</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          bg: <code>var(--panel)</code> · border: <code>2px solid var(--gold)</code><br>
+          Appears on <code>.on</code> with <code>opacity + translateY</code> transition
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Chain Feed — <code>#chain</code></div>
+        <div class="chain-demo">
+          <div class="blk">Block #4088 · RUNE +4 · Pilgrim mined</div>
+          <div class="blk">Block #4089 · Quest complete: Wax &amp; Warrant</div>
+          <div class="blk mining">⛏ Mining block #4090…</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          Confirmed: <code>border-left: 3px solid var(--gold)</code><br>
+          Mining: <code>border-left: 3px solid var(--rune)</code> · text <code>#c7f6a0</code>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: OVERLAYS
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="overlays">
+    <div class="ds-section-head">
+      <h2>Overlays</h2>
+      <a class="ds-anchor" href="#overlays">#</a>
+    </div>
+    <div class="ds-grid ds-grid-2">
+
+      <div class="ds-component">
+        <div class="ds-component-label">Start Screen — <code>#start</code></div>
+        <div class="start-demo">
+          <h1>RUNECHAIN</h1>
+          <div class="sub">The Chain Remembers</div>
+          <p>Name your character. Your record is permanent. No refunds.</p>
+          <input class="name-input" type="text" placeholder="Pilgrim" maxlength="14" style="margin-bottom:12px">
+          <br>
+          <button class="btn-base btn-gold" style="padding:12px 24px;text-transform:uppercase">Enter the Chainwell</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          bg: <code>radial-gradient(circle at 50% 35%, rgba(58,67,53,.75), rgba(5,6,8,.96) 64%)</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Death Screen — <code>#death</code></div>
+        <div style="padding:36px;background:rgba(20,0,0,.72);text-align:center">
+          <div style="color:#e24a4a;font-size:40px;letter-spacing:.18em;text-shadow:0 0 24px #000;margin-bottom:16px;text-transform:uppercase">You Died</div>
+          <div style="color:#a9a08c;font-size:12px;margin-bottom:20px">Your record has been updated.</div>
+          <button class="btn-base btn-gold" style="padding:12px 24px;text-transform:uppercase">Return to Hearthlight</button>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Damage Vignette — <code>#damagevignette</code></div>
+        <div class="vignette-demo"><span>Damage flash</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          <code>radial-gradient(circle, rgba(226,74,74,0) 48%, rgba(226,74,74,.38) 100%)</code><br>
+          Fades in/out on hit: <code>opacity 0 → 1</code> via <code>transition .12s</code>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Loot Pop — <code>#lootflash</code></div>
+        <div style="text-align:center;padding:20px">
+          <div id="loot-preview" class="anim-lootpop">Boss Sigil</div>
+          <div style="margin-top:12px">
+            <button class="btn-base" style="font-size:11px;padding:6px 12px" onclick="playLoot()">Play Animation</button>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px">
+          22px · uppercase · gold · <code>animation: lootpop 1.4s forwards</code>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: COSMETICS
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="cosmetics">
+    <div class="ds-section-head">
+      <h2>Cosmetic Skins</h2>
+      <a class="ds-anchor" href="#cosmetics">#</a>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      All skins are defined in <code>game/content.js</code> as <code>{ id, name, price, body, trim, skin }</code>.
+      Skins cost GOLD (cosmetics-only economy). Secret skins are unlocked by in-game conditions, never sold.
+    </p>
+    <div class="ds-grid ds-grid-2">
+      <div class="ds-component">
+        <div class="ds-component-label">Standard Skins</div>
+
+        <div class="skin-row">
+          <div class="sw-body" style="background:#334052"></div>
+          <div class="sw-trim" style="background:#8ca0b8"></div>
+          <div class="sw-skin" style="background:#cfa982"></div>
+          <div class="skin-name">Recorded</div>
+          <div class="skin-price">Free</div>
+        </div>
+        <div class="skin-row">
+          <div class="sw-body" style="background:#6b2020"></div>
+          <div class="sw-trim" style="background:#e24a4a"></div>
+          <div class="sw-skin" style="background:#cfa982"></div>
+          <div class="skin-name">Crimson Lord</div>
+          <div class="skin-price">120 GOLD</div>
+        </div>
+        <div class="skin-row">
+          <div class="sw-body" style="background:#1f472f"></div>
+          <div class="sw-trim" style="background:#57c77a"></div>
+          <div class="sw-skin" style="background:#cfa982"></div>
+          <div class="skin-name">Verdant Knight</div>
+          <div class="skin-price">180 GOLD</div>
+        </div>
+        <div class="skin-row">
+          <div class="sw-body" style="background:#233d73"></div>
+          <div class="sw-trim" style="background:#7aa7ff"></div>
+          <div class="sw-skin" style="background:#cfa982"></div>
+          <div class="skin-name">Azure Witness</div>
+          <div class="skin-price">240 GOLD</div>
+        </div>
+        <div class="skin-row">
+          <div class="sw-body" style="background:#4d3c17"></div>
+          <div class="sw-trim" style="background:#f1c75b"></div>
+          <div class="sw-skin" style="background:#d5c596"></div>
+          <div class="skin-name">Gilded Champion</div>
+          <div class="skin-price">500 GOLD</div>
+        </div>
+        <div class="skin-row">
+          <div class="sw-body" style="background:#17141f"></div>
+          <div class="sw-trim" style="background:#9b74ff"></div>
+          <div class="sw-skin" style="background:#77718f"></div>
+          <div class="skin-name">Voidwalker</div>
+          <div class="skin-price">800 GOLD</div>
+        </div>
+      </div>
+
+      <div class="ds-component">
+        <div class="ds-component-label">Secret Skins · unlock-only, never sold</div>
+
+        <div class="skin-row">
+          <div class="sw-body" style="background:#2b2622"></div>
+          <div class="sw-trim" style="background:#b9a06a"></div>
+          <div class="sw-skin" style="background:#bfae8c"></div>
+          <div class="skin-name">Unrecorded Pilgrim</div>
+          <div class="skin-secret">Secret</div>
+        </div>
+        <div class="skin-row">
+          <div class="sw-body" style="background:#20262a"></div>
+          <div class="sw-trim" style="background:#6f93a8"></div>
+          <div class="sw-skin" style="background:#b9b2a0"></div>
+          <div class="skin-name">Cellar Warden</div>
+          <div class="skin-secret">Secret</div>
+        </div>
+
+        <div style="font-size:10px;color:var(--muted);margin-top:20px;line-height:1.6;border-top:1px solid var(--ds-border);padding-top:14px">
+          <strong style="color:var(--txt)">Swatch legend (left to right):</strong><br>
+          ■ body colour &nbsp;·&nbsp; ■ trim colour &nbsp;·&nbsp; ● skin tone<br><br>
+          GOLD is cosmetics-only — it <em>cannot</em> buy stats, relics, or progression.
+          Character sale = sole real-money cash-out path.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECTION: MOTION
+  ═══════════════════════════════════════════ -->
+  <section class="ds-section" id="motion">
+    <div class="ds-section-head">
+      <h2>Motion</h2>
+      <a class="ds-anchor" href="#motion">#</a>
+    </div>
+    <div class="ds-grid ds-grid-3">
+
+      <div class="anim-demo">
+        <div class="anim-name">logfade · 12s</div>
+        <div id="logfade-el" style="padding:3px 7px;background:rgba(7,8,10,.6);border-left:2px solid rgba(122,167,255,.45);font-size:11px;color:#d8d0bd">
+          Varek joined the area
+        </div>
+        <div class="anim-play" onclick="playLogfade()">Play</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.5">
+          0% fade-in + rise → 8% visible → 82% hold → 100% fade-out.<br>
+          Chat log: 12s · Action log: 4.6s
+        </div>
+      </div>
+
+      <div class="anim-demo">
+        <div class="anim-name">lootpop · 1.4s</div>
+        <div id="lootpop-el" style="font-size:20px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);display:inline-block;min-height:30px">
+          Boss Sigil
+        </div>
+        <div class="anim-play" onclick="playLootpop()">Play</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.5">
+          Scale up from .92 → 1, hold, then drift to 1.04 while fading.
+        </div>
+      </div>
+
+      <div class="anim-demo">
+        <div class="anim-name">low-hp-pulse · 0.8s loop</div>
+        <div class="bar bar-hp anim-lowHp" style="margin-bottom:8px"><i style="width:14%"></i></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.5">
+          Infinite brightness oscillation 1.0 → 1.4 → 1.0.<br>
+          Applied to HP bar when below ~25%.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ds-sp"></div>
+    <table class="ds-table">
+      <thead><tr><th>Name</th><th>Duration</th><th>Trigger</th><th>Target</th></tr></thead>
+      <tbody>
+        <tr><td>logfade</td><td>12s / 4.6s</td><td>Element added to DOM</td><td>Chat log entries / Action log entries</td></tr>
+        <tr><td>lootpop</td><td>1.4s</td><td><code>#lootflash.show</code></td><td>Loot flash overlay</td></tr>
+        <tr><td>low-hp-pulse</td><td>0.8s ∞</td><td><code>.low-hp</code> class on bar</td><td>HP progress bar</td></tr>
+        <tr><td>Panel transition</td><td>0.15s</td><td><code>#prompt.on</code></td><td>Opacity + translateY(-4px)</td></tr>
+        <tr><td>Bar fill</td><td>0.08s linear</td><td>width style change</td><td>All <code>.bar &gt; i</code></td></tr>
+        <tr><td>Damage vignette</td><td>0.12s</td><td>Hit event → <code>.on</code></td><td><code>#damagevignette</code> opacity</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div><!-- /ds-page -->
+
+<script>
+  function playLogfade() {
+    const el = document.getElementById('logfade-el');
+    el.style.animation = 'none';
+    el.offsetHeight; // reflow
+    el.style.animation = 'logfade 4.6s forwards';
+  }
+
+  function playLootpop() {
+    const el = document.getElementById('lootpop-el');
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = 'lootpop 1.4s forwards';
+  }
+
+  function playLoot() {
+    const el = document.getElementById('loot-preview');
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = 'loot-demo 1.4s forwards';
+  }
+
+  // Tooltip for area swatches
+  document.querySelectorAll('.ds-area-swatch').forEach(sw => {
+    sw.title = sw.dataset.label || '';
+  });
+</script>
+</body>
+</html>

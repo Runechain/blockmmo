@@ -16,8 +16,6 @@
   const hexTab = [];
   for (let i = 0; i < 256; i++) hexTab.push(i.toString(16).padStart(2, '0'));
 
-  function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
-
   const w = new Uint32Array(64);
   let buffer = new Uint8Array(8192);
 
@@ -60,16 +58,19 @@
         w[t] = (buffer[off] << 24) | (buffer[off + 1] << 16) | (buffer[off + 2] << 8) | (buffer[off + 3]);
       }
       for (let t = 16; t < 64; t++) {
-        const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3);
-        const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
+        // Optimization: Inline rotr and use local variables for hot array lookups
+        const v15 = w[t - 15], v2 = w[t - 2];
+        const s0 = ((v15 >>> 7) | (v15 << 25)) ^ ((v15 >>> 18) | (v15 << 14)) ^ (v15 >>> 3);
+        const s1 = ((v2 >>> 17) | (v2 << 15)) ^ ((v2 >>> 19) | (v2 << 13)) ^ (v2 >>> 10);
         w[t] = (w[t - 16] + s0 + w[t - 7] + s1) | 0;
       }
       let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
       for (let t = 0; t < 64; t++) {
-        const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+        // Optimization: Inline rotr bitwise operations
+        const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
         const ch = (e & f) ^ (~e & g);
         const t1 = (h + S1 + ch + K[t] + w[t]) | 0;
-        const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+        const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
         const maj = (a & b) ^ (a & c) ^ (b & c);
         const t2 = (S0 + maj) | 0;
         h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;

@@ -17,6 +17,7 @@ output/
 # env / secrets — never commit keys (esp. once Solana/treasury keys exist)
 .env
 .env.*
+!.env.example
 *.pem
 *-keypair.json
 contracts/keys/

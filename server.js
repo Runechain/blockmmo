@@ -1774,7 +1774,26 @@ function encodeFrame(payload, opcode = 0x1) {
   return Buffer.concat([header, payload]);
 }
 
+// Zero-dep .env loader (no dotenv dependency — A1 buildless). Loaded only when run as a CLI,
+// so tests/requires are unaffected. Real process env always wins over the file; missing file is a no-op.
+function loadDotEnv(file) {
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); } catch (_) { return; }
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim();
+    if (!key || key in process.env) continue;
+    let val = line.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1);
+    process.env[key] = val;
+  }
+}
+
 if (require.main === module) {
+  loadDotEnv(path.join(__dirname, '.env'));
   createRealmServer().listen();
 }
 

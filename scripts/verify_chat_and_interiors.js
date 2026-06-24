@@ -145,3 +145,4 @@ for (const [needle, msg] of need) assert(index.includes(needle), msg);
 
 console.log('  ok  client wiring: interior mode + proximity chat hooks present');
 console.log('chat + interiors verification passed (' + INTERIORS.length + ' interiors).');
+process.exit(0); // CI-hardening: exit deterministically so a lingering handle can't wedge the runner.

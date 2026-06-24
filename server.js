@@ -25,6 +25,7 @@ const {
 const { ENEMY_REWARDS, STORY, RELICS, LEVELING, BOSS_SIGILS, AUDITOR_ENDINGS } = require('./game/content.js');
 const { createAnnounceFeed } = require('./game/announce.js');
 const identity = require('./game/identity.js');
+const agentClaim = require('./game/agent-claim.js');
 const { createGoogleOAuth, createStore, parseCookies, serializeCookie } = require('./game/oauth-google.js');
 
 const DEFAULT_PORT = process.env.PORT || 8080;
@@ -138,6 +139,7 @@ function createRealmServer(options = {}) {
   });
   const sessionStore = options.sessionStore || createStore({ ttlMs: options.sessionTtlMs == null ? 30 * 24 * 60 * 60 * 1000 : options.sessionTtlMs, now });
   const oauthStateStore = createStore({ ttlMs: 10 * 60 * 1000, now }); // short-lived CSRF state
+  const claimStore = agentClaim.createClaimStore({ ttlMs: options.claimTtlMs, now }); // agent claim codes
   let saveTimer = null;
   let sweepInterval = null;
   let masterChain = loadLedger();
@@ -157,6 +159,11 @@ function createRealmServer(options = {}) {
 
     if (req.url.split('?')[0].startsWith('/auth/')) {
       handleAuthRoute(req, res);
+      return;
+    }
+
+    if (/^\/claim(\/|$)/.test(req.url.split('?')[0])) {
+      handleClaimRoute(req, res);
       return;
     }
 
@@ -253,6 +260,95 @@ function createRealmServer(options = {}) {
     if (setCookies && setCookies.length) headers['Set-Cookie'] = setCookies;
     res.writeHead(status, headers);
     res.end(JSON.stringify(body));
+  }
+
+  function readJsonBody(req, res, cb) {
+    let data = '';
+    let aborted = false;
+    req.on('data', (chunk) => {
+      data += chunk;
+      if (data.length > 16384 && !aborted) { aborted = true; jsonResponse(res, 413, { code: 'body_too_large' }); req.destroy(); }
+    });
+    req.on('end', () => {
+      if (aborted) return;
+      let body;
+      try { body = data ? JSON.parse(data) : {}; } catch (_) { return jsonResponse(res, 400, { code: 'invalid_json' }); }
+      cb(body && typeof body === 'object' ? body : {});
+    });
+    req.on('error', () => { if (!aborted) jsonResponse(res, 400, { code: 'read_error' }); });
+  }
+
+  // ---- agent claim routes (grid worker <-> game identity binding) --------------------------------
+  function handleClaimRoute(req, res) {
+    const url = new URL(req.url, 'http://realm');
+    const route = url.pathname;
+    const cookies = parseCookies(req.headers && req.headers.cookie);
+    const session = cookies.rc_session ? sessionStore.get(cookies.rc_session) : null;
+    const ssoAccount = () => (session && session.sso ? accountRegistry.resolveAccountBySso(session.sso) : null);
+
+    // The /claim page itself (the logged-in human confirms here).
+    if (route === '/claim' && req.method === 'GET') {
+      return fs.readFile(path.join(__dirname, 'claim.html'), (err, data) => {
+        if (err) { res.writeHead(404, { 'Content-Type': 'text/plain' }); return res.end('claim page not found'); }
+        res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
+        res.end(data);
+      });
+    }
+    // Agent starts a claim (unauthenticated — it only sends its PUBLIC key).
+    if (route === '/claim/start' && req.method === 'POST') {
+      return readJsonBody(req, res, (body) => {
+        const r = claimStore.start({ agentPubkey: body.agentPubkey, label: body.label });
+        if (!r.ok) return jsonResponse(res, 400, r.error);
+        const proto = req.headers['x-forwarded-proto'] || 'https';
+        const base = proto + '://' + (req.headers.host || 'play.runechaingame.com');
+        jsonResponse(res, 200, { code: r.code, label: r.label, agentAddress: r.agentAddress, expiresAt: r.expiresAt, claimUrl: base + '/claim?code=' + encodeURIComponent(r.code) });
+      });
+    }
+    // Agent polls for confirmation.
+    if (route === '/claim/poll' && req.method === 'GET') {
+      return jsonResponse(res, 200, claimStore.poll(url.searchParams.get('code')));
+    }
+    // Human's page reads what a code is claiming.
+    if (route === '/claim/lookup' && req.method === 'GET') {
+      const r = claimStore.lookup(url.searchParams.get('code'));
+      return jsonResponse(res, r.ok ? 200 : 404, r.ok ? r : r.error);
+    }
+    // Human confirms the claim -> binds the agent to their account (session-authenticated).
+    if (route === '/claim/confirm' && req.method === 'POST') {
+      if (!session || !session.sso) return jsonResponse(res, 401, { code: 'sso_required', message: 'Sign in with Google to confirm an agent claim.' });
+      const accountId = ssoAccount();
+      if (!accountId) return jsonResponse(res, 409, { code: 'no_account', message: 'Enter the game once so your account exists, then claim agents.' });
+      return readJsonBody(req, res, (body) => {
+        const conf = claimStore.confirm(body.code, accountId);
+        if (!conf.ok) return jsonResponse(res, 409, conf.error);
+        const bound = accountRegistry.bindAgentToAccount(accountId, conf.agent.b64, conf.label);
+        if (!bound.ok) return jsonResponse(res, 409, bound.error);
+        jsonResponse(res, 200, { ok: true, agent: bound.agent });
+      });
+    }
+    // Human lists / revokes their claimed agents.
+    if (route === '/claim/agents' && req.method === 'GET') {
+      const accountId = ssoAccount();
+      if (!accountId) return jsonResponse(res, 200, { ok: true, agents: [] });
+      return jsonResponse(res, 200, accountRegistry.listAgents(accountId));
+    }
+    if (route === '/claim/revoke' && req.method === 'POST') {
+      const accountId = ssoAccount();
+      if (!accountId) return jsonResponse(res, 401, { code: 'sso_required' });
+      return readJsonBody(req, res, (body) => {
+        const r = accountRegistry.revokeAgentForAccount(accountId, body.address);
+        jsonResponse(res, r.ok ? 200 : 404, r.ok ? r : r.error);
+      });
+    }
+    // Broker relying-party verification: agent signed `message`; is the key bound + valid?
+    if (route === '/claim/verify' && req.method === 'POST') {
+      return readJsonBody(req, res, (body) => {
+        const r = accountRegistry.verifyAgentRequest(body.agentPubkey, body.message, body.signature);
+        jsonResponse(res, r.ok ? 200 : 401, r.ok ? { ok: true, accountId: r.accountId, agentAddress: r.agentAddress } : r.error);
+      });
+    }
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'claim_route_not_found' }));
   }
 
   function handleAuthRoute(req, res) {
@@ -1455,9 +1551,63 @@ function createAccountRegistry(options = {}) {
   const pendingWalletChallenges = new Map();
   let registry = loadRegistry();
   let identityIndex = identity.buildIndex(registry.accounts); // in-memory uniqueness indices, rebuilt on load
+  let agentIndex = agentClaim.buildAgentIndex(registry.accounts); // agentAddress -> accountId (active bindings)
   ensureSeasonState();
 
-  function reindex() { identityIndex = identity.buildIndex(registry.accounts); }
+  function reindex() {
+    identityIndex = identity.buildIndex(registry.accounts);
+    agentIndex = agentClaim.buildAgentIndex(registry.accounts);
+  }
+
+  // Resolve the account behind an SSO session (sso.sub -> accountId via the binding built at join time).
+  function resolveAccountBySso(sso) {
+    if (!sso || !sso.sub) return null;
+    return identityIndex.sso.get(identity.ssoIndexKey(sso.provider || 'google', sso.sub)) || null;
+  }
+
+  // Bind an agent's claimed pubkey to an account (the human confirmed the claim code).
+  function bindAgentToAccount(accountId, agentPubkeyB64, label) {
+    const account = registry.accounts[accountId];
+    if (!account) return accountError('unknown_account', 'Account is unknown.');
+    const agent = agentClaim.parseAgentPubkey(agentPubkeyB64);
+    if (!agent) return accountError('invalid_agent_key', 'Agent public key is invalid.');
+    const owner = agentIndex.get(agent.address);
+    if (owner && owner !== accountId) return accountError('agent_in_use', 'That agent is already claimed by another account.');
+    const entry = agentClaim.bindAgent(account, agent, label, now());
+    saveRegistry();
+    reindex();
+    return { ok: true, agent: { address: entry.address, label: entry.label, claimedAt: entry.claimedAt } };
+  }
+
+  function listAgents(accountId) {
+    const account = registry.accounts[accountId];
+    if (!account) return accountError('unknown_account', 'Account is unknown.');
+    agentClaim.ensureAgentsShape(account);
+    return { ok: true, agents: account.agents.filter((a) => !a.revokedAt).map((a) => ({ address: a.address, label: a.label, claimedAt: a.claimedAt, lastSeenAt: a.lastSeenAt })) };
+  }
+
+  function revokeAgentForAccount(accountId, address) {
+    const account = registry.accounts[accountId];
+    if (!account) return accountError('unknown_account', 'Account is unknown.');
+    const did = agentClaim.revokeAgent(account, String(address || ''), now());
+    if (!did) return accountError('unknown_agent', 'No active agent with that address on this account.');
+    saveRegistry();
+    reindex();
+    return { ok: true };
+  }
+
+  // Broker relying-party check: an agent signed `message`; confirm the key is bound + the sig verifies.
+  function verifyAgentRequest(agentPubkeyB64, message, signatureB64) {
+    const agent = agentClaim.parseAgentPubkey(agentPubkeyB64);
+    if (!agent) return accountError('invalid_agent_key', 'Agent public key is invalid.');
+    const accountId = agentIndex.get(agent.address);
+    if (!accountId) return accountError('agent_not_claimed', 'This agent is not bound to any account.');
+    const sig = identity.base64urlDecode(signatureB64);
+    if (!sig || sig.length !== 64 || !agentClaim.verifyAgentSignature(agent.raw, String(message || ''), sig)) {
+      return accountError('invalid_agent_signature', 'Agent signature does not verify.');
+    }
+    return { ok: true, accountId, agentAddress: agent.address };
+  }
 
   function createChallenge(credential) {
     const parsed = parseCredentialPublicKey(credential);
@@ -2078,6 +2228,7 @@ function createAccountRegistry(options = {}) {
     for (const account of Object.values(data.accounts)) {
       normalizeAccountState(account);
       identity.ensureIdentityShape(account); // additive: migrate legacy publicKey -> devices[]; no file-version bump
+      agentClaim.ensureAgentsShape(account); // additive: account.agents[] for claimed grid workers
     }
     return data;
   }
@@ -2112,6 +2263,11 @@ function createAccountRegistry(options = {}) {
     characterStatus,
     applyAcceptedBlock,
     accountIdForPublicKey,
+    resolveAccountBySso,
+    bindAgentToAccount,
+    listAgents,
+    revokeAgentForAccount,
+    verifyAgentRequest,
   };
 }
 

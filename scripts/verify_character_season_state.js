@@ -210,3 +210,4 @@ ok('carry/reset state persists across registry reload');
 fs.rmSync(tempDir, { recursive: true, force: true });
 
 console.log('\ncharacter season-state verification passed (' + pass + ' checks).');
+process.exit(0); // CI-hardening: createAccountRegistry is used directly (no realm close()); exit deterministically so a lingering handle can't wedge the runner.

@@ -51,6 +51,18 @@
         if (!pubkey) throw new Error('connect() before signing');
         return p.signTransaction(tx);
       },
+      // Sign-in ownership proof: sign an arbitrary UTF-8 challenge. Returns raw signature + public
+      // key bytes so the caller can encode them for the server's ed25519 verification.
+      async signMessage(message) {
+        if (!p) throw new Error('Phantom wallet not found');
+        if (!pubkey) throw new Error('connect() before signing');
+        const bytes = new TextEncoder().encode(String(message));
+        const res = await p.signMessage(bytes, 'utf8');
+        const signatureBytes = res && res.signature ? res.signature : res;
+        const pk = (res && res.publicKey && res.publicKey.toBytes && res.publicKey.toBytes())
+          || (p.publicKey && p.publicKey.toBytes && p.publicKey.toBytes()) || null;
+        return { signatureBytes, publicKeyBytes: pk };
+      },
     };
   }
 
@@ -69,6 +81,10 @@
       async signTransaction(tx) {
         if (!pubkey) throw new Error('connect() before signing');
         return { signedBy: pubkey, payload: tx, mock: true };
+      },
+      async signMessage(message) {
+        if (!pubkey) throw new Error('connect() before signing');
+        return { signatureBytes: new Uint8Array(64), publicKeyBytes: new Uint8Array(32), message: String(message), mock: true };
       },
     };
   }
@@ -106,6 +122,12 @@
       async signTransaction(tx) {
         if (!active) throw new Error('no wallet connected');
         return active.signTransaction(tx);
+      },
+      // Sign a sign-in ownership challenge with the active adapter.
+      async signMessage(message) {
+        if (!active) throw new Error('no wallet connected');
+        if (typeof active.signMessage !== 'function') throw new Error('active wallet cannot sign messages');
+        return active.signMessage(message);
       },
     };
   }

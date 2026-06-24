@@ -7,16 +7,24 @@ const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const api = fs.readFileSync(path.join(root, 'engine', 'api.md'), 'utf8');
 
 assert(
-  index.includes("mode:state.mode==='town'?'town':'encounter'"),
-  'network state payload should advertise town vs encounter presence mode'
+  index.includes("return {mode:'encounter',encounter:state.mode,interior:null}"),
+  'network presence should advertise the active solo segment as encounter metadata'
 );
 assert(
-  index.includes("encounter:state.mode==='town'?null:state.mode"),
-  'network state payload should include the active solo segment as encounter metadata'
+  index.includes("if(state.mode==='interior')return {mode:'interior',encounter:null,interior:activeInterior?activeInterior.id:null}"),
+  'network presence should advertise the walk-in interior the player is inside'
 );
 assert(
-  index.includes("moving:state.mode==='town'&&player.moving"),
-  'encounter presence should not broadcast active town movement'
+  index.includes("moving:(p.mode==='town'||p.mode==='interior')&&player.moving"),
+  'encounter presence should not broadcast active town/interior movement'
+);
+assert(
+  index.includes("mode:p.mode,encounter:p.encounter,interior:p.interior"),
+  'outgoing state payload should carry mode/encounter/interior presence'
+);
+assert(
+  index.includes("r.interior=m.interior||null"),
+  'remote state should persist the peer interior id'
 );
 assert(
   index.includes("r.mode=m.mode||'town'"),

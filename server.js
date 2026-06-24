@@ -23,6 +23,9 @@ const {
   validateChain,
 } = require('./game/chain.js');
 const { ENEMY_REWARDS, STORY, RELICS, LEVELING, BOSS_SIGILS, AUDITOR_ENDINGS } = require('./game/content.js');
+const { createAnnounceFeed } = require('./game/announce.js');
+const identity = require('./game/identity.js');
+const { createGoogleOAuth, createStore, parseCookies, serializeCookie } = require('./game/oauth-google.js');
 
 const DEFAULT_PORT = process.env.PORT || 8080;
 const DEFAULT_SEASON_ID = 'preseason-1';
@@ -43,6 +46,7 @@ const AUTHORITY_TIERS = Object.freeze({
   ]),
   nonAuthoritative: Object.freeze([
     'movement-relay',
+    'chat-relay',
   ]),
 });
 const CHAINWELL_BLOCK_RULES = Object.freeze({
@@ -114,7 +118,23 @@ function createRealmServer(options = {}) {
   const validatedOutcomes = new Set();
   const rewardIssueTimes = new Map();
   const pvpDuels = new Map();
-  const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, season: seasonConfig, now });
+  // Sign-in flow: identity binding is OPT-IN for a safe rollout. With requireIdentity off (default),
+  // the legacy device-key-only join keeps working unchanged; flip RUNECHAIN_REQUIRE_IDENTITY=1 once
+  // the SSO+wallet client UI ships and the Google OAuth app is registered.
+  const requireIdentity = options.requireIdentity != null ? !!options.requireIdentity : process.env.RUNECHAIN_REQUIRE_IDENTITY === '1';
+  const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, season: seasonConfig, now, requireIdentity });
+  const announceFeed = options.announceFeed || createAnnounceFeed({ seasonId });
+
+  // SSO leg (Google) + browser sessions. Secrets come from env, never the client.
+  const secureCookies = options.secureCookies != null ? !!options.secureCookies : process.env.RUNECHAIN_SECURE_COOKIES === '1';
+  const oauth = options.googleOAuth || createGoogleOAuth({
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || `http://localhost:${port}/auth/google/callback`,
+    now,
+  });
+  const sessionStore = options.sessionStore || createStore({ ttlMs: options.sessionTtlMs == null ? 30 * 24 * 60 * 60 * 1000 : options.sessionTtlMs, now });
+  const oauthStateStore = createStore({ ttlMs: 10 * 60 * 1000, now }); // short-lived CSRF state
   let saveTimer = null;
   let sweepInterval = null;
   let masterChain = loadLedger();
@@ -124,6 +144,17 @@ function createRealmServer(options = {}) {
     if (req.url === '/healthz') {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       return res.end('ok');
+    }
+
+    if (announceFeed.enabled && req.url.split('?')[0] === '/announce-feed') {
+      const since = Number(new URL(req.url, 'http://realm').searchParams.get('since')) || 0;
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify(announceFeed.since(since)));
+    }
+
+    if (req.url.split('?')[0].startsWith('/auth/')) {
+      handleAuthRoute(req, res);
+      return;
     }
 
     const route = req.url.split('?')[0];
@@ -158,7 +189,12 @@ function createRealmServer(options = {}) {
       `Sec-WebSocket-Accept: ${accept}\r\n\r\n`
     );
 
-    const client = { socket, id: null, name: 'Recorded', accountId: null, character: null, last: {} };
+    // The SSO session rides the same-origin WS upgrade as a cookie; attach the verified profile so
+    // the join handler can bind it. No session -> client.sso stays null (legacy join still allowed
+    // unless requireIdentity is on).
+    const cookies = parseCookies(req.headers && req.headers.cookie);
+    const session = cookies.rc_session ? sessionStore.get(cookies.rc_session) : null;
+    const client = { socket, id: null, name: 'Recorded', accountId: null, character: null, last: {}, sessionId: cookies.rc_session || null, sso: session ? session.sso : null };
     addClient(client);
 
     let buffer = Buffer.alloc(0);
@@ -199,6 +235,79 @@ function createRealmServer(options = {}) {
     log(`* ${client.name} left the realm  (${clients.size} online)`);
   }
 
+  // ---- sign-in HTTP routes (SSO leg) -------------------------------------------------------------
+  function sessionCookie(value, maxAgeSeconds) {
+    return serializeCookie('rc_session', value, { maxAge: maxAgeSeconds, httpOnly: true, secure: secureCookies, sameSite: 'Lax' });
+  }
+  function redirect(res, location, setCookies) {
+    const headers = { Location: location, 'Cache-Control': 'no-store' };
+    if (setCookies && setCookies.length) headers['Set-Cookie'] = setCookies;
+    res.writeHead(302, headers);
+    res.end();
+  }
+  function jsonResponse(res, status, body, setCookies) {
+    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+    if (setCookies && setCookies.length) headers['Set-Cookie'] = setCookies;
+    res.writeHead(status, headers);
+    res.end(JSON.stringify(body));
+  }
+
+  function handleAuthRoute(req, res) {
+    const url = new URL(req.url, 'http://realm');
+    const route = url.pathname;
+    const cookies = parseCookies(req.headers && req.headers.cookie);
+
+    // Begin Google sign-in: stash CSRF state, redirect the browser to Google.
+    if (route === '/auth/google/start' && req.method === 'GET') {
+      if (!oauth.enabled) return redirect(res, '/?auth=sso_unconfigured');
+      const next = sanitizeNext(url.searchParams.get('next'));
+      const state = oauthStateStore.create({ next });
+      const stateCookie = serializeCookie('rc_oauth_state', state, { maxAge: 600, httpOnly: true, secure: secureCookies, sameSite: 'Lax' });
+      return redirect(res, oauth.authUrl({ state, nonce: state }), [stateCookie]);
+    }
+
+    // Google redirects back here with ?code&state. Verify, exchange, open a session.
+    if (route === '/auth/google/callback' && req.method === 'GET') {
+      const qErr = url.searchParams.get('error');
+      if (qErr) return redirect(res, '/?auth=denied');
+      const state = url.searchParams.get('state');
+      const code = url.searchParams.get('code');
+      if (!state || cookies.rc_oauth_state !== state) return redirect(res, '/?auth=state_invalid');
+      const stateData = oauthStateStore.take(state); // single-use
+      if (!stateData) return redirect(res, '/?auth=state_invalid');
+      const clearState = serializeCookie('rc_oauth_state', '', { maxAge: 0, httpOnly: true, secure: secureCookies, sameSite: 'Lax' });
+
+      oauth.exchangeCode(code).then((result) => {
+        if (!result.ok) return redirect(res, '/?auth=' + encodeURIComponent(result.error.code), [clearState]);
+        const sid = sessionStore.create({ sso: result.profile });
+        const maxAge = Math.floor((options.sessionTtlMs == null ? 30 * 24 * 60 * 60 * 1000 : options.sessionTtlMs) / 1000);
+        return redirect(res, sanitizeNext(stateData.next) || '/', [clearState, sessionCookie(sid, maxAge)]);
+      }).catch(() => redirect(res, '/?auth=sso_error', [clearState]));
+      return;
+    }
+
+    // The client polls this to learn whether it is signed in (and as whom).
+    if (route === '/auth/session' && req.method === 'GET') {
+      const session = cookies.rc_session ? sessionStore.get(cookies.rc_session) : null;
+      const sso = session && session.sso ? { provider: session.sso.provider, email: session.sso.email, name: session.sso.name } : null;
+      return jsonResponse(res, 200, { signedIn: !!sso, sso, ssoEnabled: oauth.enabled, requireIdentity });
+    }
+
+    if (route === '/auth/logout' && (req.method === 'POST' || req.method === 'GET')) {
+      if (cookies.rc_session) sessionStore.destroy(cookies.rc_session);
+      return jsonResponse(res, 200, { ok: true }, [sessionCookie('', 0)]);
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'auth_route_not_found' }));
+  }
+
+  // Only allow same-origin relative redirect targets (defeats open-redirect via ?next=).
+  function sanitizeNext(next) {
+    if (typeof next !== 'string' || !next.startsWith('/') || next.startsWith('//')) return '/';
+    return next.slice(0, 256);
+  }
+
   function handleMessage(client, raw) {
     let message;
     try {
@@ -213,6 +322,8 @@ function createRealmServer(options = {}) {
     switch (message && message.t) {
       case 'account:challenge':
         return issueAccountChallenge(client, message.credential);
+      case 'wallet:challenge':
+        return issueWalletChallenge(client, message.wallet);
       case 'join':
         return joinClient(client, message);
       case 'state': {
@@ -222,6 +333,15 @@ function createRealmServer(options = {}) {
         client.last = state;
         client.lastStateAt = now();
         broadcast(state, client);
+        return { ok: true };
+      }
+      case 'chat': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        const text = sanitizeText(message.text, 160);
+        if (!text) return { ok: false, error: { code: 'empty_chat', message: 'Chat message is empty.' } };
+        // Non-authoritative proximity chat: relayed verbatim, never recorded to the ledger.
+        broadcast({ t: 'chat', id: client.id, name: client.name, text, interior: sanitizeText(message.interior || '', 40) || null }, client);
         return { ok: true };
       }
       case 'block': {
@@ -303,9 +423,24 @@ function createRealmServer(options = {}) {
     return result;
   }
 
+  function issueWalletChallenge(client, wallet) {
+    const result = accountRegistry.issueWalletChallenge(wallet && wallet.address);
+    if (!result.ok) {
+      send(client, { t: 'join:error', error: result.error });
+      return result;
+    }
+    send(client, { t: 'wallet:challenge', ...result.challenge });
+    return result;
+  }
+
   function joinClient(client, message) {
     const name = sanitizeDisplayName(message.name);
-    const result = accountRegistry.verifyJoin(message.credential, name);
+    // Use the identity-binding path when SSO/wallet are in play (or required); otherwise the legacy
+    // device-key-only join keeps working for the current client + existing tests.
+    const useIdentity = requireIdentity || !!client.sso || !!message.wallet;
+    const result = useIdentity
+      ? accountRegistry.verifyIdentityJoin({ credential: message.credential, wallet: message.wallet, sso: client.sso, name })
+      : accountRegistry.verifyJoin(message.credential, name);
     if (!result.ok) {
       send(client, { t: 'join:error', error: result.error });
       return result;
@@ -351,6 +486,10 @@ function createRealmServer(options = {}) {
       z: finiteNumber(message.z),
       yaw: finiteNumber(message.yaw),
       moving: !!message.moving,
+      // Presence so peers can show who is in an encounter and co-locate inside interiors.
+      mode: sanitizeText(message.mode || 'town', 24) || 'town',
+      encounter: sanitizeText(message.encounter || '', 24) || null,
+      interior: sanitizeText(message.interior || '', 40) || null,
     };
     const ending = publicAuditorEnding(client.character);
     if (ending) state.auditorEnding = ending;
@@ -754,6 +893,7 @@ function createRealmServer(options = {}) {
     masterChain.push(block);
     log(`chain block #${block.index} accepted - ${block.txs ? block.txs.length : 0} tx`);
     saveLedger();
+    announceFeed.recordBlock(block);
     return { ok: true, block };
   }
 
@@ -1305,9 +1445,15 @@ function createAccountRegistry(options = {}) {
   const seasonId = seasonConfig.id;
   const now = typeof options.now === 'function' ? options.now : () => Date.now();
   const challengeTtlMs = options.challengeTtlMs == null ? 60000 : options.challengeTtlMs;
+  const walletChallengeTtlMs = options.walletChallengeTtlMs == null ? 60000 : options.walletChallengeTtlMs;
+  const requireIdentity = !!options.requireIdentity;
   const pendingChallenges = new Map();
+  const pendingWalletChallenges = new Map();
   let registry = loadRegistry();
+  let identityIndex = identity.buildIndex(registry.accounts); // in-memory uniqueness indices, rebuilt on load
   ensureSeasonState();
+
+  function reindex() { identityIndex = identity.buildIndex(registry.accounts); }
 
   function createChallenge(credential) {
     const parsed = parseCredentialPublicKey(credential);
@@ -1345,7 +1491,9 @@ function createAccountRegistry(options = {}) {
     };
   }
 
-  function verifyJoin(credential, displayName) {
+  // Verify possession of the device (browser P-256) credential against an outstanding challenge.
+  // Shared by the legacy join and the identity-binding join.
+  function verifyDeviceCredential(credential) {
     const parsed = parseCredentialPublicKey(credential);
     if (!parsed.ok) return parsed;
     if (!credential || typeof credential.challengeId !== 'string') {
@@ -1364,15 +1512,116 @@ function createAccountRegistry(options = {}) {
     }
 
     pendingChallenges.delete(credential.challengeId);
-    const binding = bindAccount(accountId, parsed.publicKey, displayName);
+    return { ok: true, publicKey: parsed.publicKey, accountId };
+  }
+
+  function verifyJoin(credential, displayName) {
+    const device = verifyDeviceCredential(credential);
+    if (!device.ok) return device;
+    const binding = bindAccount(device.accountId, device.publicKey, displayName);
     return {
       ok: true,
-      accountId,
+      accountId: device.accountId,
       seasonId,
       season: getSeasonState(),
       character: clone(binding.character),
       createdAccount: binding.createdAccount,
       createdCharacter: binding.createdCharacter,
+    };
+  }
+
+  // ---- wallet ownership proof (the REQUIRED economic leg) ----------------------------------------
+  function cleanupWalletChallenges() {
+    const cutoff = now() - walletChallengeTtlMs;
+    for (const [nonce, c] of pendingWalletChallenges) if (c.issuedAt < cutoff) pendingWalletChallenges.delete(nonce);
+  }
+
+  function issueWalletChallenge(walletAddress) {
+    const addr = sanitizeText(walletAddress, 64);
+    if (!addr) return accountError('invalid_wallet', 'A wallet address is required to start a wallet challenge.');
+    cleanupWalletChallenges();
+    const nonce = 'wnonce_' + crypto.randomBytes(12).toString('hex');
+    const issuedAt = now();
+    const message = identity.buildWalletChallenge({ seasonId, walletAddress: addr, nonce, issuedAt });
+    pendingWalletChallenges.set(nonce, { address: addr, message, issuedAt });
+    return { ok: true, challenge: { walletAddress: addr, nonce, message, issuedAt } };
+  }
+
+  // Verify a Solana wallet signed our single-use challenge; returns the canonical (server-derived) address.
+  function verifyWalletProof(wallet) {
+    if (!wallet || typeof wallet !== 'object') return accountError('wallet_proof_missing', 'Wallet proof is required.');
+    cleanupWalletChallenges();
+    const challenge = pendingWalletChallenges.get(wallet.nonce);
+    if (!challenge) return accountError('invalid_wallet_challenge', 'Wallet challenge is unknown, expired, or already used.');
+    const pub = identity.base64urlDecode(wallet.publicKey);
+    if (!pub || pub.length !== 32) return accountError('invalid_wallet_key', 'Wallet public key must be a 32-byte base64url value.');
+    const address = identity.solanaAddress(pub);
+    if (address !== challenge.address) return accountError('wallet_address_mismatch', 'Signed wallet does not match the challenged address.');
+    const sig = identity.base64urlDecode(wallet.signature);
+    if (!sig || sig.length !== 64) return accountError('invalid_wallet_signature', 'Wallet signature must be a 64-byte base64url value.');
+    if (!identity.verifyEd25519(pub, challenge.message, sig)) return accountError('invalid_wallet_signature', 'Wallet signature does not verify.');
+    pendingWalletChallenges.delete(wallet.nonce);
+    return { ok: true, address, chain: !wallet.chain || wallet.chain === 'solana' ? 'solana' : sanitizeText(wallet.chain, 24) };
+  }
+
+  // ---- full sign-in: device + SSO + wallet, bound to one account ---------------------------------
+  function verifyIdentityJoin(input) {
+    input = input || {};
+    const displayName = input.name;
+    const device = verifyDeviceCredential(input.credential);
+    if (!device.ok) return device;
+
+    let walletAddress = null;
+    let walletChain = 'solana';
+    if (input.wallet) {
+      const proof = verifyWalletProof(input.wallet);
+      if (!proof.ok) return proof;
+      walletAddress = proof.address;
+      walletChain = proof.chain;
+    }
+
+    const sso = input.sso && input.sso.sub ? input.sso : null;
+    const decision = identity.decideBinding({
+      deviceAccountId: device.accountId,
+      ssoSub: sso ? sso.sub : null,
+      ssoProvider: sso ? (sso.provider || 'google') : 'google',
+      walletAddress,
+      index: identityIndex,
+      requireSso: requireIdentity,
+      requireWallet: requireIdentity,
+    });
+    if (!decision.ok) return decision;
+
+    const binding = bindAccount(decision.accountId, device.publicKey, displayName);
+    const account = registry.accounts[decision.accountId];
+    identity.applyIdentityLinks(account, {
+      ssoProfile: sso,
+      walletAddress,
+      walletChain,
+      devicePublicKey: device.publicKey,
+      deviceType: input.credential && input.credential.type,
+      at: now(),
+    });
+    saveRegistry();
+    reindex();
+    return {
+      ok: true,
+      accountId: decision.accountId,
+      seasonId,
+      season: getSeasonState(),
+      character: clone(binding.character),
+      createdAccount: binding.createdAccount,
+      createdCharacter: binding.createdCharacter,
+      identity: identitySummary(account),
+    };
+  }
+
+  function identitySummary(account) {
+    identity.ensureIdentityShape(account);
+    return {
+      sso: account.identity.sso ? { provider: account.identity.sso.provider, email: account.identity.sso.email, name: account.identity.sso.name } : null,
+      wallet: account.identity.wallet ? { chain: account.identity.wallet.chain, address: account.identity.wallet.address } : null,
+      devices: account.devices.length,
     };
   }
 
@@ -1822,7 +2071,10 @@ function createAccountRegistry(options = {}) {
       throw new Error('Account registry is malformed.');
     }
     if (!data.seasons || typeof data.seasons !== 'object' || Array.isArray(data.seasons)) data.seasons = {};
-    for (const account of Object.values(data.accounts)) normalizeAccountState(account);
+    for (const account of Object.values(data.accounts)) {
+      normalizeAccountState(account);
+      identity.ensureIdentityShape(account); // additive: migrate legacy publicKey -> devices[]; no file-version bump
+    }
     return data;
   }
 
@@ -1840,6 +2092,9 @@ function createAccountRegistry(options = {}) {
   return {
     createChallenge,
     verifyJoin,
+    issueWalletChallenge,
+    verifyWalletProof,
+    verifyIdentityJoin,
     getState,
     getSeasonState,
     completeMandatoryTask,
@@ -2109,7 +2364,26 @@ function encodeFrame(payload, opcode = 0x1) {
   return Buffer.concat([header, payload]);
 }
 
+// Zero-dep .env loader (no dotenv dependency — A1 buildless). Loaded only when run as a CLI,
+// so tests/requires are unaffected. Real process env always wins over the file; missing file is a no-op.
+function loadDotEnv(file) {
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); } catch (_) { return; }
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim();
+    if (!key || key in process.env) continue;
+    let val = line.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1);
+    process.env[key] = val;
+  }
+}
+
 if (require.main === module) {
+  loadDotEnv(path.join(__dirname, '.env'));
   createRealmServer().listen();
 }
 

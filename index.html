@@ -2718,9 +2718,16 @@ function refreshSigninUI(){
   const bits=[];
   bits.push(a.signedIn?('Signed in'+(a.sso&&a.sso.email?(' as '+esc(a.sso.email)):'')):'Step 1 — sign in with Google');
   if(a.requireWallet)bits.push(walletReady?'Wallet connected':'Step 2 — connect your wallet');
+  else if(a.signedIn)bits.push(walletReady?'Wallet linked':'Wallet optional');
   if(signinStatusEl)signinStatusEl.innerHTML=bits.join(' &middot; ');
   if(googleBtn)googleBtn.disabled=!!a.signedIn;
-  if(walletBtn){ walletBtn.hidden=!a.requireWallet; walletBtn.disabled=walletReady; } // wallet step only when required
+  if(walletBtn){
+    // Wallet button shows once signed in: REQUIRED when requireWallet, otherwise an OPTIONAL link
+    // (lets players bind a wallet early — and lets us prove the Phantom leg before enforcing it).
+    walletBtn.hidden=!a.signedIn;
+    walletBtn.disabled=walletReady;
+    walletBtn.textContent=walletReady?'Wallet connected':(a.requireWallet?'Connect Solana wallet':'Link wallet (optional)');
+  }
   if(goBtn)goBtn.disabled=!(a.signedIn&&(!a.requireWallet||walletReady));
 }
 function showSigninGate(message){

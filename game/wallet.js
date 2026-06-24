@@ -25,36 +25,44 @@
   // Phantom browser-extension adapter — the first concrete adapter. Wraps the injected provider
   // (window.solana). The provider is injectable so this is testable without the extension.
   function createPhantomAdapter(provider) {
-    const p = provider || (typeof root !== 'undefined' ? root.solana : null);
+    // Resolve the injected provider LAZILY on every call. Phantom injects window.solana
+    // asynchronously (often after this adapter is constructed at page load), so capturing it once
+    // would leave it null forever and make connect() fail even when Phantom is installed.
+    const getProvider = () => provider || (typeof root !== 'undefined' ? root.solana : null);
     let pubkey = null;
     function readKey(src) {
       const k = src && src.publicKey;
       return k && typeof k.toString === 'function' ? k.toString() : (typeof k === 'string' ? k : null);
     }
+    const notFound = () => new Error('Phantom wallet not found — install the Phantom extension, then reload.');
     return {
       name: 'phantom',
-      available() { return !!(p && p.isPhantom); },
+      available() { const p = getProvider(); return !!(p && p.isPhantom); },
       async connect() {
-        if (!p) throw new Error('Phantom wallet not found');
+        const p = getProvider();
+        if (!p) throw notFound();
         const res = await p.connect();
         pubkey = readKey(res) || readKey(p);
         return pubkey;
       },
       async disconnect() {
+        const p = getProvider();
         if (p && typeof p.disconnect === 'function') await p.disconnect();
         pubkey = null;
       },
       getPublicKey() { return pubkey; },
       // tx: a server-serialized transaction. The adapter signs; it never builds the tx.
       async signTransaction(tx) {
-        if (!p) throw new Error('Phantom wallet not found');
+        const p = getProvider();
+        if (!p) throw notFound();
         if (!pubkey) throw new Error('connect() before signing');
         return p.signTransaction(tx);
       },
       // Sign-in ownership proof: sign an arbitrary UTF-8 challenge. Returns raw signature + public
       // key bytes so the caller can encode them for the server's ed25519 verification.
       async signMessage(message) {
-        if (!p) throw new Error('Phantom wallet not found');
+        const p = getProvider();
+        if (!p) throw notFound();
         if (!pubkey) throw new Error('connect() before signing');
         const bytes = new TextEncoder().encode(String(message));
         const res = await p.signMessage(bytes, 'utf8');

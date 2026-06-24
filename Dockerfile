@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json ./
 COPY server.js ./
 COPY index.html ./
+COPY claim.html ./
 COPY game/ ./game/
 COPY engine/ ./engine/
 COPY assets/pixel/ ./assets/pixel/

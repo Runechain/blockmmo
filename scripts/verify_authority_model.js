@@ -140,6 +140,9 @@ assert.deepStrictEqual(readMessages(peer)[0], {
   z: 34,
   yaw: 0.5,
   moving: true,
+  mode: 'town',
+  encounter: null,
+  interior: null,
 });
 
 // Authoritative: raw client ledger blocks never append, even if they are internally valid.
@@ -174,7 +177,14 @@ assertRejected(pvpResult, 'authoritative_message_requires_server');
 assert.strictEqual(readMessages(peer).length, 0, 'forged PvP result must not relay to peers');
 assert.strictEqual(readMessages(recorded)[0].error.code, 'authoritative_message_requires_server');
 
-// Validated: solo-segment outcomes can request ledger-touching rewards only after server checks shape/source.
+const directEnemyReward = realm.handleParsedMessage(recorded, {
+  t: 'mine:reward',
+  source: { type: 'enemy', key: 'hollow' },
+});
+assertRejected(directEnemyReward, 'invalid_reward_source');
+assert.strictEqual(readMessages(recorded)[0].error.code, 'invalid_reward_source');
+
+// Validated: solo-segment outcomes can request ledger-touching enemy rewards only after server checks shape/source.
 const badSolo = realm.handleParsedMessage(recorded, {
   t: 'segment:complete',
   outcome: { mode: 'platformer', segmentId: 'seg-bogus', reward: { type: 'enemy', key: 'hollow' } },

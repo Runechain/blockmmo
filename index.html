@@ -54,12 +54,21 @@
   .dot.encounter{background:var(--gold);box-shadow:0 0 8px rgba(241,199,91,.7)}
   .peerstate{margin-left:auto;color:#9f967f;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
   .dot.local{background:#7a7f86;box-shadow:none}
+  #chatlog{left:12px;bottom:84px;width:min(340px,calc(100vw - 24px));font-size:11px;color:#d8d0bd;max-height:38vh;overflow:hidden;text-align:left}
+  #chatlog div{margin:0 0 3px;padding:3px 7px;background:rgba(7,8,10,.6);border-left:2px solid rgba(122,167,255,.45);opacity:0;animation:logfade 12s forwards;word-wrap:break-word}
+  #chatlog div b{color:var(--mana)}
+  #chatbar{left:12px;bottom:54px;width:min(340px,calc(100vw - 24px));display:none;pointer-events:auto}
+  #chatbar.open{display:block}
+  #chatbar input{width:100%;background:rgba(7,8,10,.92);border:2px solid var(--mana);color:var(--txt);
+    font-family:inherit;font-size:12px;padding:6px 8px;outline:none;pointer-events:auto}
+  #chatbar .chathint{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.06em}
   #log{top:12px;right:12px;width:min(360px,calc(100vw - 24px));font-size:11px;color:#d8d0bd;text-align:right}
   #log div{display:inline-block;max-width:100%;margin:0 0 5px;padding:5px 7px;background:rgba(7,8,10,.64);
     border:1px solid rgba(241,199,91,.25);opacity:0;animation:logfade 4.6s forwards}
   @keyframes logfade{0%{opacity:0;transform:translateY(-5px)}8%{opacity:1;transform:none}82%{opacity:1}100%{opacity:0}}
-  #prompt{bottom:78px;left:50%;transform:translateX(-50%);display:none;background:var(--panel);border:2px solid var(--gold);
-    box-shadow:0 0 0 2px #050607;padding:7px 12px;font-size:12px;color:var(--gold);text-align:center}
+  #prompt{bottom:78px;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none;background:var(--panel);border:2px solid var(--gold);
+    box-shadow:0 0 0 2px #050607;padding:7px 12px;font-size:12px;color:var(--gold);text-align:center;transition:opacity .15s,transform .15s}
+  #prompt.on{opacity:1;transform:translateX(-50%) translateY(-4px);pointer-events:auto}
   #bossbar{display:none;left:50%;top:16px;transform:translateX(-50%);width:min(520px,58vw);text-align:center;
     color:var(--gold);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
   #bossbar .bar{height:12px;margin-top:5px;background:#170909;border-color:#050607}
@@ -103,6 +112,17 @@
   .statbtn .cost{color:var(--gold)}
   button:hover:not(:disabled){border-color:var(--gold);background:#222820}
   button:disabled{opacity:.42;cursor:default}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  button:active{transform:translateY(1px);filter:brightness(.9)}
+  kbd{display:inline-block;padding:1px 4px;font-family:inherit;font-size:10px;background:var(--ink);
+    border:1px solid var(--gold);border-bottom-width:2px;border-radius:2px;color:var(--gold);
+    line-height:1.1;margin:0 2px;vertical-align:baseline;font-weight:bold}
+  @keyframes low-hp-pulse{
+    0%{filter:brightness(1)}
+    50%{filter:brightness(1.4)}
+    100%{filter:brightness(1)}
+  }
+  .low-hp{animation:low-hp-pulse .8s infinite}
   .itemlist{margin-top:13px;border-top:1px solid #34302a;padding-top:10px}
   .itemrow{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid #272b2f}
   .itemicon{width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges;background:#08090a;border:1px solid #34302a;padding:4px}
@@ -132,14 +152,14 @@
 
 <div id="vitals" class="hud">
   <div class="lab"><span id="charname">Recorded</span> - Level <b id="lvl">1</b></div>
-  <div id="hp" class="bar"><i></i></div>
+  <div id="hp" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="120" aria-valuemax="120" aria-label="Health"><i></i></div>
   <div class="lab">Stamina</div>
-  <div id="sta" class="bar"><i></i></div>
+  <div id="sta" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="100" aria-valuemax="100" aria-label="Stamina"><i></i></div>
   <div class="statline">VGR <b id="sVgr">10</b> / END <b id="sEnd">10</b> / STR <b id="sStr">10</b> / DMG <b id="sDmg">34</b></div>
   <div id="runes" class="statline"></div>
 </div>
 
-<div id="quest" class="hud">
+<div id="quest" class="hud" aria-live="polite">
   <div class="qk">Current thread</div>
   <div id="qtitle" class="qt">Chainwell Ambush</div>
   <div id="qobj" class="qo">Enter the realm to wake the chain.</div>
@@ -147,6 +167,8 @@
 
 <div id="wallet" class="hud">
   <h3>Runechain Wallet</h3>
+  <div class="row"><span>Wallet</span><b id="wStatus">Not connected</b></div>
+  <button id="wConnect" class="econbtn" style="width:100%;margin:2px 0 8px">Connect Wallet</button>
   <div class="row"><span>Confirmed RUNE</span><b id="bal">0.00</b></div>
   <div class="row"><span>Pending mempool</span><b id="pend">0.00</b></div>
   <div class="row"><span>Gold spendable</span><b id="gold">0.00</b></div>
@@ -164,8 +186,14 @@
   <div id="peerlist"></div>
 </div>
 
+<div id="chatlog" class="hud" aria-live="polite"></div>
+<div id="chatbar" class="hud">
+  <input id="chatinput" maxlength="160" autocomplete="off" placeholder="Speak to the realm…" aria-label="Chat message">
+  <div class="chathint">Enter to send · Esc to cancel</div>
+</div>
+
 <div id="prompt" class="hud"></div>
-<div id="log" class="hud"></div>
+<div id="log" class="hud" aria-live="polite"></div>
 <div id="bossbar" class="hud">
   <span id="bossname">Boss</span>
   <div class="bar"><i id="bossfill"></i></div>
@@ -204,8 +232,8 @@
   </div>
 </div>
 
-<div id="death">
-  <h1>YOU DIED</h1>
+<div id="death" role="alert" aria-labelledby="death-title">
+  <h1 id="death-title">YOU DIED</h1>
   <button id="respawn">Return to Hearthlight</button>
 </div>
 
@@ -214,10 +242,15 @@
   <div class="sub">GRACEFALL PARISH - PIXEL MMO PROTOTYPE</div>
   <p>Top-down pixel combat in a ruined parish: safe Hearthlight, readable monsters, RUNE drops, proof-of-work blocks, relic forging, cosmetics, and same-origin MMO sync.</p>
   <div class="keys">
-    <b>WASD</b> move / <b>Mouse</b> aim / <b>Click</b>, <b>Space</b>, or <b>L</b> attack / <b>Shift</b> dash /
-    <b>Q</b> target nearest / <b>E</b> interact / <b>G</b> Hearthlight / <b>B</b> wardrobe / <b>M</b> wallet
+    <kbd>WASD</kbd> move / <kbd>Mouse</kbd> aim / <kbd>Click</kbd>, <kbd>Space</kbd>, or <kbd>L</kbd> attack / <kbd>Shift</kbd> dash /
+    <kbd>Q</kbd> target nearest / <kbd>E</kbd> interact / <kbd>G</kbd> Hearthlight / <kbd>B</kbd> wardrobe / <kbd>M</kbd> wallet
   </div>
-  <input id="name" maxlength="14" placeholder="name the Recorded" />
+  <input id="name" maxlength="14" placeholder="name the Recorded" aria-label="Name the Recorded" />
+  <div id="signin" hidden>
+    <button id="google-signin" type="button">Sign in with Google</button>
+    <button id="wallet-connect" type="button">Connect Solana wallet</button>
+    <div id="signin-status" class="mini" aria-live="polite"></div>
+  </div>
   <button id="go">Enter Gracefall</button>
   <div class="mini">This opens safe. One weak Hollow waits outside Hearthlight. The road, graveyard, and boss gates unlock as the ledger records you.</div>
 </div>
@@ -225,7 +258,10 @@
 <script src="game/sha256.js"></script>
 <script src="game/chain.js"></script>
 <script src="game/content.js"></script>
+<script src="game/overworld.js"></script>
 <script src="game/account.js"></script>
+<script src="game/wallet.js"></script>
+<script src="game/signin.js"></script>
 <script>
 /* ============================================================================
    RUNECHAIN PIXEL - single-file browser MMO demo
@@ -235,9 +271,11 @@
 
 /* ------------------------- Core data/runtime ----------------------------- */
 const Content = window.RUNECHAIN_CONTENT;
-if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT) throw new Error('RUNECHAIN core scripts failed to load');
+const Overworld = window.RUNECHAIN_OVERWORLD;
+if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT || !window.RUNECHAIN_WALLET || !window.RUNECHAIN_SIGNIN) throw new Error('RUNECHAIN core scripts failed to load');
+if (!Overworld) throw new Error('RUNECHAIN overworld failed to load');
 const {
-  ECON, STORY, RELICS, SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES,
+  ECON, STORY, RELICS, SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, WORLD_PORTALS,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
@@ -280,6 +318,50 @@ const Econ = {
   },
   spendGold(name, amt, note){ Chain.debit(name,amt,note,'GOLD','GOLD_SINK'); }
 };
+
+/* ----- Wallet seam (PRD F6.4 / A3) ---------------------------------------
+   The client talks ONLY to the adapter manager from game/wallet.js, never to a
+   wallet SDK directly. Phantom is one adapter; a deterministic mock is the
+   fallback so the flow works with no extension. Adding a wallet (e.g. mobile) is
+   a new adapter module with zero changes here. */
+const Wallet = (function(){
+  const W = window.RUNECHAIN_WALLET;
+  const manager = W.createWalletManager({
+    adapters: [ W.createPhantomAdapter(), W.createMockAdapter({ name:'mock' }) ],
+  });
+  function preferredAdapter(){
+    return (typeof window!=='undefined' && window.solana && window.solana.isPhantom) ? 'phantom' : 'mock';
+  }
+  return {
+    manager,
+    async connect(){ const name=preferredAdapter(); const pk=await manager.connect(name); return { name, pk }; },
+    disconnect(){ return manager.disconnect(); },
+    signTransaction(tx){ return manager.signTransaction(tx); },
+    get address(){ return manager.getPublicKey(); },
+    get active(){ return manager.activeName(); },
+  };
+})();
+
+/* Server-authority settlement seam (U7 / F6.4 / F5.4). In production the
+   authoritative server BUILDS and serializes the wSOL settlement transaction
+   (50/35/15 split) and the client only signs it; real on-chain submission is
+   legal-gated (F6.3) and stays mocked here. The Gold credit reconciles onto the
+   Chainwell after a signed settlement (S1.2 crossing point). */
+const Settlement = {
+  buildTx(payer, sol){
+    return {
+      kind:'runechain.settlement.v1',
+      builtBy:'server',            // never client-constructed in production (U7)
+      payer, sol,
+      split:{
+        burn:{ pct:ECON.SPLIT.burn, address:ECON.BURN_ADDR },
+        marketing:{ pct:ECON.SPLIT.marketing, address:ECON.MARKETING_ADDR },
+        ops:{ pct:ECON.SPLIT.ops, address:ECON.OPS_ADDR },
+      },
+    };
+  },
+};
+function shortPk(pk){ return pk ? (pk.length>10 ? pk.slice(0,4)+'…'+pk.slice(-4) : pk) : ''; }
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const Story=(function(){
@@ -346,6 +428,31 @@ const Story=(function(){
   return {state,event,updateHud,currentQuest,currentStep,questReached,stepMatchesMonster};
 })();
 
+/* --------------------------- Overworld layer ---------------------------- */
+/* Hybrid integration of the Gameworld overworld kit (game/overworld.js).
+   The parish/moor west of OVERWORLD_SEAM_X keeps its authored PixelLab Wang
+   terrain and decor and its original collision-free movement. East of the seam
+   (the long, previously-empty corridor out to the Auditor at x=2280) the kit
+   owns ground, props, quest gates, and collision. The seam sits on the kit's
+   Mempool Moor -> Shroud Vaults boundary (x=860), which is also where the live
+   game's authored decor ends and the north branch to the Shroud Vaults begins,
+   so the kit's q07 Shroud gate (x=842) is intentionally left to the existing
+   north-path gate and only the deep q10/q12/q13 gates are enforced here. */
+const OVERWORLD_SEAM_X = 860;
+const overworldOptions = {
+  solidProps: true,
+  waterIsSolid: true,
+  blockLockedGates: true,
+  drawGates: true,
+  questReached: id => Story.questReached(id)
+};
+/* Kit collision applies only east of the seam; the authored zone keeps the
+   game's original free movement. */
+function moveOverworldActor(actor, dx, dy){
+  if(actor.x < OVERWORLD_SEAM_X){ actor.x+=dx; actor.y+=dy; return {hitX:false,hitY:false}; }
+  return Overworld.moveCircle(actor, dx, dy, overworldOptions);
+}
+
 /* --------------------------- Dialogue subsystem -------------------------- */
 /* Branching, multi-line, repeatable NPC conversations. Data-driven from each
    NPC's dialogue tree (see game/content.js NPCS format). Mirrors the engine-mode
@@ -381,7 +488,11 @@ const Dialogue=(function(){
   }
   function choose(){
     const n=node(); if(!n||!atLastLine()||!(n.choices&&n.choices.length))return false;
-    goTo(n.choices[active.sel].goto);
+    const picked=n.choices[active.sel];
+    // Optional side-effect hook: a synthetic dialogue (e.g. the Auditor's ending) can react to the
+    // chosen option. Plain NPC dialogues omit onChoose and just branch via goto as before.
+    if(active.npc&&typeof active.npc.onChoose==='function')active.npc.onChoose(picked);
+    goTo(picked.goto);
     return true;
   }
   // E / Space when a dialogue is open: pick a choice if one is showing, else advance text.
@@ -459,7 +570,7 @@ const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 const keys={}, pressed={}, released={}, mouse={x:VIEW_W/2,y:VIEW_H/2,worldX:0,worldY:0,down:false};
 const camera={x:0,y:0};
-const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false,mode:'town'};
+const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false,mapOpen:false,mode:'town'};
 const ASSET_PROOF_MODE=new URLSearchParams(location.search).get('assets')||'';
 const GRACE={x:0,y:0};
 for(const k in ASSETS){
@@ -491,7 +602,7 @@ let player={
   skinId:'tarnished', pal:skinPal('tarnished')
 };
 const enemies=[], particles=[], projectiles=[], remotes={};
-const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set()};
+const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set(), portals:new Set()};
 
 function recalcStats(fullHeal){
   const b=itemBonuses();
@@ -515,7 +626,7 @@ function targetNearest(){
   if(player.lock)log('Target locked: <b>'+esc(player.lock.type.name)+'</b>');
 }
 function doAttack(){
-  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen)return;
+  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||state.mode!=='town')return;
   if(player.attackCd>0)return;
   if(player.sta<14){ flashBar('sta'); return; }
   player.sta-=14; player.attackCd=.32/(1+(player.atkSpeedMult||0)); player.attack={t:0,hit:false}; state.shake=2.2;
@@ -524,7 +635,7 @@ function doAttack(){
   slashFx(player.x,player.y,player.dirX,player.dirY);
 }
 function doDash(){
-  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||player.dash>0)return;
+  if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||player.dash>0||state.mode!=='town')return;
   if(player.sta<18){ flashBar('sta'); return; }
   player.sta-=18; player.dash=.26; player.invuln=.32; state.shake=1.4;
   const mx=(keys.KeyD?1:0)-(keys.KeyA?1:0), my=(keys.KeyS?1:0)-(keys.KeyW?1:0);
@@ -540,6 +651,7 @@ function hurtPlayer(amount){
   if(player.hp<=0){
     player.dead=true;
     document.getElementById('death').style.display='flex';
+    document.getElementById('respawn').focus();
     log('You died. Hearthlight will reset your body, not the chain.');
   }
 }
@@ -644,6 +756,9 @@ function hitEnemy(e, amount){
   if(e.hp<=0)killEnemy(e);
 }
 function killEnemy(e){
+  // The Auditor cannot be killed — any "defeat" funnels into the three-ending choice instead
+  // of a normal kill/sigil-mint (issue #24). The sigil (amended-record) is Choice C only.
+  if(e.key==='auditor'){ openAuditorChoice(e); return; }
   e.dead=true; e.deathT=1.2; state.shake=e.type.boss?7:3;
   if(e.key==='hollow')progress.hollows++;
   const bonus=itemBonuses();
@@ -661,6 +776,59 @@ function killEnemy(e){
     if(e.key==='tallow'&&northPathUnlocked())log('<b style="color:#f1c75b">North path opened:</b> Shroud Vaults.');
   }
 }
+/* ---- Area 3 finale: the Auditor's three permanent endings (issue #24) ------
+   The Auditor is never killed. Reaching it opens a choice of three account-bound endings;
+   the ledger is preserved (no RUNE wipe). Choice C ('amend') is the only path to the Amended
+   Record sigil and the endgame. The choice is non-stranding: Escape just defers it (the enemy
+   stays until answered, and F reopens the choice without re-running the ascent). */
+let auditorEnemy=null, auditorReached=false;
+function auditorEndingNpc(){
+  const nodes={ intro:{
+    speaker:'The Auditor', text:[
+      'The Auditor faces you, a column of scrolling text. "Your account does not reconcile. One entry must be corrected."',
+      'It offers you the registry, and a second quill. There is no killing this. Only an answer — and it is permanent.'
+    ],
+    choices:(AUDITOR_ENDINGS||[]).map((e)=>({ label:e.label, goto:'end-'+e.id, ending:e.id }))
+  } };
+  (AUDITOR_ENDINGS||[]).forEach((e)=>{ nodes['end-'+e.id]={ speaker:'The Auditor', text:e.lines }; });
+  return { id:'the-auditor', name:'The Auditor', role:'Archive of Attestation', color:'#f0f0e8',
+    dialogue:{ start:'intro', nodes },
+    onChoose(choice){ if(choice&&choice.ending)resolveAuditorChoice(choice.ending); } };
+}
+function openAuditorChoice(enemy){
+  auditorEnemy=enemy||auditorEnemy;
+  if(progress.ending){ // permanent — restate, never re-roll
+    const chosen=(AUDITOR_ENDINGS||[]).find((e)=>e.id===progress.ending);
+    log('<b style="color:#f0f0e8">The Auditor:</b> Your record stands as you left it — '+esc(chosen?chosen.title:progress.ending)+'. The choice was permanent.');
+    if(auditorEnemy){ auditorEnemy.dead=true; auditorEnemy.deathT=1.2; }
+    return;
+  }
+  auditorReached=true;
+  if(Dialogue.isOpen())return;
+  Dialogue.open(auditorEndingNpc());
+}
+function resolveAuditorChoice(id){
+  if(progress.ending)return; // permanent, account-bound
+  const ending=(AUDITOR_ENDINGS||[]).find((e)=>e.id===id);
+  if(!ending)return;
+  progress.ending=ending.id;
+  log('<b style="color:#f0f0e8">Ending '+esc(ending.id)+' — '+esc(ending.title.replace(/^Ending [A-C] — /,''))+'</b> is recorded. It is permanent and account-bound.');
+  (ending.lines||[]).forEach((t)=>log('<span style="color:#d8d2c4">'+esc(t)+'</span>'));
+  // Ledger is PRESERVED across every ending — no RUNE wipe / relic destruction (scope ruling).
+  if(ending.sigil){ // Choice C only: seal the Amended Record sigil via the prototype ledger path
+    const rune={ id:'auditor-'+ending.id+'-'+Date.now(), name:(SIGILS[ending.sigil]&&SIGILS[ending.sigil].name)||'The Amended Record', key:ending.sigil, buff:0 };
+    Chain.mintGreatRune(valueAddress(),rune);
+    Story.event('greatRune',{rune:rune.id});
+  }
+  if(ending.endgame){ progress.endgameUnlocked=true; log('<b style="color:#f1c75b">The Amendment endgame is open</b> — contestation echoes await.'); }
+  Net.recordAuditorEnding(ending.id);
+  // Resolve (not kill) the Auditor: it leaves the field without a combat death / unconditional mint.
+  if(auditorEnemy){ auditorEnemy.dead=true; auditorEnemy.deathT=1.2; }
+  Story.event('ending',{choice:ending.id}); // completes q13 (done.event==='ending')
+  lootFlash('<b>'+esc(ending.title)+'</b><br><span style="font-size:13px;color:#d8d2c4">Ending recorded'+(ending.sigil?' · Amended Record sealed':'')+'</span>');
+  updateHud();
+}
+function endgameUnlocked(){ return !!progress.endgameUnlocked; }
 function updateEnemies(dt){
   let attackers=0;
   for(const e of enemies){
@@ -685,7 +853,7 @@ function updateEnemies(dt){
       const hd=Math.hypot(e.x-e.homeX,e.y-e.homeY);
       if(hd>3){
         const n=norm(e.homeX-e.x,e.homeY-e.y);
-        e.x+=n.x*enemySpeed(e)*.45*dt; e.y+=n.y*enemySpeed(e)*.45*dt;
+        moveOverworldActor(e, n.x*enemySpeed(e)*.45*dt, n.y*enemySpeed(e)*.45*dt);
       } else {
         e.roam+=dt;
         e.x=e.homeX+Math.cos(e.roam*.7)*4;
@@ -697,15 +865,15 @@ function updateEnemies(dt){
     const toP=norm(player.x-e.x,player.y-e.y);
     applyAct1BossBehavior(e,dt,d,toP);
     if(e.type.ranged){
-      if(d>78){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
-      else if(d<44){ e.x-=toP.x*enemySpeed(e)*dt; e.y-=toP.y*enemySpeed(e)*dt; }
+      if(d>78){ moveOverworldActor(e, toP.x*enemySpeed(e)*dt, toP.y*enemySpeed(e)*dt); }
+      else if(d<44){ moveOverworldActor(e, -toP.x*enemySpeed(e)*dt, -toP.y*enemySpeed(e)*dt); }
       if(d<e.type.reach && e.castCd<=0){ e.castCd=e.castRate||2.0; spawnProjectile(e,toP); }
       continue;
     }
     const reach=e.type.reach;
     if(d>reach+3){
       const crowdHold=attackers>2 && d<42 && !e.type.boss;
-      if(!crowdHold){ e.x+=toP.x*enemySpeed(e)*dt; e.y+=toP.y*enemySpeed(e)*dt; }
+      if(!crowdHold){ moveOverworldActor(e, toP.x*enemySpeed(e)*dt, toP.y*enemySpeed(e)*dt); }
     } else {
       attackers++;
       if(e.windup>0){
@@ -771,9 +939,21 @@ function resolveAttack(){
 
 /* ----------------------------- Input ------------------------------------ */
 addEventListener('keydown',e=>{
+  // While the chat input is focused, swallow game keys; only Enter (send) / Esc (cancel) act.
+  if(Chat.isOpen()){
+    if(e.code==='Enter'){ e.preventDefault(); Chat.submit(); }
+    else if(e.code==='Escape'){ e.preventDefault(); Chat.close(); }
+    return;
+  }
+  // Typing in a text field (the name box, sign-in inputs, etc.) must not be hijacked by game
+  // keybinds — otherwise letters bound to actions (L/J=attack, etc.) never reach the input.
+  const _editing=e.target;
+  if(_editing&&(_editing.tagName==='INPUT'||_editing.tagName==='TEXTAREA'||_editing.isContentEditable))return;
   if(!keys[e.code]&&!e.repeat)pressed[e.code]=true;
   keys[e.code]=true;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  // Enter opens chat (town / interior / encounter) when no modal is up.
+  if(e.code==='Enter'&&!e.repeat&&state.started&&!Dialogue.isOpen()&&!state.graceOpen&&!state.wardrobeOpen){ e.preventDefault(); Chat.open(); return; }
   if(Dialogue.isOpen()){
     if(e.repeat)return;
     if(e.code==='KeyE'||e.code==='Space')Dialogue.input();
@@ -789,6 +969,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyG'&&!e.repeat){ state.graceOpen?closeGrace():openGrace(); }
   if(e.code==='KeyB'&&!e.repeat){ state.wardrobeOpen?closeWardrobe():openWardrobe(); }
   if(e.code==='KeyM'&&!e.repeat)toggleWallet();
+  if(e.code==='KeyN'&&!e.repeat)state.mapOpen=!state.mapOpen;
   if(e.code==='KeyP'&&!e.repeat)enterEngineMode('platformer');
   if(e.code==='KeyO'&&!e.repeat)enterEngineMode('battlefield');
   if(e.code==='KeyU'&&!e.repeat)enterEngineMode('turnbased');
@@ -803,7 +984,7 @@ addEventListener('keyup',e=>{ keys[e.code]=false; released[e.code]=true; });
 /* Codex's standalone engine modules (engine/*.js) loaded dynamically and driven
    through a host adapter. Town stays the existing top-down game; P enters the
    demo platformer, O the battlefield, T returns to Hearthlight. */
-let modeManager=null, platformerMode=null, battlefieldMode=null, turnbasedMode=null, bossSeq=null, bossEncounterEnemy=null, RCEngine=null;
+let modeManager=null, platformerMode=null, battlefieldMode=null, turnbasedMode=null, bossSeq=null, bossEncounterEnemy=null, activeWorldEntry=null, RCEngine=null, activePortal=null, activeInterior=null, interiorReturn=null;
 const engineCam={x:0,y:0,w:VIEW_W,h:VIEW_H};
 const engineApi={
   viewW:VIEW_W, viewH:VIEW_H, camera:engineCam,
@@ -835,14 +1016,19 @@ const engineApi={
     for(let x=ox-dw; x<viewW; x+=dw) ctx.drawImage(a.img, 0,0,a.w,a.h, Math.round(x),0,dw,dh);
     return true;
   } },
-  net:{ id:'local', _h:{}, on(t,fn){ (this._h[t]||(this._h[t]=[])).push(fn); return ()=>{}; },
-    send(m){ if(m&&m.t==='rc:pvp:challenge'){ const h=this._h; setTimeout(()=>{ (h['rc:pvp:accept']||[]).forEach(fn=>fn({t:'rc:pvp:accept',duelId:m.duelId,from:'stub-rival',to:m.from})); }, 350); } } },
+  net:{ id:'local', _h:{},
+    on(t,fn){ if(window.Net&&Net.onGameMessage)return Net.onGameMessage(t,fn); (this._h[t]||(this._h[t]=[])).push(fn); return ()=>{}; },
+    send(m){
+      if(window.Net&&Net.sendGameMessage&&Net.sendGameMessage(m))return true;
+      if(m&&m.t==='rc:pvp:challenge'){ const h=this._h; const duelId=m.duelId||('stub-duel-'+Date.now().toString(36)); setTimeout(()=>{ (h['rc:pvp:accept']||[]).forEach(fn=>fn({t:'rc:pvp:accept',duelId,from:'stub-rival',to:m.from||this.id,actorPeerId:this.id,turn:1,state:null})); }, 350); }
+      return false;
+    } },
   chain:{}, log:(m)=>log(m),
   onBossTrigger(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('boss',{id}); return; } log('A boss stirs ('+id+'). Returning to the parish.'); exitEngineMode(); },
-  onExit(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('exit',{id}); return; } log('Stage cleared ('+id+').'); exitEngineMode(); },
+  onExit(id){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('exit',{id}); return; } if(completeWorldEntry(id))return; log('Stage cleared ('+id+').'); exitEngineMode({completed:true}); },
   onCreatureDefeated(){}, onWaveSpawn(w){ if(w&&w.id)log('Wave incoming: '+w.id); },
   onZoneCleared(id){ log('Safe ground secured: '+id); }, onMeleeHit(){},
-  onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from,m&&m.duelId); },
+  onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from,m&&m.duelId,m); },
   onDuelResult(r){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('duel',r); return; } log('Duel: '+((r&&r.reason)||'over')); },
   onBossComplete(script){ const e=bossEncounterEnemy; log((script&&script.name||'The boss')+' is overcome.'); endBossSequence(); if(e&&!e.dead)killEnemy(e); } };
 function engineInput(){
@@ -863,12 +1049,40 @@ function enterEngineMode(name){
   modeManager.setMode(mode, ctx, engineApi); state.mode=name; Net.updatePeers();
   log(name==='battlefield'?'Mempool Yard — survive the waves. (T to leave)':name==='turnbased'?'A duel begins — Up/Down choose, J/Space confirm. (T to leave)':'Parish Road Receipts — reach the gate. (T to leave)');
 }
-function exitEngineMode(){
+function exitEngineMode(opts){
+  opts=opts||{};
   if(state.mode==='sequencer'){ endBossSequence(); return; }
+  if(state.mode==='interior'){ exitInterior(); return; }
   if(state.mode==='town')return;
+  const ret=activeWorldEntry&&activeWorldEntry.returnPoint;
   if(modeManager)modeManager.setMode(null, ctx, engineApi);
   player.hp=Math.max(1,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;
+  if(ret){ player.x=ret.x; player.y=ret.y; player.vx=0; player.vy=0; camera.x=player.x; camera.y=player.y; syncMouseWorld(); }
+  activeWorldEntry=null;
+  if(activePortal){
+    // Re-emerge in the overworld exactly at the entrance we descended through (issue #19).
+    player.x=activePortal.x; player.y=activePortal.y;
+    player.vx=0; player.vy=0; player.moving=false;
+    camera.x=player.x; camera.y=player.y; syncMouseWorld();
+    if(opts.completed)progress.portals.add(activePortal.id);
+    state.mode='town'; Net.updatePeers();
+    log(opts.completed?('You climb back out of '+esc(activePortal.label)+', the receipts settled behind you.'):('You retreat from '+esc(activePortal.label)+'.'));
+    activePortal=null;
+    return;
+  }
   state.mode='town'; Net.updatePeers(); log('Returned to Hearthlight.');
+}
+// Descend an overworld entrance into its platformer interior (issue #19 / Q-N1). Uses the
+// segment-free engine path; exitEngineMode handles the return + re-emergence position.
+function enterPortal(p){
+  if(!modeManager||!RCEngine||!RCEngine.createPlatformerMode||!p||!p.level||!state.started||player.dead||state.mode!=='town')return;
+  if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
+  const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;
+  activePortal=p;
+  const mode=platformerMode=RCEngine.createPlatformerMode(p.level);
+  modeManager.setMode(mode, ctx, engineApi); state.mode='platformer'; Net.updatePeers();
+  if(p.intro)log('<span style="color:#bcae8c">'+esc(p.intro)+'</span>');
+  log('You descend into '+esc(p.label)+'. Reach the far exit, or press <b>T</b> to climb back out.');
 }
 function updateEngineMode(dt){
   modeManager.update(dt, engineInput());
@@ -882,10 +1096,10 @@ function updateEngineMode(dt){
 /* Segment sequencer (F3): chains play-styles into one boss encounter, above the mode manager. */
 /* F2.3: real-time battlefield initiates a PvP encounter (rc:pvp handshake); on accept,
    both combatants transition into the turn-based mode to resolve it. */
-function startTurnDuel(peerName, duelId){
+function startTurnDuel(peerName, duelId, serverFrame){
   if(state.mode!=='battlefield'||!RCEngine||!RCEngine.createTurnBasedMode)return;
   const ep=engineApi.player; player.hp=Math.round(ep.hp); player.sta=ep.sta;
-  const enc={id:duelId||'pvp-duel',name:'Duel',peerId:peerName||'stub-rival',duelId:duelId||null,opponent:{name:(peerName||'Rival')+' Recorded',hp:90,attack:11,defense:1,color:'#6f7db0',sprite:'phantom'}};
+  const enc={id:duelId||'pvp-duel',name:'Duel',peerId:peerName||'stub-rival',duelId:duelId||null,actorPeerId:serverFrame&&serverFrame.actorPeerId,turn:serverFrame&&serverFrame.turn,state:serverFrame&&serverFrame.state,opponent:{name:(peerName||'Rival')+' Recorded',hp:90,attack:11,defense:1,color:'#6f7db0',sprite:'phantom'}};
   const mode=turnbasedMode=RCEngine.createTurnBasedMode(enc);
   modeManager.setMode(mode, ctx, engineApi); state.mode='turnbased'; Net.updatePeers();
   log('Settling accounts — a turn-based duel begins. (T to leave)');
@@ -922,6 +1136,9 @@ function nearestBossEncounter(){
   return best;
 }
 function startBossEncounter(enemy){
+  // The Auditor: once already reached (or once answered) re-engaging reopens the choice directly
+  // rather than re-running the ascent/rift — the climax is the answer, not the fight.
+  if(enemy&&enemy.key==='auditor'&&(auditorReached||progress.ending)){ openAuditorChoice(enemy); return; }
   const script=enemy&&(AREA1_ENCOUNTERS[enemy.key]||AREA2_ENCOUNTERS[enemy.key]||AREA3_ENCOUNTERS[enemy.key]);
   if(!modeManager||!RCEngine||!RCEngine.createSegmentSequencer||!script||!state.started||player.dead||state.mode!=='town')return;
   if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
@@ -980,6 +1197,7 @@ function openGrace(){
   state.graceOpen=true; player.hp=player.maxHp; player.sta=player.maxSta;
   Story.event('visit',{site:'hearthlight'});
   document.getElementById('levelup').style.display='flex';
+  document.getElementById('lvclose').focus();
   refreshGrace();
 }
 function closeGrace(){ state.graceOpen=false; document.getElementById('levelup').style.display='none'; }
@@ -1028,7 +1246,9 @@ function forgeRelic(it){
 }
 function openWardrobe(){
   if(!state.started||player.dead)return;
-  state.wardrobeOpen=true; document.getElementById('wardrobe').style.display='flex'; refreshWardrobe();
+  state.wardrobeOpen=true; document.getElementById('wardrobe').style.display='flex';
+  document.getElementById('wclose').focus();
+  refreshWardrobe();
 }
 function closeWardrobe(){ state.wardrobeOpen=false; document.getElementById('wardrobe').style.display='none'; }
 document.getElementById('wclose').onclick=closeWardrobe;
@@ -1061,7 +1281,42 @@ function buySkin(s){
   player.skinId=s.id; player.pal=skinPal(s.id); refreshWardrobe();
 }
 document.getElementById('wConv').onclick=()=>{ const g=Econ.convertRuneToGold(valueAddress(),Chain.spendable(valueAddress(),'RUNE')); if(g>0)log('Converting '+g.toFixed(2)+' Gold from RUNE.'); refreshWardrobe(); };
-document.getElementById('wBuy').onclick=()=>{ const g=Econ.buyGoldWithSol(valueAddress(),1); log('Bought '+g.toFixed(2)+' Gold in the devnet mock.'); refreshWardrobe(); };
+function updateWalletConnUI(){
+  const s=document.getElementById('wStatus'), b=document.getElementById('wConnect');
+  if(!s||!b)return;
+  if(Wallet.address){ s.textContent=Wallet.active+' · '+shortPk(Wallet.address); b.textContent='Disconnect Wallet'; }
+  else { s.textContent='Not connected'; b.textContent='Connect Wallet'; }
+}
+document.getElementById('wConnect').onclick=async function(){
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = Wallet.address ? 'Disconnecting...' : 'Connecting...';
+  try{
+    if(Wallet.address){ await Wallet.disconnect(); log('Wallet disconnected.'); }
+    else { const c=await Wallet.connect(); log('Connected '+c.name+' wallet ('+shortPk(c.pk)+').'); }
+  }catch(err){ log('Wallet: '+esc(err.message||String(err))); }
+  btn.disabled = false;
+  updateWalletConnUI();
+};
+document.getElementById('wBuy').onclick=async function(){
+  const sol=1;
+  const btn = this;
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  try{
+    if(!Wallet.address){ await Wallet.connect(); updateWalletConnUI(); }
+    // Server builds + serializes the settlement tx (U7); the adapter only signs it (F6.4).
+    const tx=Settlement.buildTx(valueAddress(),sol);
+    const signed=await Wallet.signTransaction(tx);
+    if(!signed) throw new Error('settlement not signed');
+    // Signed settlement (devnet mock, go-live legal-gated F6.3) -> reconcile Gold onto the Chainwell (S1.2).
+    const g=Econ.buyGoldWithSol(valueAddress(),sol);
+    log('Settled '+sol+' wSOL via '+Wallet.active+' wallet; credited '+g.toFixed(2)+' Gold (devnet mock).');
+    refreshWardrobe();
+  }catch(err){ log('Purchase failed: '+esc(err.message||String(err))); }
+  finally { btn.disabled = false; btn.textContent = oldText; }
+};
 function toggleWallet(){
   state.wallet=!state.wallet;
   document.getElementById('wallet').style.display=state.wallet?'block':'none';
@@ -1072,15 +1327,40 @@ function lootFlash(html){
 }
 function flashBar(id){ const el=document.getElementById(id); el.style.filter='brightness(1.9)'; setTimeout(()=>el.style.filter='',140); }
 
+function applyAuditorEndingRecord(record){
+  if(!record||!record.id)return false;
+  progress.ending=record.id;
+  progress.endgameUnlocked=!!record.endgame||!!progress.endgameUnlocked;
+  return true;
+}
+
 /* ----------------------------- Networking ------------------------------- */
 const Net=(function(){
   let ws=null, connected=false, accountReady=false, accountCredential=null, id=Math.random().toString(36).slice(2,8), sendTimer=0, activeWork=null, submittedWork=null, awaitingWork=false, pendingSource=null;
   const rewardQueue=[];
+  // Sign-in legs beyond the device key: SSO session state + the connected Solana wallet.
+  const Signin=window.RUNECHAIN_SIGNIN, Wallet=window.RUNECHAIN_WALLET;
+  const walletManager=Wallet.createWalletManager({adapters:[Wallet.createPhantomAdapter()]});
+  let authState=Signin.parseSession({}), signinWallet=null, pendingJoin=null;
+  const gameHandlers={};
   function credentialPayload(){
     return {
       type: accountCredential.type,
       publicKey: accountCredential.publicKey,
     };
+  }
+  // Send the join once the device (and, when required, wallet) legs are signed.
+  function sendJoin(walletProof){
+    if(!ws||ws.readyState!==1||!pendingJoin)return;
+    ws.send(JSON.stringify({
+      t:'join', id, name:player.name,
+      credential:{...credentialPayload(),challengeId:pendingJoin.challengeId,signature:pendingJoin.signature},
+      wallet:walletProof||undefined,
+    }));
+  }
+  async function connectWalletForSignin(){
+    if(!signinWallet)signinWallet=await Signin.connectWallet(walletManager);
+    return signinWallet;
   }
   function clearRewardWork(){
     awaitingWork=false;
@@ -1093,6 +1373,20 @@ const Net=(function(){
     clearRewardWork();
     log(message);
     try{ ws.close(); }catch(_){}
+  }
+  function onGameMessage(type, fn){
+    (gameHandlers[type]||(gameHandlers[type]=[])).push(fn);
+    return ()=>{ gameHandlers[type]=(gameHandlers[type]||[]).filter(handler=>handler!==fn); };
+  }
+  function emitGameMessage(message){
+    const handlers=gameHandlers[message.t]||[];
+    for(const fn of handlers)fn(message);
+  }
+  function sendGameMessage(message){
+    if(!message||!message.t||!/^rc:pvp:/.test(message.t))return false;
+    if(!connected||!accountReady||!ws||ws.readyState!==1)return false;
+    ws.send(JSON.stringify(message));
+    return true;
   }
   function connect(){
     try{
@@ -1126,23 +1420,37 @@ const Net=(function(){
             closeForAccountError('Account challenge signing failed: '+esc(err.message||'unknown'));
             return;
           }
-          ws.send(JSON.stringify({
-            t:'join',
-            id,
-            name:player.name,
-            credential:{
-              ...credentialPayload(),
-              challengeId:m.challengeId,
-              signature,
-            },
-          }));
+          pendingJoin={challengeId:m.challengeId,signature};
+          // Wallet leg: required when the server enforces identity (or a wallet is already connected).
+          if(Signin.needsWalletLeg(authState,!!signinWallet)){
+            try{
+              await connectWalletForSignin();
+              ws.send(JSON.stringify({t:'wallet:challenge',wallet:{address:signinWallet.address}}));
+            }catch(err){
+              closeForAccountError('Wallet connect failed: '+esc(err.message||'unknown'));
+            }
+            return;
+          }
+          sendJoin(null);
+        }
+        if(m.t==='wallet:challenge'){
+          if(!pendingJoin||!signinWallet){ closeForAccountError('Wallet challenge arrived out of order.'); return; }
+          try{
+            const signRes=await signinWallet.signMessage(m.message);
+            sendJoin(Signin.buildWalletProof(m,signRes));
+          }catch(err){
+            closeForAccountError('Wallet signing failed: '+esc(err.message||'unknown'));
+          }
         }
         if(m.t==='account'){
           const character=m.character||{};
           id=m.peerId||id;
+          engineApi.net.id=id;
+          engineApi.player.id=id;
           player.accountId=m.accountId||accountCredential.accountId||null;
           player.characterId=character.id||null;
           player.address=character.address||player.characterId||player.name;
+          applyAuditorEndingRecord(character.auditorEnding);
           accountReady=true;
           log('Character bound for this season: <b>'+esc(character.name||player.name)+'</b>.');
           updateHud();
@@ -1151,18 +1459,30 @@ const Net=(function(){
         }
         if(m.t==='join:error'){
           const code=m.error&&m.error.code;
+          if(typeof showSigninGate==='function')showSigninGate(Signin.joinErrorMessage(code));
           closeForAccountError('Realm account rejected: '+esc(code||'unknown'));
           return;
         }
+        if(m.t==='auditor:ending'){
+          applyAuditorEndingRecord(m.ending);
+          updateHud();
+          updatePeers();
+        }
+        if(m.t==='auditor:ending:error'){
+          const code=m.error&&m.error.code;
+          log('The Auditor rejects the record update: '+esc(code||'unknown'));
+        }
         if(m.t==='state'&&m.id!==id){
           let r=remotes[m.id];
-          if(!r){ r={id:m.id,name:m.name||'Recorded',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false,lastSeen:Date.now()}; remotes[m.id]=r; updatePeers(); }
-          r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0; r.lastSeen=Date.now();
-          if(!r){ r={id:m.id,name:m.name||'Recorded',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false,mode:m.mode||'town',encounter:m.encounter||null}; remotes[m.id]=r; updatePeers(); }
-          const oldMode=r.mode, oldEncounter=r.encounter;
-          r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0; r.mode=m.mode||'town'; r.encounter=m.encounter||null;
-          if(oldMode!==r.mode||oldEncounter!==r.encounter)updatePeers();
+          if(!r){ r={id:m.id,name:m.name||'Recorded',x:m.x||0,y:m.z||0,tx:m.x||0,ty:m.z||0,skin:m.skin||'tarnished',moving:false,mode:m.mode||'town',encounter:m.encounter||null,interior:null}; remotes[m.id]=r; updatePeers(); }
+          const oldMode=r.mode, oldEncounter=r.encounter, oldInterior=r.interior;
+          const oldEnding=r.auditorEnding&&r.auditorEnding.id;
+          r.tx=m.x||0; r.ty=m.z||0; r.skin=m.skin||r.skin; r.moving=!!m.moving; r.dir=m.yaw||0; r.lastSeen=Date.now(); r.mode=m.mode||'town'; r.encounter=m.encounter||null; r.interior=m.interior||null;
+          r.auditorEnding=m.auditorEnding||null;
+          if(oldMode!==r.mode||oldEncounter!==r.encounter||oldInterior!==r.interior||oldEnding!==(r.auditorEnding&&r.auditorEnding.id))updatePeers();
         }
+        if(m.t==='chat'&&m.id!==id)receiveChat(m);
+        if(m.t&&/^rc:pvp:/.test(m.t))emitGameMessage(m);
         if(m.t==='leave'){ delete remotes[m.id]; updatePeers(); }
         if(m.t==='block'&&Chain.acceptRemote(m.block))log('Received a mined block from a peer.');
         if(m.t==='mine:work'){
@@ -1203,9 +1523,21 @@ const Net=(function(){
     setTimeout(()=>{ if(!connected)updatePeers(); },900);
     document.addEventListener('visibilitychange',()=>{
       if(document.visibilityState==='visible'&&connected&&accountReady&&ws&&ws.readyState===1){
-        ws.send(JSON.stringify({t:'state',id,name:player.name,skin:player.skinId,x:player.x,y:0,z:player.y,yaw:Math.atan2(player.dirY,player.dirX),moving:player.moving}));
+        ws.send(stateMsg());
       }
     });
+  }
+  // Single source of truth for the outgoing transform+presence packet (town / interior / encounter).
+  function stateMsg(){
+    const p=netPresence();
+    return JSON.stringify({t:'state',id,name:player.name,skin:player.skinId,x:player.x,y:0,z:player.y,
+      yaw:Math.atan2(player.dirY,player.dirX),moving:(p.mode==='town'||p.mode==='interior')&&player.moving,
+      mode:p.mode,encounter:p.encounter,interior:p.interior});
+  }
+  function sendChat(text){
+    if(!connected||!accountReady||!ws||ws.readyState!==1)return false;
+    ws.send(JSON.stringify({t:'chat',id,name:player.name,text,interior:netPresence().interior}));
+    return true;
   }
   function tick(dt){
     const pruneT=Date.now()-15000;
@@ -1214,7 +1546,7 @@ const Net=(function(){
       sendTimer+=dt;
       if(sendTimer>.08){
         sendTimer=0;
-        ws.send(JSON.stringify({t:'state',id,name:player.name,skin:player.skinId,x:player.x,y:0,z:player.y,yaw:Math.atan2(player.dirY,player.dirX),moving:state.mode==='town'&&player.moving,mode:state.mode==='town'?'town':'encounter',encounter:state.mode==='town'?null:state.mode}));
+        ws.send(stateMsg());
       }
     }
   }
@@ -1222,6 +1554,11 @@ const Net=(function(){
     if(!connected||!ws||ws.readyState!==1)return false;
     rewardQueue.push(source);
     if(accountReady)requestNextRewardWork();
+    return true;
+  }
+  function recordAuditorEnding(endingId){
+    if(!connected||!accountReady||!ws||ws.readyState!==1)return false;
+    ws.send(JSON.stringify({t:'auditor:ending',ending:endingId}));
     return true;
   }
   function requestNextRewardWork(){
@@ -1253,14 +1590,103 @@ const Net=(function(){
   }
   function updatePeers(){
     const el=document.getElementById('peerlist'); el.innerHTML='';
-    const meMode=state.mode==='town'?'town':state.mode;
-    const me=document.createElement('div'); me.className='peerline'; me.innerHTML='<span class="dot '+(state.mode==='town'?'':'encounter')+'"></span>'+esc(player.name)+' <span style="color:#7d776b">(you)</span><span class="peerstate">'+esc(meMode==='town'?'town':'in '+meMode)+'</span>'; el.appendChild(me);
+    const meInterior=state.mode==='interior'?(activeInterior?activeInterior.id:null):null;
+    const meLabel=presenceLabel(state.mode==='town'?'town':(state.mode==='interior'?'interior':'encounter'),state.mode,meInterior);
+    const me=document.createElement('div'); me.className='peerline'; me.innerHTML='<span class="dot '+(state.mode==='town'?'':'encounter')+'"></span>'+esc(player.name)+' <span style="color:#7d776b">(you)</span><span class="peerstate">'+esc(meLabel)+'</span>'; el.appendChild(me);
     const rs=Object.values(remotes);
     if(!connected&&!rs.length){ const d=document.createElement('div'); d.className='peerline'; d.innerHTML='<span class="dot local"></span>Solo mode'; el.appendChild(d); return; }
-    for(const r of rs){ const d=document.createElement('div'); d.className='peerline'; const inEncounter=r.mode&&r.mode!=='town'; d.innerHTML='<span class="dot '+(inEncounter?'encounter':'')+'"></span>'+esc(r.name)+'<span class="peerstate">'+esc(inEncounter?'in '+(r.encounter||'encounter'):'town')+'</span>'; el.appendChild(d); }
+    for(const r of rs){ const d=document.createElement('div'); d.className='peerline'; const away=r.mode&&r.mode!=='town'; const ending=r.auditorEnding&&r.auditorEnding.id?' · Ending '+r.auditorEnding.id:''; d.innerHTML='<span class="dot '+(away?'encounter':'')+'"></span>'+esc(r.name)+esc(ending)+'<span class="peerstate">'+esc(presenceLabel(r.mode,r.encounter,r.interior))+'</span>'; el.appendChild(d); }
   }
-  return {connect,tick,mineAuthorized,requestRuneReward,updatePeers,get connected(){return connected;},get authenticated(){return accountReady;}};
+  return {connect,tick,mineAuthorized,requestRuneReward,recordAuditorEnding,sendGameMessage,onGameMessage,updatePeers,sendChat,connectWalletForSignin,setAuthState:(s)=>{authState=s||authState;},getAuthState:()=>authState,get connected(){return connected;},get authenticated(){return accountReady;}};
 })();
+window.Net=Net;
+
+/* ----------------------------- Presence helpers ------------------------- */
+// Which "room" am I sending as: town overworld, a named interior, or an engine encounter.
+function netPresence(){
+  if(state.mode==='town')return {mode:'town',encounter:null,interior:null};
+  if(state.mode==='interior')return {mode:'interior',encounter:null,interior:activeInterior?activeInterior.id:null};
+  return {mode:'encounter',encounter:state.mode,interior:null};
+}
+function interiorById(id){ return id?((INTERIORS||[]).find(i=>i.id===id)||null):null; }
+function presenceLabel(mode,encounter,interior){
+  if(mode==='interior'){ const it=interiorById(interior); return 'in '+(it?it.name:'a building'); }
+  if(mode&&mode!=='town')return 'in '+(encounter||'encounter');
+  return 'town';
+}
+// Are two participants in the same chat "room"? (both in the open town, or the same interior)
+function sameRoomAsMe(interiorId){ const mine=(state.mode==='interior'&&activeInterior)?activeInterior.id:null; return (interiorId||null)===mine; }
+
+/* ----------------------------- Proximity chat --------------------------- */
+const CHAT_RADIUS=320, CHAT_BUBBLE_SEC=5.5;
+const Chat=(()=>{
+  function bar(){ return document.getElementById('chatbar'); }
+  function input(){ return document.getElementById('chatinput'); }
+  function isOpen(){ return !!state.chatOpen; }
+  function open(){
+    if(state.chatOpen||!state.started||player.dead)return;
+    if(state.graceOpen||state.wardrobeOpen||Dialogue.isOpen())return;
+    state.chatOpen=true; bar().classList.add('open');
+    const i=input(); i.value=''; i.focus();
+    for(const k in keys)keys[k]=false;     // drop any movement held when chat opened
+  }
+  function close(){
+    state.chatOpen=false; bar().classList.remove('open');
+    const i=input(); i.blur();
+    for(const k in keys)keys[k]=false;
+  }
+  function submit(){
+    const text=(input().value||'').trim().slice(0,160);
+    close();
+    if(text)emitChat(text);
+  }
+  return {isOpen,open,close,submit};
+})();
+function setBubble(o,text){ if(o)o.chat={text:String(text).slice(0,160),until:state.time+CHAT_BUBBLE_SEC}; }
+function pushChatLine(name,text,self){
+  const el=document.getElementById('chatlog'); if(!el)return;
+  const d=document.createElement('div');
+  d.innerHTML='<b'+(self?' style="color:#f1c75b"':'')+'>'+esc(name)+':</b> '+esc(text);
+  el.appendChild(d); while(el.children.length>6)el.removeChild(el.firstChild);
+  setTimeout(()=>{ if(d.parentNode)d.remove(); },12000);
+}
+function emitChat(text){
+  setBubble(player,text);
+  pushChatLine(player.name,text,true);
+  Net.sendChat(text);
+}
+// Proximity/local: only hear peers in the same room and within earshot.
+function receiveChat(m){
+  if(!sameRoomAsMe(m.interior))return;
+  const r=remotes[m.id]; if(!r)return;            // no transform tracked yet → can't place them
+  if(dist(player,r)>CHAT_RADIUS)return;           // out of earshot
+  setBubble(r,m.text);
+  pushChatLine(m.name,m.text,false);
+}
+function wrapChat(text,max){
+  const words=String(text).split(/\s+/), lines=[]; let line='';
+  for(const w of words){ const t=line?line+' '+w:w; if(t.length>max&&line){ lines.push(line); line=w; } else line=t; }
+  if(line)lines.push(line);
+  return lines.slice(0,4);
+}
+function drawBubbleFor(o){
+  const c=o&&o.chat; if(!c||c.until<=state.time)return;
+  const s=worldToScreen(o.x,o.y);
+  ctx.font='8px ui-monospace,monospace';
+  const lines=wrapChat(c.text,28);
+  let tw=10; for(const l of lines)tw=Math.max(tw,ctx.measureText(l).width+10); tw=Math.min(190,tw);
+  const lh=10, bh=lines.length*lh+6, bx=Math.round(s.x-tw/2), by=Math.round(s.y-56-bh);
+  ctx.fillStyle='rgba(7,8,10,.86)'; ctx.fillRect(bx,by,tw,bh);
+  ctx.strokeStyle='rgba(122,167,255,.6)'; ctx.lineWidth=1; ctx.strokeRect(bx+.5,by+.5,tw-1,bh-1);
+  ctx.fillStyle='rgba(7,8,10,.86)'; ctx.fillRect(s.x-3,by+bh,6,4);
+  ctx.fillStyle='#e8e6df'; ctx.textAlign='center';
+  lines.forEach((l,i)=>ctx.fillText(l,s.x,by+11+i*lh));
+  ctx.textAlign='left';
+}
+function drawChatBubbles(){
+  for(const k in remotes)drawBubbleFor(remotes[k]);
+  drawBubbleFor(player);
+}
 
 /* ----------------------------- Update loop ------------------------------ */
 function updatePlayer(dt){
@@ -1277,20 +1703,23 @@ function updatePlayer(dt){
 
   if(player.dash>0){
     player.dash-=dt;
-    player.x+=player.vx*dt; player.y+=player.vy*dt;
+    const md=moveOverworldActor(player, player.vx*dt, player.vy*dt);
+    if(md.hitX)player.vx=0; if(md.hitY)player.vy=0;
   } else {
     const mx=(keys.KeyD?1:0)-(keys.KeyA?1:0), my=(keys.KeyS?1:0)-(keys.KeyW?1:0);
     player.moving=!!(mx||my);
     let spd=player.moving?PLAYER_SPEED:0;
     const n=player.moving?norm(mx,my):{x:0,y:0};
     player.vx=n.x*spd; player.vy=n.y*spd;
-    player.x+=player.vx*dt; player.y+=player.vy*dt;
+    const mw=moveOverworldActor(player, player.vx*dt, player.vy*dt);
+    if(mw.hitX)player.vx=0; if(mw.hitY)player.vy=0;
   }
   player.x=clamp(player.x,-WORLD_LIMIT,WORLD_LIMIT); player.y=clamp(player.y,-WORLD_LIMIT,WORLD_LIMIT);
 }
 function update(dt){
   state.time+=dt;
   if(state.mode==='sequencer'){ if(bossSeq)updateBossSequence(dt); return; }
+  if(state.mode==='interior'){ if(state.started)updateInterior(dt); return; }
   if(state.mode!=='town'){ if(modeManager)updateEngineMode(dt); return; }
   syncMouseWorld();
   if(state.started&&Dialogue.isOpen()){ updateHud(); return; }
@@ -1364,17 +1793,37 @@ function drawWang(cx,cy,sx,sy){
 function drawTerrain(){
   const sh=maybeShake(); ctx.save(); ctx.translate(Math.round(sh.x),Math.round(sh.y));
   ctx.fillStyle='#15311f'; ctx.fillRect(0,0,VIEW_W,VIEW_H);
-  const startX=Math.floor((camera.x-VIEW_W/2)/TILE)-1, endX=Math.floor((camera.x+VIEW_W/2)/TILE)+1;
-  const startY=Math.floor((camera.y-VIEW_H/2)/TILE)-1, endY=Math.floor((camera.y+VIEW_H/2)/TILE)+1;
-  for(let ty=startY;ty<=endY;ty++)for(let tx=startX;tx<=endX;tx++){
-    const s=worldToScreen(tx*TILE,ty*TILE); drawWang(tx,ty,s.x,s.y);
+  // Hybrid ground: authored PixelLab Wang terrain west of the seam, deterministic
+  // overworld-kit regions east of it. The seam tracks with the camera (and shake,
+  // since we are inside the shake translate) so the boundary stays world-anchored.
+  const seamSX=worldToScreen(OVERWORLD_SEAM_X,0).x;
+  if(seamSX<VIEW_W){                                   // east: overworld-kit ground
+    const ex=Math.max(0,seamSX);
+    ctx.save(); ctx.beginPath(); ctx.rect(ex,0,VIEW_W-ex,VIEW_H); ctx.clip();
+    Overworld.drawGround(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
+    Overworld.drawProps(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
+    ctx.restore();
   }
+  if(seamSX>0){                                        // west: authored Wang terrain
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,Math.min(seamSX,VIEW_W),VIEW_H); ctx.clip();
+    const startX=Math.floor((camera.x-VIEW_W/2)/TILE)-1, endX=Math.floor((camera.x+VIEW_W/2)/TILE)+1;
+    const startY=Math.floor((camera.y-VIEW_H/2)/TILE)-1, endY=Math.floor((camera.y+VIEW_H/2)/TILE)+1;
+    for(let ty=startY;ty<=endY;ty++)for(let tx=startX;tx<=endX;tx++){
+      const s=worldToScreen(tx*TILE,ty*TILE); drawWang(tx,ty,s.x,s.y);
+    }
+    ctx.restore();
+  }
+  // Decor and gameplay markers stay unclipped: authored terrain decor all sits west
+  // of the seam, while NPCs, lore, puzzles, portals, and the north gate must remain
+  // visible wherever they are, drawing on top of whichever ground owns that tile.
   drawDecor();
   ctx.restore();
 }
 function drawDecor(){
   drawChapel();
+  drawBuildings();
   drawNorthPath();
+  drawWorldEntries();
   for(const f of FENCES)drawFence(f);
   for(const r of RUINS)drawRuin(r);
   for(const g of GRAVES)drawGrave(g);
@@ -1385,6 +1834,7 @@ function drawDecor(){
   drawInteractables();
   drawLore();
   drawPuzzles();
+  drawPortals();
   const g=worldToScreen(GRACE.x,GRACE.y);
   ctx.globalAlpha=.14; ctx.fillStyle='#f1c75b'; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS*1.25,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
   ctx.strokeStyle='rgba(241,199,91,.55)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(g.x,g.y,SAFE_RADIUS,0,Math.PI*2); ctx.stroke();
@@ -1411,6 +1861,21 @@ function drawNorthPath(){
     ctx.globalAlpha=.22; ctx.fillStyle='#8ec7ff';
     ctx.beginPath(); ctx.ellipse(gate.x,gate.y+10,46,14,0,0,Math.PI*2); ctx.fill();
     ctx.globalAlpha=1;
+  }
+}
+function drawWorldEntries(){
+  const near=nearestWorldEntry();
+  for(const entry of WORLD_ENTRIES){
+    if(!worldEntryActive(entry))continue;
+    const s=worldToScreen(entry.x,entry.y);
+    const hot=near&&near.id===entry.id;
+    rect(s.x-16,s.y-8,32,16,hot?'#36556a':'#2d3a3f');
+    rect(s.x-22,s.y-20,44,14,hot?'#6f8fa0':'#53656c');
+    rect(s.x-8,s.y-8,16,16,hot?'#11191e':'#182126');
+    ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillStyle=hot?'#f1c75b':'#aeb7b4';
+    ctx.fillText(entry.label,s.x,s.y-24);
+    if(hot)ctx.fillText('E',s.x,s.y-34);
   }
 }
 function drawChapel(){
@@ -1540,6 +2005,9 @@ const INTERACTABLES=[
   {id:'ledger-core-a',target:'ledger-core',quest:'q12',x:1944,y:-44,label:'CORE',kind:'tablet'},
   {id:'ledger-core-b',target:'ledger-core',quest:'q12',x:2000,y:38,label:'CORE',kind:'tablet'}
 ];
+const WORLD_ENTRIES=[
+  {id:'parish-road-receipts',quest:'q02',x:342,y:-112,radius:42,label:'ROAD CELLAR',title:'Parish Road Receipts',mode:'platformer',level:PLAT_LEVEL,disableBossTrigger:true,exitId:'to-mempool-yard',returnPoint:{x:342,y:-74}}
+];
 // margin-scroll (Keeper of Margins) is an OPTIONAL side-interaction, not a quest step, so its
 // key is fixed ('q06:margin-scroll') — deterministic regardless of the active quest at inscribe time,
 // which the foreman weakening gate in startBossEncounter() reads.
@@ -1560,9 +2028,55 @@ function nearestInteractable(){
   }
   return bestD<36?best:null;
 }
+// NPCs in scope: the interior's own NPCs when inside a building, else the overworld roster.
+function activeNpcs(){ return (state.mode==='interior'&&activeInterior)?(activeInterior.npcs||[]):(NPCS||[]); }
+function worldEntryActive(entry){
+  return !!(entry && Story.questReached(entry.quest||'q01'));
+}
+function nearestWorldEntry(){
+  if(state.mode!=='town')return null;
+  let best=null, bestD=999;
+  for(const entry of WORLD_ENTRIES){
+    if(!worldEntryActive(entry))continue;
+    const d=Math.hypot(player.x-entry.x,player.y-entry.y);
+    if(d<bestD){ best=entry; bestD=d; }
+  }
+  return best&&bestD<=(best.radius||38)?best:null;
+}
+function worldEntryLevel(entry){
+  if(!entry||!entry.disableBossTrigger)return entry&&entry.level;
+  return Object.assign({},entry.level,{bossTrigger:null});
+}
+function enterWorldEntry(entry){
+  if(!entry||!modeManager||!RCEngine||!state.started||player.dead||state.mode!=='town')return false;
+  if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
+  const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;
+  activeWorldEntry=entry;
+  let mode;
+  if(entry.mode==='battlefield')mode=RCEngine.createBattlefieldMode(entry.level);
+  else if(entry.mode==='turnbased')mode=RCEngine.createTurnBasedMode(entry.level);
+  else mode=RCEngine.createPlatformerMode(worldEntryLevel(entry));
+  modeManager.setMode(mode, ctx, engineApi);
+  state.mode=entry.mode||'platformer'; Net.updatePeers();
+  log('Entering '+esc(entry.title||entry.label||'interior')+'. Find the exit to return.');
+  return true;
+}
+function completeWorldEntry(id){
+  const entry=activeWorldEntry;
+  if(!entry)return false;
+  if(entry.exitId&&id&&id!==entry.exitId)return false;
+  if(modeManager)modeManager.setMode(null, ctx, engineApi);
+  player.hp=Math.max(1,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;
+  const ret=entry.returnPoint||entry;
+  player.x=ret.x; player.y=ret.y; player.vx=0; player.vy=0; player.moving=false;
+  camera.x=player.x; camera.y=player.y; syncMouseWorld();
+  activeWorldEntry=null; state.mode='town'; Net.updatePeers();
+  log('Returned from '+esc(entry.title||entry.label||'the interior')+'.');
+  return true;
+}
 function nearestNpc(){
   let best=null, bestD=999;
-  for(const n of (NPCS||[])){
+  for(const n of activeNpcs()){
     const d=Math.hypot(player.x-n.x,player.y-n.y);
     if(d<bestD){ best=n; bestD=d; }
   }
@@ -1570,6 +2084,12 @@ function nearestNpc(){
 }
 function doInteract(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||Dialogue.isOpen())return;
+  if(state.mode==='interior'){
+    const n=nearestNpc(); if(n){ Dialogue.open(n); return; }
+    if(nearInteriorExit()){ exitInterior(); return; }
+    return;
+  }
+  if(state.mode!=='town')return;
   const i=nearestInteractable();
   if(i){
     if(!i.repeat)progress.interactions.add(interactionKey(i));
@@ -1580,12 +2100,161 @@ function doInteract(){
     sayAct1(lines);
     return;
   }
+  const entry=nearestWorldEntry();
+  if(entry){
+    enterWorldEntry(entry);
+    return;
+  }
   const lore=nearestLore();
   if(lore){ discoverLore(lore); return; }
   const pz=nearestPuzzleTarget();
   if(pz){ if(pz.clue) readPuzzleClue(pz.puzzle); else stampPuzzle(pz.puzzle,pz.node); return; }
+  const door=nearestDoor();
+  if(door){ enterInterior(door); return; }
+  const portal=nearestPortal();
+  if(portal){ enterPortal(portal); return; }
   const n=nearestNpc();
   if(n)Dialogue.open(n);
+}
+/* ---- World-to-interior portals (issue #19): walk to an entrance, press E to descend -------- */
+const PORTALS=(WORLD_PORTALS||[]);
+// Story-gate (folded in from #78): a portal with an `unlock` quest stays closed until it's reached,
+// so the entrance is an earned reward, not a hole in the wall. No `unlock` => always open.
+function portalUnlocked(p){ return !p.unlock || Story.questReached(p.unlock); }
+function nearestPortal(){
+  let best=null, bestD=30;
+  for(const p of PORTALS){ if(!portalUnlocked(p))continue; const d=Math.hypot(player.x-p.x,player.y-p.y); if(d<bestD){ best=p; bestD=d; } }
+  return best;
+}
+function drawPortals(){
+  const near=(state.mode==='town'&&!Dialogue.isOpen())?nearestPortal():null;
+  for(const p of PORTALS){
+    if(!portalUnlocked(p))continue; // unopened until its quest is reached
+    const s=worldToScreen(p.x,p.y), cleared=progress.portals.has(p.id);
+    // a dark cave mouth set into a stone arch
+    rect(s.x-13,s.y-4,26,8,'#3b3f3a');
+    rect(s.x-11,s.y-18,22,16,'#2a2d2b');
+    ctx.fillStyle=cleared?'#10130f':'#070809'; ctx.beginPath(); ctx.ellipse(s.x,s.y-6,8,10,0,0,Math.PI*2); ctx.fill();
+    rect(s.x-13,s.y-20,26,3,'#4c5149');
+    if(near===p){
+      ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#cbe0bc';
+      ctx.fillText('E',s.x,s.y-24);
+    }
+  }
+  ctx.textAlign='left';
+}
+/* ---- Walk-in town interiors: doors in the overworld, top-down rooms inside ---
+   Distinct from the platformer portals above. A door (from INTERIORS[].building) is an
+   overworld trigger; entering swaps to state.mode==='interior' and renders the room in its
+   own local coordinate space. Multiplayer presence carries the interior id, so peers in the
+   same building see each other (and hear proximity chat); peers outside do not. */
+const BUILDINGS=(INTERIORS||[]).map(it=>({it,b:it.building})).filter(o=>o.b);
+function buildingUnlocked(it){ return !it.unlock || Story.questReached(it.unlock); }
+function nearestDoor(){
+  let best=null, bestD=34;
+  for(const o of BUILDINGS){ if(!buildingUnlocked(o.it))continue; const d=Math.hypot(player.x-o.b.door.x,player.y-o.b.door.y); if(d<bestD){ best=o.it; bestD=d; } }
+  return best;
+}
+function nearInteriorExit(){ const it=activeInterior; if(!it||!it.exit)return false; return Math.hypot(player.x-it.exit.x,player.y-it.exit.y)<26; }
+function enterInterior(it){
+  if(!it||!state.started||player.dead||state.mode!=='town')return;
+  if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
+  interiorReturn={x:it.building.door.x,y:it.building.door.y};   // re-emerge at the door
+  activeInterior=it; state.mode='interior';
+  player.x=it.spawn.x; player.y=it.spawn.y; player.vx=0; player.vy=0; player.moving=false; player.lock=null;
+  camera.x=player.x; camera.y=player.y;
+  // Secret buildings reward the curiosity of finding them — a cosmetic, never power. Granted once.
+  if(it.reward && !ownedSkin(it.reward)){
+    progress.cosmetics.add(it.reward);
+    const sk=SKINS.find(s=>s.id===it.reward);
+    if(sk){ log('<b style="color:#f1c75b">Cosmetic unlocked:</b> '+esc(sk.name)+' — equip it in the wardrobe (B).'); lootFlash('<b>'+esc(it.name)+'</b><br><span style="font-size:13px;color:#cbb7ea">A hidden door · cosmetic unlocked</span>'); }
+    if(state.wardrobeOpen)refreshWardrobe();
+  }
+  Net.updatePeers();
+  log('You step into '+esc(it.name)+'. Reach the door (or press <b>T</b>) to step back out.');
+}
+function exitInterior(){
+  if(state.mode!=='interior')return;
+  const r=interiorReturn||{x:0,y:0}, name=activeInterior?activeInterior.name:'inside';
+  state.mode='town'; activeInterior=null; interiorReturn=null;
+  player.x=r.x; player.y=r.y+18; player.vx=0; player.vy=0; player.moving=false;   // just outside the door
+  camera.x=player.x; camera.y=player.y;
+  Net.updatePeers();
+  log('You step back out of '+esc(name)+'.');
+}
+const INTERIOR_MARGIN=20;
+function updateInterior(dt){
+  if(player.dead)return;
+  if(Dialogue.isOpen()){ updateHud(); Net.tick(dt); return; }
+  const it=activeInterior; if(!it)return;
+  const mx=(keys.KeyD?1:0)-(keys.KeyA?1:0), my=(keys.KeyS?1:0)-(keys.KeyW?1:0);
+  player.moving=!!(mx||my);
+  const n=player.moving?norm(mx,my):{x:0,y:0};
+  player.vx=n.x*PLAYER_SPEED; player.vy=n.y*PLAYER_SPEED;
+  if(player.moving)faceToward(player.x+n.x,player.y+n.y);
+  player.x=clamp(player.x+player.vx*dt,INTERIOR_MARGIN,it.w-INTERIOR_MARGIN);
+  player.y=clamp(player.y+player.vy*dt,INTERIOR_MARGIN,it.h-INTERIOR_MARGIN);
+  // Camera follows but stays clamped so the room walls stay framed.
+  const cx=clamp(player.x,VIEW_W/2,Math.max(VIEW_W/2,it.w-VIEW_W/2));
+  const cy=clamp(player.y,VIEW_H/2,Math.max(VIEW_H/2,it.h-VIEW_H/2));
+  camera.x=lerp(camera.x,it.w<VIEW_W?it.w/2:cx,Math.min(1,dt*8));
+  camera.y=lerp(camera.y,it.h<VIEW_H?it.h/2:cy,Math.min(1,dt*8));
+  Net.tick(dt);
+  if(sigilSig()!==player.sigilSig)recalcStats(false);
+  updateHud();
+}
+function drawInteriorDecor(d){
+  const s=worldToScreen(d.x,d.y);
+  if(d.t==='candle'){
+    rect(s.x,s.y,d.w,d.h,'#241d12');
+    rect(s.x+d.w/2-1,s.y-4,2,4,Math.sin(state.time*9+d.x)>.1?'#ffd36a':(d.c||'#f08c3a'));
+    ctx.globalAlpha=.16; rect(s.x-6,s.y-10,d.w+12,d.h+8,d.c||'#f1c75b'); ctx.globalAlpha=1; return;
+  }
+  rect(s.x,s.y,d.w,d.h,d.c||'#2c2620');
+  if(d.top)rect(s.x,s.y,d.w,Math.min(5,d.h),d.top);
+  if(d.label){ ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#cbbf9c'; ctx.fillText(d.label,s.x+d.w/2,s.y+d.h/2+3); ctx.textAlign='left'; }
+}
+function drawInterior(){
+  const it=activeInterior; if(!it){ ctx.fillStyle='#0b0e10'; ctx.fillRect(0,0,VIEW_W,VIEW_H); return; }
+  ctx.fillStyle='#07090a'; ctx.fillRect(0,0,VIEW_W,VIEW_H);
+  const o=worldToScreen(0,0);
+  // floor + wall border
+  rect(o.x,o.y,it.w,it.h,it.floor||'#241f1b');
+  const wc=it.wall||'#463a30';
+  rect(o.x,o.y,it.w,8,wc); rect(o.x,o.y+it.h-8,it.w,8,wc); rect(o.x,o.y,8,it.h,wc); rect(o.x+it.w-8,o.y,8,it.h,wc);
+  // under-actor decor (rugs) first
+  for(const d of (it.decor||[]))if(d.t==='rug')drawInteriorDecor(d);
+  // exit pad (the door back outside)
+  if(it.exit){ const e=worldToScreen(it.exit.x,it.exit.y);
+    rect(e.x-14,e.y-6,28,12,'#171311'); rect(e.x-12,e.y-22,24,16,it.accent||'#8f7a4a'); rect(e.x-12,e.y-24,24,3,'#d9c79a');
+    if(nearInteriorExit()&&!Dialogue.isOpen()){ ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#f1c75b'; ctx.fillText('E / T',e.x,e.y-28); ctx.textAlign='left'; }
+  }
+  // standing decor (depth-sorted with NPCs/players would be nicer; flat is fine for small rooms)
+  for(const d of (it.decor||[]))if(d.t!=='rug')drawInteriorDecor(d);
+  drawNpcs();
+  // peers sharing this interior
+  for(const k in remotes){ const r=remotes[k]; if(r.mode==='interior'&&r.interior===it.id)drawPlayerSprite(r,true); }
+  drawPlayerSprite(player,false);
+}
+function drawBuildings(){
+  const near=(state.mode==='town'&&!Dialogue.isOpen())?nearestDoor():null;
+  for(const o of BUILDINGS){
+    const it=o.it, b=o.b; if(!buildingUnlocked(it))continue;
+    if(!b.drawn){
+      const c=worldToScreen(b.x,b.y), x=c.x-b.w/2, y=c.y-b.h/2;
+      if(b.secret){ ctx.globalAlpha=.92; }
+      rect(x,y+b.h*0.32,b.w,b.h*0.68,b.wall||'#4a4036');        // walls
+      rect(x-4,y,b.w+8,b.h*0.36,b.roof||'#5c1d22');             // roof
+      rect(x-4,y,b.w+8,4,'#1c1714');                            // roof ridge shadow
+      ctx.globalAlpha=1;
+      if(b.sign){ ctx.font='7px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#e6d6a8'; ctx.fillText(b.sign,c.x,y-4); ctx.textAlign='left'; }
+    }
+    // door
+    const d=worldToScreen(b.door.x,b.door.y);
+    rect(d.x-8,d.y-20,16,22,b.secret?'#0a0c0d':'#1d1712');
+    rect(d.x-8,d.y-22,16,3,b.secret?'#2b3338':'#6e5a36');
+    if(near===it){ ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#f1c75b'; ctx.fillText('E',d.x,d.y-26); ctx.textAlign='left'; }
+  }
 }
 /* ---- Off-path lore / Codex (issue #25): rewarded curiosity, never power ---- */
 const LORE=(AREA1_LORE||[]);
@@ -1718,8 +2387,8 @@ function drawInteractables(){
   }
 }
 function drawNpcs(){
-  const near=(state.mode==='town'&&!Dialogue.isOpen())?nearestNpc():null;
-  for(const n of (NPCS||[])){
+  const near=((state.mode==='town'||state.mode==='interior')&&!Dialogue.isOpen())?nearestNpc():null;
+  for(const n of activeNpcs()){
     const s=worldToScreen(n.x,n.y), col=n.color||'#cfa982';
     const bob=Math.round(Math.sin(state.time*2+n.x)*1);
     ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fillRect(s.x-8,s.y+1,16,4);
@@ -1795,7 +2464,7 @@ function drawEncounterMarker(p){
   ctx.fillText('IN ENCOUNTER',s.x,s.y-42);
 }
 function drawPlayerSprite(p,remote=false){
-  if(remote&&p.mode&&p.mode!=='town'){ drawEncounterMarker(p); return; }
+  if(remote&&p.mode&&p.mode!=='town'&&p.mode!=='interior'){ drawEncounterMarker(p); return; }
   const frame=p.attack?2:(p.hurt>0?3:(p.moving?1:0));
   drawShadow(p.x,p.y,remote?24:32,remote?8:10);
   const s=worldToScreen(p.x,p.y);
@@ -1903,9 +2572,11 @@ function draw(){
   ctx.imageSmoothingEnabled=false;
   if(ASSET_PROOF_MODE){ drawAssetProof(); return; }
   if(state.mode==='sequencer'){ if(bossSeq&&bossSeq.isBeat())bossSeq.render(ctx,engineCam); else if(modeManager)modeManager.render(ctx,engineCam); else { ctx.fillStyle='#05060a'; ctx.fillRect(0,0,VIEW_W,VIEW_H); } return; }
+  if(state.mode==='interior'){ drawInterior(); drawChatBubbles(); if(Dialogue.isOpen())Dialogue.render(); return; }
   if(state.mode!=='town'){ if(modeManager)modeManager.render(ctx,engineCam); else { ctx.fillStyle='#101619'; ctx.fillRect(0,0,VIEW_W,VIEW_H); } return; }
   drawTerrain();
-  const actors=[...enemies.filter(e=>!(e.dead&&e.deathT<=0)),...Object.values(remotes),player].sort((a,b)=>a.y-b.y);
+  // Peers inside a building (mode==='interior') send room-local coords, so they don't belong in the town scene.
+  const actors=[...enemies.filter(e=>!(e.dead&&e.deathT<=0)),...Object.values(remotes).filter(r=>r.mode!=='interior'),player].sort((a,b)=>a.y-b.y);
   for(const a of actors){
     if(a===player)drawPlayerSprite(player,false);
     else if(a.type)drawEnemy(a);
@@ -1915,11 +2586,33 @@ function draw(){
   drawTargetLine();
   drawParticles();
   drawAim();
+  drawChatBubbles();
+  if(state.mapOpen){
+    Overworld.drawMinimap(ctx, VIEW_W-196, VIEW_H-76, 184, 64, player, {
+      onlyUnlocked:true,
+      questReached:id=>Story.questReached(id)
+    });
+  }
   if(Dialogue.isOpen())Dialogue.render();
 }
 
 /* ------------------------------- HUD ------------------------------------ */
-const hpFill=document.querySelector('#hp>i'), staFill=document.querySelector('#sta>i');
+const UI={
+  hpFill:document.querySelector('#hp>i'),
+  staFill:document.querySelector('#sta>i'),
+  hpEl:document.getElementById('hp'),
+  staEl:document.getElementById('sta'),
+  prompt:document.getElementById('prompt'),
+  lvl:document.getElementById('lvl'),
+  bal:document.getElementById('bal'),
+  sVgr:document.getElementById('sVgr'),
+  sEnd:document.getElementById('sEnd'),
+  sStr:document.getElementById('sStr'),
+  sDmg:document.getElementById('sDmg'),
+  runes:document.getElementById('runes')
+};
+const hpFill=UI.hpFill, staFill=UI.staFill;
+const hpEl=UI.hpEl, staEl=UI.staEl;
 function log(html){
   const l=document.getElementById('log'), d=document.createElement('div');
   d.innerHTML=html; l.appendChild(d);
@@ -1927,33 +2620,46 @@ function log(html){
   setTimeout(()=>{ if(d.parentNode)d.remove(); },5200);
 }
 function updateHud(){
-  hpFill.style.width=(player.hp/player.maxHp*100)+'%';
-  staFill.style.width=(player.sta/player.maxSta*100)+'%';
-  document.getElementById('lvl').textContent=player.level;
-  document.getElementById('sVgr').textContent=player.vigor;
-  document.getElementById('sEnd').textContent=player.endurance;
-  document.getElementById('sStr').textContent=player.strength;
-  document.getElementById('sDmg').textContent=player.dmg;
+  const hpPct=player.hp/player.maxHp, staPct=player.sta/player.maxSta;
+  if(UI.hpFill.style.width!==(hpPct*100)+'%')UI.hpFill.style.width=(hpPct*100)+'%';
+  if(UI.staFill.style.width!==(staPct*100)+'%')UI.staFill.style.width=(staPct*100)+'%';
+  UI.hpEl.setAttribute('aria-valuenow', Math.round(player.hp));
+  UI.hpEl.setAttribute('aria-valuemax', Math.round(player.maxHp));
+  UI.staEl.setAttribute('aria-valuenow', Math.round(player.sta));
+  UI.staEl.setAttribute('aria-valuemax', Math.round(player.maxSta));
+  UI.hpEl.classList.toggle('low-hp', hpPct < 0.25);
+  if(UI.lvl.textContent!==String(player.level))UI.lvl.textContent=player.level;
+  if(UI.sVgr.textContent!==String(player.vigor))UI.sVgr.textContent=player.vigor;
+  if(UI.sEnd.textContent!==String(player.endurance))UI.sEnd.textContent=player.endurance;
+  if(UI.sStr.textContent!==String(player.strength))UI.sStr.textContent=player.strength;
+  if(UI.sDmg.textContent!==String(player.dmg))UI.sDmg.textContent=player.dmg;
   const grs=Chain.greatRunesOf(valueAddress());
-  document.getElementById('runes').textContent=grs.length?'Boss Sigil: '+grs.map(g=>g.name).join(', '):'';
+  const rText=grs.length?'Boss Sigil: '+grs.map(g=>g.name).join(', '):'';
+  if(UI.runes.textContent!==rText)UI.runes.textContent=rText;
   Story.updateHud();
   updateWallet();
-  const prompt=document.getElementById('prompt');
-  if(Dialogue.isOpen()){ prompt.style.display='none'; }
+  const prompt=UI.prompt;
+  if(Dialogue.isOpen()){ prompt.classList.remove('on'); }
   else{
-  const bossEnc=state.mode==='town'?nearestBossEncounter():null;
-  const near=nearestInteractable();
-  const lore=state.mode==='town'?nearestLore():null;
-  const pz=state.mode==='town'?nearestPuzzleTarget():null;
-  const npc=state.mode==='town'?nearestNpc():null;
-  if(bossEnc){ prompt.style.display='block'; prompt.innerHTML='Press <b>F</b> to face <b>'+esc(bossEnc.type.name)+'</b>'; }
-  else if(near){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> - '+esc(near.label); }
-  else if(lore){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to examine <b>'+esc(lore.title)+'</b>'; }
-  else if(pz){ prompt.style.display='block'; prompt.innerHTML=pz.clue?('Press <b>E</b> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <b>E</b> to stamp <b>'+esc(pz.node.label)+'</b>'); }
-  else if(npc){ prompt.style.display='block'; prompt.innerHTML='Press <b>E</b> to speak with <b>'+esc(npc.name)+'</b>'; }
-  else if(nearGrace()&&!state.graceOpen&&!player.dead){ prompt.style.display='block'; prompt.innerHTML='Safe Hearthlight - press <b>G</b> to rest, level, forge'; }
-  else if(player.lock&&!player.lock.dead){ prompt.style.display='block'; prompt.innerHTML='Target: <b>'+esc(player.lock.type.name)+'</b>'; }
-  else prompt.style.display='none';
+    const bossEnc=state.mode==='town'?nearestBossEncounter():null;
+    const near=nearestInteractable();
+    const entry=state.mode==='town'?nearestWorldEntry():null;
+    const lore=state.mode==='town'?nearestLore():null;
+    const pz=state.mode==='town'?nearestPuzzleTarget():null;
+    const portal=state.mode==='town'?nearestPortal():null;
+    const npc=state.mode==='town'?nearestNpc():null;
+    let html='';
+    if(bossEnc) html='Press <kbd>F</kbd> to face <b>'+esc(bossEnc.type.name)+'</b>';
+    else if(near) html='Press <kbd>E</kbd> - '+esc(near.label);
+    else if(entry) html='Press <kbd>E</kbd> to enter <b>'+esc(entry.title||entry.label)+'</b>';
+    else if(lore) html='Press <kbd>E</kbd> to examine <b>'+esc(lore.title)+'</b>';
+    else if(pz) html=pz.clue?('Press <kbd>E</kbd> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <kbd>E</kbd> to stamp <b>'+esc(pz.node.label)+'</b>');
+    else if(portal) html='Press <kbd>E</kbd> to descend into <b>'+esc(portal.label)+'</b>';
+    else if(npc) html='Press <kbd>E</kbd> to speak with <b>'+esc(npc.name)+'</b>';
+    else if(nearGrace()&&!state.graceOpen&&!player.dead) html='Safe Hearthlight - press <kbd>G</kbd> to rest, level, forge';
+    else if(player.lock&&!player.lock.dead) html='Target: <b>'+esc(player.lock.type.name)+'</b>';
+    if(html){ if(prompt.innerHTML!==html)prompt.innerHTML=html; prompt.classList.add('on'); }
+    else prompt.classList.remove('on');
   }
   const boss=enemies.find(e=>e.type.boss&&!e.dead);
   const box=document.getElementById('bossbar');
@@ -1973,6 +2679,7 @@ function updateWallet(){
   document.getElementById('burned').textContent=Econ.solTally(ECON.BURN_ADDR).toFixed(4);
   document.getElementById('marketingpool').textContent=Econ.solTally(ECON.MARKETING_ADDR).toFixed(4);
   document.getElementById('opspool').textContent=Econ.solTally(ECON.OPS_ADDR).toFixed(4);
+  updateWalletConnUI();
   let html='';
   if(Chain.mining)html+='<div class="blk mining">#'+Chain.mining.index+' mining - nonce '+Chain.mining.nonce.toLocaleString()+'</div>';
   for(const b of Chain.chain.slice(-5).reverse())html+='<div class="blk">#'+b.index+' '+b.hash.slice(0,12)+' - '+(b.txs||[]).length+' tx</div>';
@@ -1980,6 +2687,10 @@ function updateWallet(){
 }
 function startGame(){
   if(state.started)return;
+  // When the realm enforces identity, the device key alone is not enough — gate on SSO + wallet.
+  const auth=Net.getAuthState();
+  if(auth.requireIdentity&&auth.ssoEnabled&&!auth.signedIn){ showSigninGate(window.RUNECHAIN_SIGNIN.joinErrorMessage('sso_required')); return; }
+  if(auth.requireIdentity&&!walletReady){ showSigninGate(window.RUNECHAIN_SIGNIN.joinErrorMessage('wallet_required')); return; }
   player.name=(document.getElementById('name').value.trim()||'Recorded').slice(0,14);
   player.address=player.characterId||player.name;
   document.getElementById('charname').textContent=player.name;
@@ -1991,6 +2702,47 @@ function startGame(){
 }
 document.getElementById('go').onclick=startGame;
 document.getElementById('name').addEventListener('keydown',e=>{ if(e.code==='Enter')startGame(); });
+
+// ---- Sign-in gate UI: SSO (Google) + Solana wallet, layered on the device key ----
+const signinEl=document.getElementById('signin');
+const signinStatusEl=document.getElementById('signin-status');
+const googleBtn=document.getElementById('google-signin');
+const walletBtn=document.getElementById('wallet-connect');
+const goBtn=document.getElementById('go');
+let walletReady=false;
+function refreshSigninUI(){
+  const a=Net.getAuthState();
+  const gated=!!(a.requireIdentity&&a.ssoEnabled);
+  if(signinEl)signinEl.hidden=!gated;
+  if(!gated){ if(goBtn)goBtn.disabled=false; return; } // legacy/open mode: no extra gate
+  const bits=[];
+  bits.push(a.signedIn?('Signed in'+(a.sso&&a.sso.email?(' as '+esc(a.sso.email)):'')):'Step 1 — sign in with Google');
+  bits.push(walletReady?'Wallet connected':'Step 2 — connect your wallet');
+  if(signinStatusEl)signinStatusEl.innerHTML=bits.join(' &middot; ');
+  if(googleBtn)googleBtn.disabled=!!a.signedIn;
+  if(walletBtn)walletBtn.disabled=walletReady;
+  if(goBtn)goBtn.disabled=!(a.signedIn&&walletReady);
+}
+function showSigninGate(message){
+  const startEl=document.getElementById('start');
+  if(startEl){ startEl.style.display=''; document.body.classList.remove('playing'); }
+  if(typeof state==='object'&&state)state.started=false;
+  if(signinEl)signinEl.hidden=false;
+  if(signinStatusEl&&message)signinStatusEl.textContent=message;
+}
+if(googleBtn)googleBtn.onclick=()=>window.RUNECHAIN_SIGNIN.beginGoogleSignIn(location);
+if(walletBtn)walletBtn.onclick=async()=>{
+  if(signinStatusEl)signinStatusEl.textContent='Connecting wallet…';
+  try{ await Net.connectWalletForSignin(); walletReady=true; refreshSigninUI(); }
+  catch(err){ if(signinStatusEl)signinStatusEl.textContent='Wallet connect failed: '+(err&&err.message||'unknown'); }
+};
+(async function bootSignin(){
+  try{
+    const f=(typeof window.fetch==='function')?window.fetch.bind(window):null;
+    Net.setAuthState(await window.RUNECHAIN_SIGNIN.loadSession(f));
+  }catch(_){}
+  refreshSigninUI();
+})();
 document.getElementById('respawn').onclick=()=>{
   player.x=0; player.y=0; player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false; player.invuln=1; player.lock=null;
   document.getElementById('death').style.display='none';
@@ -2003,6 +2755,7 @@ initWorld();
 Story.updateHud();
 Net.updatePeers();
 updateHud();
+document.getElementById('name').focus();
 </script>
 </body>
 </html>

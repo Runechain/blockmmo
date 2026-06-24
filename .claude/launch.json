@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["server.js"],
       "port": 8080
+    },
+    {
+      "name": "design-system",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8090", "--directory", "/Users/angusdurrie/Documents/Documents - Netpune/Development/blockmmo/blockmmo"],
+      "port": 8090
     }
   ]
 }

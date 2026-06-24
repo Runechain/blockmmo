@@ -190,9 +190,9 @@ const STORY = root.RUNECHAIN_STORY || {
     title:'The Auditor',
     onStart:['The humanoid silhouette of scrolling text faces you. It cannot be killed. Only answered.'],
     steps:[
-      {id:'auditor', text:'Stand your ground against the Auditor and make your choice.', done:{event:'kill', monster:'auditor', count:1}}
+      {id:'auditor', text:'Stand before the Auditor and make your choice — there is no killing it.', done:{event:'ending', any:true}}
     ],
-    onComplete:['The ledger rotates one final time. Your amendment stands. You are the Second Scribe.'],
+    onComplete:['The ledger rotates one final time and settles. Your choice is recorded, and permanent.'],
     rewards:{rune:200}
   }]
 };
@@ -227,6 +227,38 @@ const SIGILS = {
   'contested-will':  { name:'The Contested Will', runeMult:0.10, atkSpeed:0.12, iframeOnHit:true, note:'Severed from inheritance' },
   'amended-record':  { name:'The Amended Record', runeMult:0.15, endgame:true, note:'Co-authored' }
 };
+/* Boss Sigils — mapping from final-boss enemy key to the sigil it drops on kill.
+   amended-record is Choice C only: the server enforces choiceC:true on the source. */
+const BOSS_SIGILS = {
+  tallow: 'waxen-testament',
+  ledgerbound: 'contested-will',
+  auditor: 'amended-record',
+};
+
+/* ---- Area 3 finale — the Auditor's three endings (issue #24/#5) ----------- */
+/* The Auditor cannot be killed; the climax is a CHOICE of three permanent, account-bound
+   endings (A/B/C), not combat. Per the ratified scope ruling the ending is FLAG-BASED and the
+   ledger is PRESERVED — no on-chain RUNE wipe or relic destruction. Choice C ('amend') is the
+   ONLY path to the Amended Record sigil and the only one that unlocks the endgame. The server
+   persists the public account-bound ending; index.html mirrors it in progress.ending. */
+const AUDITOR_ENDINGS = [
+  { id:'A', key:'comply', title:'Ending A — Reconciled', label:'Sign the ledger as the Auditor wrote it',
+    lines:[
+      'You countersign the Auditor\'s version. The discrepancy is closed; the parish is recorded solvent, and you compliant.',
+      'Codex: "The discrepancy was you. It has been reconciled. You are, at last, in good standing — and nothing else."'
+    ] },
+  { id:'B', key:'refuse', title:'Ending B — Redacted', label:'Strike your own name from the registry',
+    lines:[
+      'You redact your entry entirely. The Auditor cannot audit what was never recorded; the column where you stood goes blank.',
+      'Codex: "Unrecorded. You owe nothing because you are nothing the ledger can hold. Free, and alone with it."'
+    ] },
+  { id:'C', key:'amend', title:'Ending C — Amended', sigil:'amended-record', endgame:true, label:'Take the second quill and co-author the record',
+    lines:[
+      'You take the other quill. The record is rewritten by two hands, neither sovereign — the Auditor\'s and yours.',
+      'Codex: "The Amended Record stands: co-authored, contestable, alive. You are the Second Scribe."',
+      'AMENDED RECORD SIGIL sealed. The Amendment endgame opens.'
+    ] }
+];
 
 const ACT1_GRACEFALL = {
   id:'gracefall-parish',
@@ -314,7 +346,9 @@ const SKINS = [
   // Exploration-exclusive cosmetic: not sold for Gold (secret:true hides it from the wardrobe shop).
   // Granted only by finding the hidden Unrecorded Vault off the parish path — rewarded curiosity,
   // never power, never purchasable. See AREA1_LORE 'unrecorded-vault' + index.html lore wiring.
-  { id:'unrecorded', name:'Unrecorded Pilgrim', price:0, secret:true, body:'#2b2622', trim:'#b9a06a', skin:'#bfae8c' }
+  { id:'unrecorded', name:'Unrecorded Pilgrim', price:0, secret:true, body:'#2b2622', trim:'#b9a06a', skin:'#bfae8c' },
+  // Found by discovering the Sealed Cellar interior (a hidden building off the plaza). Curiosity-only.
+  { id:'cellar-warden', name:'Cellar Warden', price:0, secret:true, body:'#20262a', trim:'#6f93a8', skin:'#b9b2a0' }
 ];
 
 /* ---- Area 1 — off-path lore (issue #25, world & content lane) ------------- */
@@ -532,8 +566,13 @@ const BOSS_SCRIPT={id:'gate-sexton-marrow',name:'Gate Sexton Marrow',beat:0.8,se
 /* Area 1 bosses as story-gated, multi-play-style encounters (bible: Gracefall Parish). */
 const TURN_SEXTON={id:'duel-sexton',name:'Gate Sexton Marrow',opponent:{name:'Gate Sexton Marrow',hp:96,attack:14,defense:2,color:'#d8b36b',sprite:'sexton'}};
 const TURN_WARDEN={id:'duel-warden',name:'Mempool Warden',opponent:{name:'Mempool Warden',hp:92,attack:13,defense:1,color:'#b88cff',sprite:'mempool'}};
-/* Mother Tallow hp = 260 is canon (DESIGN-BIBLE.md Area 1: "hp 260, dmg 22..."); matches the index.html registry. */
-const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:260,attack:18,defense:3,color:'#f1c75b',sprite:'tallow'}};
+/* Mother Tallow hp = 260 is canon (DESIGN-BIBLE.md Area 1: "hp 260, dmg 22..."); matches the index.html registry.
+   Phase 2 (smoke split): at 50% HP she sheds her waxen body and a smoke echo, becoming a dual-chain foe
+   (engine/turnbased.js resolveFoe). Both halves must be cut down; they slowly re-merge each foe turn unless
+   the hero holds the split open with Strike Both. This is the Area-1 introduction to the dual-chain mechanic
+   the Canon/Schism bosses lean on later — gentler halves and merge than the final Ledger-Bound. */
+const TURN_TALLOW={id:'duel-tallow',name:'Mother Tallow',opponent:{name:'Mother Tallow',hp:260,attack:18,defense:3,color:'#f1c75b',sprite:'tallow',
+  phase2:{threshold:0.5,aHp:72,bHp:72,aLabel:'WAXEN',bLabel:'SMOKE',aColor:'#f1c75b',bColor:'#9a8f7a',mergePerTurn:4}}};
 /* Tallow House: vertical wax-choked interior, rising lift, dripping-wax hazards — distinct from the Parish Road climb. */
 const PLAT_TALLOW_HOUSE={id:'a1-tallow-house',name:'Tallow House',width:1080,height:720,spawn:{x:60,y:616},physics:{maxRun:195,jump:445},
   platforms:[{id:'ground',x:0,y:660,w:1080,h:60,type:'solid'},{id:'shelf-a',x:90,y:580,w:130,h:12,type:'oneWay'},{id:'mid-floor',x:320,y:560,w:260,h:14,type:'solid'},{id:'wax-lift',x:510,y:510,w:110,h:14,type:'solid',vy:32,minY:400,maxY:520},{id:'shelf-b',x:120,y:460,w:160,h:12,type:'oneWay'},{id:'walkway',x:650,y:430,w:200,h:14,type:'solid'},{id:'step-a',x:200,y:360,w:120,h:14,type:'solid'},{id:'step-b',x:750,y:340,w:140,h:12,type:'oneWay'},{id:'upper',x:380,y:270,w:260,h:14,type:'solid'},{id:'altar',x:700,y:190,w:230,h:14,type:'solid'}],
@@ -559,6 +598,19 @@ const AREA1_ENCOUNTERS={
     {mode:'turnbased',name:'Mother Tallow',payload:TURN_TALLOW,beatText:'She melts toward you.',complete:{event:'duel'}}
   ]}
 };
+/* ---- World-to-interior portals (issue #19 / Q-N1) ------------------------- */
+/* The connective tissue the top-down world was missing: descend an overworld entrance and a
+   platformer interior loads inline; reach its exit (or leave via T) and re-emerge at the same
+   spot. Reuses the segment-free engine path (host: enterPortal/exitEngineMode) and validated
+   platformer geometry — bespoke interior layouts are a follow-up. `level` must expose an `exit`
+   so the player can always climb back out. `unlock` (optional) story-gates the entrance: the
+   portal only opens once that quest is reached, so descending is an EARNED, diegetic reward
+   (folded in from the #78 design) rather than a bare hole in the wall. Omit it = always open. */
+const WORLD_PORTALS=[
+  { id:'undercroft', x:-250, y:-188, label:'the Sunken Undercroft', kind:'cave', unlock:'q02',
+    intro:'A stair drops beneath the parish into a flooded receipts-tunnel.',
+    level:PLAT_LEVEL }
+];
 /* ---- Area 2 — The Shroud Vaults ---------------------------------------- */
 const AREA2_TOWN={id:'a2-vault-anteroom',name:'Vault Anteroom / Forklight Hearthlight',
   hearthlight:{id:'forklight',free:true,safe:true},
@@ -636,10 +688,11 @@ const AREA3_ENCOUNTERS={
     {mode:'battlefield',name:'The Seized Asset Yard',payload:BATTLE_SEIZED_YARD,beatText:'Your relics walk as husks.',complete:{event:'cleared'}},
     {mode:'turnbased',name:'Contest three decrees',payload:TURN_CASCADE,beatText:'You cannot damage it — contest its logic.',complete:{event:'duel'}}
   ]},
+  // The Auditor cannot be fought: the ascent + rift lead to the choice, which the host presents
+  // on encounter completion (openAuditorChoice). No turn-based duel — the climax is co-authorship.
   auditor:{id:'the-auditor',name:'The Auditor',beat:0.9,segments:[
     {mode:'platformer',name:'The Testimony Ascent',payload:PLAT_ASCENT_TESTIMONY,beatText:'Paradox waves invert your controls.',complete:{event:'boss'}},
-    {mode:'battlefield',name:'The Temporal Rift',payload:BATTLE_SEIZED_YARD,beatText:'Past versions of every enemy spawn.',complete:{event:'cleared'}},
-    {mode:'turnbased',name:'Make your choice',payload:TURN_AUDITOR,beatText:'The Auditor rotates one final time. Answer it.',complete:{event:'duel'}}
+    {mode:'battlefield',name:'The Temporal Rift',payload:BATTLE_SEIZED_YARD,beatText:'Past versions of every enemy spawn. Beyond them, the Auditor waits to be answered.',complete:{event:'cleared'}}
   ]}
 };
 /* ---- NPCs — branching dialogue (issue #22, lore/dialogue lane) ----------- */
@@ -783,8 +836,155 @@ const NPCS=[
       farewell:{ text:['Back to the spade. Always more plots.'], end:true } }} }
 ];
 
+/* ---- Walk-in town interiors (top-down rooms) ----------------------------- */
+/* Distinct from WORLD_PORTALS (those drop into platformer caves). An INTERIOR is a small
+   top-down room you walk into through an overworld door, with its own local coordinate space
+   (0,0 .. w,h), its own decor, and NPCs that reuse the same npc.dialogue format as NPCS above.
+   index.html consumes this: BUILDINGS doors live in the town; pressing E at a door calls
+   enterInterior(); the room renders via drawInterior(); the exit pad (or T) returns you outside.
+   Fields:
+     id,name                              — identity + peers-panel label
+     building:{x,y,w,h,wall,roof,door:{x,y},sign,drawn?,secret?} — overworld footprint + entry point
+                                            drawn:true => facade already drawn elsewhere (e.g. chapel)
+                                            secret:true => rendered subtly; entering grants `reward`
+     unlock                               — optional quest id gate (Story.questReached); omit = open
+     reward                               — optional cosmetic skin id granted once on first entry
+     w,h,spawn,exit                       — interior bounds, entry point, exit pad (local coords)
+     floor,wall,accent                    — palette
+     decor:[{x,y,w,h,c,top?,t?,label?}]   — rects; t:'rug' draws under actors, t:'candle' flickers
+     npcs:[{id,x,y,color,sprite,name,role,dialogue}] — local-coord NPCs (same format as NPCS)        */
+const INTERIORS=[
+  { id:'chapel', name:'Chapel of the Hearthlight',
+    building:{x:-92,y:-104,w:150,h:84,door:{x:-44,y:-40},sign:'CHAPEL',drawn:true},
+    w:360, h:250, spawn:{x:180,y:188}, exit:{x:180,y:236}, floor:'#241f1b', wall:'#463a30', accent:'#8f2f2a',
+    decor:[
+      {x:60,y:40,w:240,h:150,c:'#2c2620',t:'rug'},
+      {x:150,y:34,w:60,h:26,c:'#5c1d22',top:'#f1c75b'},   // altar
+      {x:172,y:18,w:16,h:18,c:'#f1c75b',t:'candle'},      // altar flame
+      {x:74,y:96,w:44,h:12,c:'#3b3128'},{x:74,y:128,w:44,h:12,c:'#3b3128'},   // pews L
+      {x:242,y:96,w:44,h:12,c:'#3b3128'},{x:242,y:128,w:44,h:12,c:'#3b3128'}, // pews R
+      {x:36,y:60,w:10,h:14,c:'#caa84a',t:'candle'},{x:314,y:60,w:10,h:14,c:'#caa84a',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-chaplain', x:180, y:64, color:'#f1c75b', sprite:'knight', name:'Chaplain Verity', role:'Hearthlight Recorder',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'Inside at last. The Hearthlight burns brighter where the walls keep the cold ledger out.',
+            'This is sanctuary, Recorded. Rest is free here; no debt is read aloud beneath this roof.'],
+            choices:[ {label:'Why a chapel for a tax-house?', goto:'why'}, {label:'Bless my record.', goto:'bless'}, {label:'I should go.', goto:'bye'} ] },
+          why:{ text:['Because a number is easier to forgive when you kneel beside it.','We kept the architecture. We changed the verdict.'], goto:'again' },
+          bless:{ text:['Then be witnessed: you woke owing, and you may yet leave owing nothing.','Carry that out the door. The plaza forgets it quickly.'], goto:'again' },
+          bye:{ text:['Go warm, go recorded.'], end:true },
+          again:{ text:['The flame holds. So does your name.'],
+            choices:[ {label:'Tell me of the chapel.', goto:'why'}, {label:'Step back out.', goto:'bye'} ] } }} }
+    ] },
+  { id:'tavern', name:'The Settled Tankard',
+    building:{x:172,y:-152,w:150,h:96,wall:'#5a4124',roof:'#7a3b22',door:{x:172,y:-108},sign:'TAVERN'},
+    w:420, h:280, spawn:{x:210,y:216}, exit:{x:210,y:264}, floor:'#2b2218', wall:'#4a3722', accent:'#caa24a',
+    decor:[
+      {x:40,y:48,w:340,h:24,c:'#3a2c1c',top:'#6b4a26'},   // bar counter (back)
+      {x:96,y:120,w:60,h:36,c:'#3a2c1c',top:'#5a4326'},{x:264,y:120,w:60,h:36,c:'#3a2c1c',top:'#5a4326'}, // tables
+      {x:110,y:196,w:60,h:36,c:'#3a2c1c',top:'#5a4326'},
+      {x:46,y:30,w:14,h:18,c:'#caa24a',t:'candle'},{x:360,y:30,w:14,h:18,c:'#caa24a',t:'candle'},
+      {x:300,y:30,w:80,h:18,c:'#241a10',label:'KEGS'}
+    ],
+    npcs:[
+      {id:'int-barkeep', x:210, y:84, color:'#caa24a', sprite:'knight', name:'Goodwife Sump', role:'Keeper of the Tankard',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'Mind the step and mind your tab — I record both.',
+            'We pour settled accounts here. Drink is the one debt the Hearthlight lets you carry gladly.'],
+            choices:[ {label:'Heard any rumors?', goto:'rumor'}, {label:'Who drinks here?', goto:'who'}, {label:'Just passing.', goto:'bye'} ] },
+          rumor:{ text:[
+            'Rumor? The Assayer two doors down has been crossing out names that were already paid.',
+            'And someone bricked over the old cellar stair to the west. Folk who go looking for it do not always come back the same colour.'],
+            goto:'again' },
+          who:{ text:['Diggers, scribes, the odd pilgrim who confused this for the chapel.','And Sot in the corner. He owes me a story for every cup. Ask him.'], goto:'again' },
+          bye:{ text:['Door is where you left it.'], end:true },
+          again:{ text:['Back for another? The tap is honest.'],
+            choices:[ {label:'Any fresh rumor?', goto:'rumor'}, {label:'Leave.', goto:'bye'} ] } }} },
+      {id:'int-sot', x:328, y:198, color:'#9b6b46', sprite:'hollow', name:'Sot Halfpenny', role:'Regular',
+        dialogue:{ start:'intro', repeat:'intro', nodes:{
+          intro:{ text:[
+            'You — you have the look of someone who reads margins.',
+            'I had a name once. Sold it for the cellar key, west of the plaza. Then they sealed the door and kept my name inside.'],
+            choices:[ {label:'A sealed cellar?', goto:'cellar'}, {label:'Your name?', goto:'name'}, {label:'Sober up.', goto:'bye'} ] },
+          cellar:{ text:['West. Past the brambles where the grass forgets to grow.','The door only shows itself to someone already looking. Walk slow out there.'], goto:'intro' },
+          name:{ text:['Gone into the dark with the wax. If you ever stand in that cellar — say it back to me.','Whatever it answers, do not believe all of it.'], goto:'intro' },
+          bye:{ text:['...one more, Sump. On the pilgrim.'], end:true } }} }
+    ] },
+  { id:'vestry', name:'The Gilded Vestry',
+    building:{x:-282,y:34,w:140,h:90,wall:'#3a3550',roof:'#5a4a7a',door:{x:-282,y:74},sign:'VESTRY'},
+    w:360, h:250, spawn:{x:180,y:188}, exit:{x:180,y:236}, floor:'#221f2a', wall:'#3a3550', accent:'#9b74ff',
+    decor:[
+      {x:50,y:60,w:36,h:120,c:'#2c2740',top:'#6f5fa0'},{x:274,y:60,w:36,h:120,c:'#2c2740',top:'#6f5fa0'}, // wardrobes
+      {x:140,y:150,w:80,h:40,c:'#2c2740',top:'#9b74ff'},  // dais
+      {x:40,y:30,w:14,h:18,c:'#9b74ff',t:'candle'},{x:306,y:30,w:14,h:18,c:'#9b74ff',t:'candle'},
+      {x:120,y:30,w:120,h:18,c:'#191527',label:'GOLD ONLY'}
+    ],
+    npcs:[
+      {id:'int-vestry-keeper', x:180, y:104, color:'#9b74ff', sprite:'sorcerer', name:'Vestry-Keeper Lune', role:'Cosmetics Vendor',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'A new silhouette walks in! Stand on the dais — let me see you in something settled.',
+            'Everything here is Gold, and Gold buys looks alone. Not one thread of it will swing your blade harder.'],
+            choices:[ {label:'Gold gives no power?', goto:'nopower'}, {label:'Open the wardrobe.', goto:'shop'}, {label:'Later.', goto:'bye'} ] },
+          nopower:{ text:['None. That is the law of the realm and the whole charm of it.','You earn strength in RUNE like everyone. Here you only earn admiration.'], goto:'again' },
+          shop:{ text:['Press B anywhere to browse and equip. Crimson, Azure, Voidwalker — all settled coin, all yours to wear.'], goto:'again' },
+          bye:{ text:['Come back when you crave a new outline.'], end:true },
+          again:{ text:['Back to be re-dressed? B opens the wardrobe.'],
+            choices:[ {label:'Remind me — Gold and power?', goto:'nopower'}, {label:'Step out.', goto:'bye'} ] } }} }
+    ] },
+  { id:'assayer', name:"The Assayer's Office", unlock:null,
+    building:{x:322,y:72,w:130,h:88,wall:'#2f3a30',roof:'#3f5a3f',door:{x:322,y:110},sign:'ASSAYER'},
+    w:360, h:240, spawn:{x:180,y:180}, exit:{x:180,y:228}, floor:'#1d231d', wall:'#2f3a30', accent:'#7fb37f',
+    decor:[
+      {x:50,y:44,w:260,h:22,c:'#26301f',top:'#4a5e3a'},   // long desk
+      {x:60,y:90,w:50,h:90,c:'#222b1c',top:'#3a4a2e'},{x:250,y:90,w:50,h:90,c:'#222b1c',top:'#3a4a2e'}, // shelves
+      {x:150,y:96,w:60,h:36,c:'#26301f',top:'#4a5e3a'},
+      {x:40,y:28,w:14,h:16,c:'#9fd07a',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-assayer', x:180, y:78, color:'#7fb37f', sprite:'sorcerer', name:'Assayer Coin', role:'Verifier of Debts',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'Papers. You have none? Good — the honest rarely do.',
+            'I verify debts. Lately the ledger hands me names already settled and asks me to open them again. I have stopped obeying.'],
+            choices:[ {label:'Who orders the re-opening?', goto:'who'}, {label:'A task, then?', goto:'task'}, {label:'No business today.', goto:'bye'} ] },
+          who:{ text:['The order comes up from the north, stamped in wax that is still warm.','Someone down in the Vaults is forging closure into debt. I would name them if I dared.'], goto:'again' },
+          task:{ text:[
+            'If you find a settled candle gone dark in this realm, do not relight it — bring me its name instead.',
+            'A name carried out of the dark and spoken here is worth more than coin. It is worth a correction.'],
+            goto:'again' },
+          bye:{ text:['Mind the stamps on your way out.'], end:true },
+          again:{ text:['Back at my desk? The forgeries have not stopped.'],
+            choices:[ {label:'Who is forging closure?', goto:'who'}, {label:'Remind me of the task.', goto:'task'}, {label:'Leave.', goto:'bye'} ] } }} }
+    ] },
+  { id:'cellar', name:'The Sealed Cellar', reward:'cellar-warden',
+    building:{x:-520,y:182,w:96,h:60,wall:'#23282c',roof:'#2b3338',door:{x:-520,y:152},sign:'',secret:true},
+    w:320, h:230, spawn:{x:160,y:172}, exit:{x:160,y:220}, floor:'#16191c', wall:'#262d31', accent:'#6f93a8',
+    decor:[
+      {x:40,y:40,w:60,h:90,c:'#1c2226',top:'#39474e'},{x:220,y:40,w:60,h:90,c:'#1c2226',top:'#39474e'}, // racks
+      {x:130,y:60,w:60,h:30,c:'#1a2024',top:'#4a606a'},  // a single sealed casket
+      {x:150,y:40,w:12,h:16,c:'#6f93a8',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-cellar-shade', x:160, y:70, color:'#6f93a8', sprite:'hollow', name:'A Sealed Voice', role:'Unrecorded',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'You found the door. Almost no one does. They wall me up and the wall forgets why.',
+            'I am the name Sot sold. Speak it back and I keep my shape a little longer.'],
+            choices:[ {label:'Speak the name.', goto:'name'}, {label:'What is this place?', goto:'place'}, {label:'I cannot stay.', goto:'bye'} ] },
+          name:{ text:['...you said it correctly. The first to, in a long dark.','Take the warden’s cloak from the rack. Wear it where the light is — let them wonder where you found it.'], goto:'again' },
+          place:{ text:['The cellar beneath the cellar. Where the realm files what it would rather not have written.','Curiosity brought you. Curiosity is the only currency that ever reaches down here.'], goto:'again' },
+          bye:{ text:['Climb back to the warm. Leave the door as you found it.'], end:true },
+          again:{ text:['Still here, in the cold file? Good. The wall has not won yet.'],
+            choices:[ {label:'Tell me of this place.', goto:'place'}, {label:'Climb out.', goto:'bye'} ] } }} }
+    ] }
+];
+
   return {
-    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, SKINS, ASSETS, NPCS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES,
+    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, WORLD_PORTALS,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
     AREA2_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,

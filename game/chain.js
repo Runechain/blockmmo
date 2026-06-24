@@ -14,7 +14,16 @@
   }
 
   function serializeBlockForHash(b) {
-    return b.index + '|' + b.prev + '|' + b.time + '|' + JSON.stringify(b.txs) + '|' + b.nonce;
+    // Optimization: Cache the prefix part of the block string (everything except the nonce)
+    // to avoid expensive JSON.stringify calls during PoW mining loops.
+    if (b._hashPrefix === undefined || b._lastIndex !== b.index || b._lastPrev !== b.prev || b._lastTime !== b.time || b._lastTxs !== b.txs) {
+      b._hashPrefix = b.index + '|' + b.prev + '|' + b.time + '|' + JSON.stringify(b.txs) + '|';
+      b._lastIndex = b.index;
+      b._lastPrev = b.prev;
+      b._lastTime = b.time;
+      b._lastTxs = b.txs;
+    }
+    return b._hashPrefix + b.nonce;
   }
 
   function hashBlock(b, sha256) {
@@ -103,6 +112,14 @@
 
     const DIFFICULTY = options.difficulty == null ? DEFAULT_DIFFICULTY : options.difficulty;
     let chain = [], mempool = [], miner = null, hashes = 0, hrTimer = 0, hashrate = 0;
+
+    // Optimization: Confirmed state indexes for O(1) queries
+    let confirmedBalances = {}; // { [cur]: { [name]: amount } }
+    let confirmedTallies = {};  // { [cur]: { [to]: amount } }
+    let confirmedGreatRunes = {}; // { [name]: greatRune[] }
+    let confirmedCosmetics = {};  // { [name]: cosmeticId[] }
+    let confirmedItems = {};      // { [name]: itemId[] }
+
     const rid = () => Math.random().toString(36).slice(2, 8);
     const onBlockMined = typeof options.onBlockMined === 'function' ? options.onBlockMined : null;
 
@@ -110,8 +127,43 @@
       return validateBlockCandidate(b, chain[chain.length - 1], { sha256, difficulty: DIFFICULTY }).ok;
     }
 
+    function applyBlockToIndex(b) {
+      for (const t of b.txs || []) {
+        const cur = t.cur || 'RUNE';
+        if (t.to) {
+          if (!confirmedBalances[cur]) confirmedBalances[cur] = {};
+          confirmedBalances[cur][t.to] = (confirmedBalances[cur][t.to] || 0) + (t.amt || 0);
+          if (!confirmedTallies[cur]) confirmedTallies[cur] = {};
+          confirmedTallies[cur][t.to] = (confirmedTallies[cur][t.to] || 0) + (t.amt || 0);
+        }
+        if (t.from) {
+          if (!confirmedBalances[cur]) confirmedBalances[cur] = {};
+          confirmedBalances[cur][t.from] = (confirmedBalances[cur][t.from] || 0) - (t.amt || 0);
+        }
+        if (t.to && t.greatRune) {
+          if (!confirmedGreatRunes[t.to]) confirmedGreatRunes[t.to] = [];
+          confirmedGreatRunes[t.to].push(t.greatRune);
+        }
+        if (t.to && t.cosmetic) {
+          if (!confirmedCosmetics[t.to]) confirmedCosmetics[t.to] = [];
+          confirmedCosmetics[t.to].push(t.cosmetic);
+        }
+        if (t.to && t.item) {
+          if (!confirmedItems[t.to]) confirmedItems[t.to] = [];
+          confirmedItems[t.to].push(t.item);
+        }
+      }
+    }
+
+    function rebuildIndexes() {
+      confirmedBalances = {}; confirmedTallies = {};
+      confirmedGreatRunes = {}; confirmedCosmetics = {}; confirmedItems = {};
+      for (const b of chain) applyBlockToIndex(b);
+    }
+
     function genesis() {
       chain = [createGenesisBlock(sha256)];
+      rebuildIndexes();
     }
 
     genesis();
@@ -145,6 +197,7 @@
         if (h.startsWith('0'.repeat(DIFFICULTY))) {
           miner.hash = h;
           chain.push(miner);
+          applyBlockToIndex(miner);
           const landed = miner;
           mempool = mempool.slice(landed.txs.length);
           miner = null;
@@ -169,6 +222,7 @@
       const tip = chain[chain.length - 1];
       if (b && b.index === tip.index + 1 && b.prev === tip.hash && valid(b)) {
         chain.push(b);
+        applyBlockToIndex(b);
         const ids = new Set((b.txs || []).map(t => t.id));
         mempool = mempool.filter(t => !ids.has(t.id));
         if (miner && miner.index <= b.index) miner = null;
@@ -180,13 +234,7 @@
     function pool() { return miner ? mempool.concat(miner.txs) : mempool; }
 
     function balanceOf(name, cur = 'RUNE') {
-      let bal = 0;
-      for (const b of chain) for (const t of b.txs || []) {
-        if ((t.cur || 'RUNE') !== cur) continue;
-        if (t.to === name) bal += t.amt || 0;
-        if (t.from === name) bal -= t.amt || 0;
-      }
-      return bal;
+      return (confirmedBalances[cur] && confirmedBalances[cur][name]) || 0;
     }
 
     function pendingCredit(name, cur = 'RUNE') {
@@ -204,29 +252,25 @@
     function spendable(name, cur = 'RUNE') { return balanceOf(name, cur) - pendingDebit(name, cur); }
 
     function tallyTo(addr, cur = 'RUNE') {
-      let v = 0;
-      for (const b of chain) for (const t of b.txs || []) if (t.to === addr && (t.cur || 'RUNE') === cur) v += t.amt || 0;
+      let v = (confirmedTallies[cur] && confirmedTallies[cur][addr]) || 0;
       for (const t of pool()) if (t.to === addr && (t.cur || 'RUNE') === cur) v += t.amt || 0;
       return v;
     }
 
     function greatRunesOf(name) {
-      const out = [];
-      for (const b of chain) for (const t of b.txs || []) if (t.to === name && t.greatRune) out.push(t.greatRune);
+      const out = (confirmedGreatRunes[name] || []).slice();
       for (const t of pool()) if (t.to === name && t.greatRune) out.push(t.greatRune);
       return out;
     }
 
     function cosmeticsOf(name) {
-      const out = [];
-      for (const b of chain) for (const t of b.txs || []) if (t.to === name && t.cosmetic) out.push(t.cosmetic);
+      const out = (confirmedCosmetics[name] || []).slice();
       for (const t of pool()) if (t.to === name && t.cosmetic) out.push(t.cosmetic);
       return out;
     }
 
     function itemsOf(name) {
-      const out = [];
-      for (const b of chain) for (const t of b.txs || []) if (t.to === name && t.item) out.push(t.item);
+      const out = (confirmedItems[name] || []).slice();
       for (const t of pool()) if (t.to === name && t.item) out.push(t.item);
       return out;
     }
@@ -251,6 +295,7 @@
 
       chain = nextChain;
       mempool = nextMempool;
+      rebuildIndexes();
       const tip = chain[chain.length - 1];
       if (miner && (miner.index <= tip.index || miner.prev !== tip.hash)) miner = null;
       return true;

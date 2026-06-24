@@ -140,6 +140,9 @@ assert.deepStrictEqual(readMessages(peer)[0], {
   z: 34,
   yaw: 0.5,
   moving: true,
+  mode: 'town',
+  encounter: null,
+  interior: null,
 });
 
 // Authoritative: raw client ledger blocks never append, even if they are internally valid.

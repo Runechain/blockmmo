@@ -266,6 +266,9 @@ assert.deepStrictEqual(readMessages(peer)[0], {
   z: 44,
   yaw: 1.25,
   moving: true,
+  mode: 'town',
+  encounter: null,
+  interior: null,
 });
 
 nowMs = 2000;

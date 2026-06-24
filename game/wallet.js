@@ -25,31 +25,51 @@
   // Phantom browser-extension adapter — the first concrete adapter. Wraps the injected provider
   // (window.solana). The provider is injectable so this is testable without the extension.
   function createPhantomAdapter(provider) {
-    const p = provider || (typeof root !== 'undefined' ? root.solana : null);
+    // Resolve the injected provider LAZILY on every call. Phantom injects window.solana
+    // asynchronously (often after this adapter is constructed at page load), so capturing it once
+    // would leave it null forever and make connect() fail even when Phantom is installed.
+    const getProvider = () => provider || (typeof root !== 'undefined' ? root.solana : null);
     let pubkey = null;
     function readKey(src) {
       const k = src && src.publicKey;
       return k && typeof k.toString === 'function' ? k.toString() : (typeof k === 'string' ? k : null);
     }
+    const notFound = () => new Error('Phantom wallet not found — install the Phantom extension, then reload.');
     return {
       name: 'phantom',
-      available() { return !!(p && p.isPhantom); },
+      available() { const p = getProvider(); return !!(p && p.isPhantom); },
       async connect() {
-        if (!p) throw new Error('Phantom wallet not found');
+        const p = getProvider();
+        if (!p) throw notFound();
         const res = await p.connect();
         pubkey = readKey(res) || readKey(p);
         return pubkey;
       },
       async disconnect() {
+        const p = getProvider();
         if (p && typeof p.disconnect === 'function') await p.disconnect();
         pubkey = null;
       },
       getPublicKey() { return pubkey; },
       // tx: a server-serialized transaction. The adapter signs; it never builds the tx.
       async signTransaction(tx) {
-        if (!p) throw new Error('Phantom wallet not found');
+        const p = getProvider();
+        if (!p) throw notFound();
         if (!pubkey) throw new Error('connect() before signing');
         return p.signTransaction(tx);
+      },
+      // Sign-in ownership proof: sign an arbitrary UTF-8 challenge. Returns raw signature + public
+      // key bytes so the caller can encode them for the server's ed25519 verification.
+      async signMessage(message) {
+        const p = getProvider();
+        if (!p) throw notFound();
+        if (!pubkey) throw new Error('connect() before signing');
+        const bytes = new TextEncoder().encode(String(message));
+        const res = await p.signMessage(bytes, 'utf8');
+        const signatureBytes = res && res.signature ? res.signature : res;
+        const pk = (res && res.publicKey && res.publicKey.toBytes && res.publicKey.toBytes())
+          || (p.publicKey && p.publicKey.toBytes && p.publicKey.toBytes()) || null;
+        return { signatureBytes, publicKeyBytes: pk };
       },
     };
   }
@@ -69,6 +89,10 @@
       async signTransaction(tx) {
         if (!pubkey) throw new Error('connect() before signing');
         return { signedBy: pubkey, payload: tx, mock: true };
+      },
+      async signMessage(message) {
+        if (!pubkey) throw new Error('connect() before signing');
+        return { signatureBytes: new Uint8Array(64), publicKeyBytes: new Uint8Array(32), message: String(message), mock: true };
       },
     };
   }
@@ -106,6 +130,12 @@
       async signTransaction(tx) {
         if (!active) throw new Error('no wallet connected');
         return active.signTransaction(tx);
+      },
+      // Sign a sign-in ownership challenge with the active adapter.
+      async signMessage(message) {
+        if (!active) throw new Error('no wallet connected');
+        if (typeof active.signMessage !== 'function') throw new Error('active wallet cannot sign messages');
+        return active.signMessage(message);
       },
     };
   }

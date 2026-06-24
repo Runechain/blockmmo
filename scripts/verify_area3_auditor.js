@@ -199,3 +199,4 @@ assert(/if\(ending\.sigil\)\{[\s\S]*?Chain\.mintGreatRune/.test(index),
 assert(/Story\.event\(['"]ending['"]/.test(index), 'resolveAuditorChoice must fire the ending event');
 
 console.log('area3 auditor verification passed (3 endings; cannot be killed; Choice C = Amended Record + endgame; ledger preserved)');
+process.exit(0); // CI-hardening: exit deterministically so a lingering handle can't wedge the runner.

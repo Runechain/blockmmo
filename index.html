@@ -2743,12 +2743,21 @@ if(walletBtn)walletBtn.onclick=async()=>{
   try{ await Net.connectWalletForSignin(); walletReady=true; refreshSigninUI(); }
   catch(err){ if(signinStatusEl)signinStatusEl.textContent='Wallet connect failed: '+(err&&err.message||'unknown'); }
 };
+async function autoConnectWallet(){
+  const a=Net.getAuthState();
+  // Once signed in and the gate is active, surface Phantom RIGHT AWAY — returning users reconnect
+  // silently, new users get the approval popup — so there's no separate "Link wallet" click.
+  if(!a.signedIn || !a.requireIdentity || !a.ssoEnabled || walletReady) return;
+  try{ await Net.connectWalletForSignin(); walletReady=true; refreshSigninUI(); }
+  catch(_){ /* Phantom not installed or user declined — the wallet button stays as a fallback */ }
+}
 (async function bootSignin(){
   try{
     const f=(typeof window.fetch==='function')?window.fetch.bind(window):null;
     Net.setAuthState(await window.RUNECHAIN_SIGNIN.loadSession(f));
   }catch(_){}
   refreshSigninUI();
+  autoConnectWallet();
 })();
 document.getElementById('respawn').onclick=()=>{
   player.x=0; player.y=0; player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false; player.invuln=1; player.lock=null;

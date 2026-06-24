@@ -61,8 +61,9 @@ These hold across every feature below. They exist once, here, so they cannot dri
 - **U6 — One character per account per season. [DECIDED]** A hard cap of one. For the
   prototype, "account" binds to a browser-local P-256 game-account credential verified
   by a server challenge. This is a low-friction pseudonymous cap, not proof of one human.
-  Stronger sybil resistance and production compliance remain gated by legal/compliance
-  work before any real-money character-sale market.
+  For any production season that allows real-money character sales, the cap keys to a
+  **verified identity**, not a wallet: one verified person may enable at most one
+  sale-capable character per season, while wallets remain settlement/payment rails only.
 - **U7 — Server is authoritative for all value. [DECIDED]** Clients propose; the server
   disposes. The "trust the client" relay posture is retired for anything touching the
   ledger or PvP outcomes (see [Server Authority](#system--server-authority--anti-cheat)).
@@ -234,13 +235,17 @@ to the player on the Chainwell.
   (e.g. Phantom) as **one adapter**, not the only path, so a future mobile-wallet
   connection is not designed out.
 
-**Open.**
-- **Q-F6a [OPEN]** Settlement as a custom **Anchor program** (clean atomic 3-way routing in
-  one instruction) vs. a **client-built multi-instruction transaction** using the standard
-  SPL token program. The burn alone is doable client-side and trustlessly; atomic 3-way
-  routing argues for a program. Server-authority (U7) also argues for server-constructed/
-  validated transactions.
-- **Q-F6b [OPEN]** Which wrapped-SOL mint is settled in.
+**Architecture decisions.**
+- **Q-F6a [DECIDED]** Settlement is a custom **Anchor program**, not a client-built
+  multi-instruction transaction. The burn alone is doable client-side and trustlessly, but
+  the product needs one atomic settlement instruction that validates the configured
+  destinations and either completes the 50/35/15 split or reverts. Server-authority (U7)
+  also requires server-constructed/server-validated transactions so clients only sign the
+  authoritative settlement payload.
+- **Q-F6b [DECIDED]** Settlement uses the SPL Token Program native wSOL mint
+  `So11111111111111111111111111111111111111112`. Implementation and deployment must pin
+  or validate that mint at the settlement seam; arbitrary wrapped-SOL-compatible mints are
+  not acceptable settlement assets.
 
 ---
 
@@ -294,12 +299,15 @@ to F6.3). *Not legal advice; flagged so it is not a silent omission.*
   Carried as "failed"? (Needs an explicit rule; the gate must handle this state.)
 - **Q-F7b [OPEN]** `NonTransferable` is unusable for F7.2 — confirm transfer-hook vs.
   escrow-program as the gating mechanism.
-- **Q-A1 [DECIDED FOR PROTOTYPE][LEGAL OPEN]** (also U6) The one-per-season cap binds
-  to a browser-local P-256 game account credential. The server owns the binding, issues a
-  challenge, verifies the signature, and keys Chainwell value to the season character id
-  instead of a display name. This is deliberately soft sybil resistance for prototype
-  playtests; verified identity, wallet linkage, or sale-boundary controls remain a
-  separate compliance decision before production cash-out.
+- **Q-A1 [DECIDED]** (also U6) Prototype play keeps the browser-local P-256 game account
+  credential: the server owns the binding, issues a challenge, verifies the signature,
+  and keys Chainwell value to the season character id instead of a display name. That
+  remains deliberately soft sybil resistance for prototype playtests only. For any
+  production season that enables real-money character sales, **wallet-binding is not
+  treated as sufficient** for the legal case; the sale-capable account layer binds to
+  **one verified identity per season**, with the wallet serving only as the payment/
+  settlement instrument. Sumsub is the planning-baseline provider, and the hosted KYC
+  flow is deferred until a player opts into a production sale-capable season.
 
 ---
 
@@ -406,10 +414,11 @@ Consolidated. Each is referenced inline above.
 | Q-F5a | U3 cap's exact unit and value | Balance |
 | Q-F5b | RUNE→Gold and wSOL→Gold rates | Balance |
 | Q-F5c | Season reset of paid QOL — to zero or to a baseline floor | Design |
-| Q-F6a | Settlement: custom Anchor program vs. client-built multi-instruction tx | Architecture |
-| Q-F6b | Which wrapped-SOL mint to settle in | Architecture |
+| Q-F6a | CLOSED: settlement is a custom Anchor program; the server constructs/validates the tx rather than relying on a client-built multi-instruction tx | Architecture |
+| Q-F6b | CLOSED: settlement uses the SPL Token Program native wSOL mint `So11111111111111111111111111111111111111112` | Architecture |
 | Q-F7a | Status of a character whose window closed with tasks unfinished | Design (gate) |
 | Q-F7b | Transfer-gating mechanism: transfer-hook vs. escrow-program | Architecture |
+| Q-A1 | CLOSED: prototype uses server-verified browser game accounts; production sale-capable seasons require one verified identity per season, not wallet-only binding | Compliance/Architecture |
 | Q-S2a | CLOSED: authoritative Chainwell validates server-issued `mine:submit` blocks only | Architecture |
 | Q-S2c | Turn-arbitration protocol for turn-based PvP | Architecture |
 
@@ -429,6 +438,85 @@ reflect the ratified design.
 | **C4** | Real money in/out | **Ratified.** Designed system; go-live legal-gated (Ruling 10). |
 
 Builders now follow the bible's updated rulings 7–10 on these points.
+
+---
+
+## Legal & Compliance Stance
+
+> **Not legal advice, and not a determination.** This section consolidates the **project's
+> positions** as structured **inputs for legal counsel** (issue Q-L3 / #39). It does not assert
+> that any framing is legally sufficient; counsel review is a hard precondition on production
+> go-live (F6.3). Sections above remain the design source of truth.
+
+**Posture.** RUNECHAIN takes real value in (wSOL → Gold, with a 15% operator fee, F6) and lets
+real value out at exactly one boundary (selling a season-complete character, U5/F7). That
+"money-in + value-out" shape requires review regardless of any "art / collectible / deflationary"
+framing. The design intentionally narrows the surface; it does not assume the surface away.
+
+**Framing arguments (logged as inputs to review, not determinations).**
+- **No guaranteed financial outcome.** Participation is at the player's own risk under
+  terms/disclaimer; the project does not promise returns or guarantee resale value.
+- **Characters as collectibles.** Sale price is discovered **off-platform, peer-to-peer**; the
+  project does not set, guarantee, or operate a price-making market.
+- **Gold as a deflationary sink, not an investment.** Gold buys cosmetics only (U3, Ruling 7);
+  the wSOL purchase routes a **true SPL burn** (F6.2) with no yield, buyback, or redemption.
+- **Marketing bucket is not a prize pool.** The 35% is operator-discretion spend (F5.4), not a
+  committed player-facing payout (avoids tournament/gambling structure — see non-goals).
+- **No loss-based wagering.** Death drops nothing (F4 / Ruling 8); there is no stake-to-lose loop.
+
+**Q-A1 production compliance stance.**
+- **Wallet-binding is not sufficient for the legal case around U6.** A wallet is cheap to
+  multiply, so it cannot be the project's relied-on sybil-resistance layer for any
+  real-money character-sale market.
+- **Prototype vs. production split.** Prototype/internal play keeps the low-friction
+  browser-local game account. A production **sale-capable** season instead requires a
+  verified-identity link, and the one-character-per-season cap binds to that identity.
+- **Friction target.** No KYC at first launch or for non-cash playtests. Identity review is
+  deferred until a player opts into a production sale-capable season; players who do not
+  opt in can still play, but cannot create a sale-capable character.
+- **Provider baseline.** Sumsub is the planning baseline for production costing
+  (~$1.35–$1.85 / verification benchmark already logged in issue #40). Replace only if
+  another hosted-verification provider offers materially lower cost without expanding the
+  project's data-handling surface.
+- **Privacy / retention rule.** If verified identity is enabled, the game service stores
+  only provider reference ids, decision state, jurisdiction/region if needed, and audit
+  timestamps — **not** raw ID images/selfies. Production go-live additionally requires a
+  provider DPA, a published retention/deletion schedule, and a user-facing support path
+  for access/erasure requests.
+
+**Design guardrails that support the stance.** No paid advantage (U1), money never skips the
+grind (U2), one real-value exit only (U5), one character per account per season (U6), only
+*earned* value is tradeable (U4 / F7.4), server-authoritative value (U7).
+
+**Sequencing.** Build proceeds in three steps; only the last is legal-gated:
+1. **Prototype / devnet** — all design, contracts, and integration on devnet. *Unblocked.*
+2. **Hardening** — server authority, anti-cheat, sybil-resistance (Q-A1 / #40), audits. *Unblocked.*
+3. **Production go-live flip** — enabling real F6 settlement and F7 sales with real funds.
+   **Gated** on counsel sign-off of R1 + R8 (#39) and the Q-A1 decision (#40). The programs
+   ship `paused = true` and stay off until an admin flips them post-sign-off (see
+   `contracts/BUILD.md`).
+
+---
+
+## Risk Register
+
+> Consolidated risk inputs for the Q-L3 review (#39) and the Q-A1 compliance decision (#40).
+> **Status** is the *project's* working assessment, **not** a legal conclusion. "Mitigated by
+> design" means a guardrail is in place that counsel should still validate.
+
+| ID | Risk | Primary mitigation(s) | Status |
+|---|---|---|---|
+| **R1** | Money-in path (taking wSOL, minting spendable Gold, collecting a 15% fee) may implicate money-transmission / money-services regulation. | Off-platform price discovery; deflationary burn framing (F6.2); operator fee is a service fee, not a deposit; **production go-live legal-gated (F6.3)**. | **Open — gates go-live.** Counsel review required (#39). |
+| **R2** | Gold construed as an investment/security. | Cosmetics-only (U3, Ruling 7); true-burn sink, no yield/buyback/redemption (F6.2); not transferable for cash (U5). | Mitigated by design; confirm with counsel. |
+| **R3** | 35% marketing bucket read as a gambling prize pool. | Operator-discretion spend, **not** a committed payout (F5.4); explicit non-goal. | Mitigated by design; confirm with counsel. |
+| **R4** | Loss-based mechanics read as wagering. | No item/currency loss on death (F4 / Ruling 8); no stake-to-lose loop. | Mitigated by design. |
+| **R5** | Player financial-outcome liability. | Terms/disclaimer; participation at own risk; value set off-platform, not guaranteed. | Open — counsel to confirm sufficiency. |
+| **R6** | One-character-per-season cap (U6) trivially circumvented via multiple wallets/accounts, weakening guardrail G5 and the legal case. | Prototype cap stays on the browser-local P-256 game account, but any production sale-capable season binds the cap to **one verified identity per season**; wallet is explicitly **not** the identity layer. | Mitigated by design; counsel must confirm the production stance (#40). |
+| **R7** | Verified-identity binding (R6) creates a new data-retention / privacy compliance surface (e.g. GDPR). | Minimize retained data to provider reference ids + outcomes only; no raw identity docs on game servers; require provider DPA, retention/deletion policy, and user request handling before go-live. | Open operational compliance work if production sales are enabled (#40). |
+| **R8** | Cash-out concentration: a secondary market in completed characters reopens securities / gambling / tax questions (the **#1** legal-review item, F7 risk note). | U6 caps the market to ≤1 sale per account per season; U4 / F7.4 make only *earned* (not purchased) value tradeable; settlement is off-platform peer-to-peer; **F7 go-live legal-gated**. | **Open — gates F7 go-live.** Counsel review required (#39). |
+
+These risks are referenced from the design above (notably F6.3, F7 risk note, U5/U6, Q-A1) and
+from issues #39 (R1, R5, R8) and #40 (R6, R7).
 
 ---
 

@@ -274,15 +274,16 @@ assert.deepStrictEqual(readMessages(peer)[0], {
 nowMs = 2000;
 const rewardRequest = realm.handleParsedMessage(submitter, {
   t: 'mine:reward',
-  source: { type: 'enemy', key: 'hollow' },
+  source: { type: 'boss', key: 'tallow' },
 });
 assert.strictEqual(rewardRequest.ok, true, 'authenticated account should receive reward work');
 const rewardWork = readMessages(submitter)[0];
 assert.strictEqual(rewardWork.t, 'mine:work');
 assert.strictEqual(rewardWork.work.block.txs[0].to, firstJoin.account.character.address);
 assert.deepStrictEqual(rewardWork.work.block.txs[0].auth, {
-  type: 'server-reward',
-  source: 'enemy:hollow',
+  type: 'server-boss-reward',
+  source: 'boss:tallow',
+  sigilId: 'waxen-testament',
   accountId: firstJoin.account.accountId,
   characterId: firstJoin.account.character.id,
   seasonId: 'season-one',

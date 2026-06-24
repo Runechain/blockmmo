@@ -13,26 +13,52 @@
     0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
     0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
 
+  const hexTab = [];
+  for (let i = 0; i < 256; i++) hexTab.push(i.toString(16).padStart(2, '0'));
+
   function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
 
+  const w = new Uint32Array(64);
+  let buffer = new Uint8Array(8192);
+
   return function sha256(ascii) {
-    const bytes = [];
+    // UTF-8 encoding might expand the string up to 3x (for chars < 65536)
+    // plus 9 bytes for padding and bit length.
+    const maxNeeded = ascii.length * 3 + 9 + 64;
+    if (buffer.length < maxNeeded) buffer = new Uint8Array(Math.pow(2, Math.ceil(Math.log2(maxNeeded))));
+
+    let bl = 0;
     for (let i = 0; i < ascii.length; i++) {
       const c = ascii.charCodeAt(i);
-      if (c < 128) bytes.push(c);
-      else if (c < 2048) bytes.push(192 | (c >> 6), 128 | (c & 63));
-      else bytes.push(224 | (c >> 12), 128 | ((c >> 6) & 63), 128 | (c & 63));
+      if (c < 128) buffer[bl++] = c;
+      else if (c < 2048) {
+        buffer[bl++] = (c >> 6) | 192;
+        buffer[bl++] = (c & 63) | 128;
+      } else {
+        buffer[bl++] = (c >> 12) | 224;
+        buffer[bl++] = ((c >> 6) & 63) | 128;
+        buffer[bl++] = (c & 63) | 128;
+      }
     }
-    const l = bytes.length;
-    bytes.push(0x80);
-    while (bytes.length % 64 !== 56) bytes.push(0);
-    const bl = l * 8;
-    bytes.push(0, 0, 0, 0, (bl >>> 24) & 255, (bl >>> 16) & 255, (bl >>> 8) & 255, bl & 255);
+    const l = bl;
+    buffer[bl++] = 0x80;
+    const padLen = (bl % 64 <= 56) ? (56 - bl % 64) : (120 - bl % 64);
+    for (let i = 0; i < padLen; i++) buffer[bl++] = 0;
+    const bits = l * 8;
+    buffer[bl++] = 0; buffer[bl++] = 0; buffer[bl++] = 0; buffer[bl++] = 0;
+    buffer[bl++] = (bits >>> 24) & 255;
+    buffer[bl++] = (bits >>> 16) & 255;
+    buffer[bl++] = (bits >>> 8) & 255;
+    buffer[bl++] = bits & 255;
+
     let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a,
         h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
-    const w = new Uint32Array(64);
-    for (let i = 0; i < bytes.length; i += 64) {
-      for (let t = 0; t < 16; t++) w[t] = (bytes[i + t * 4] << 24) | (bytes[i + t * 4 + 1] << 16) | (bytes[i + t * 4 + 2] << 8) | (bytes[i + t * 4 + 3]);
+
+    for (let i = 0; i < bl; i += 64) {
+      for (let t = 0; t < 16; t++) {
+        const off = i + t * 4;
+        w[t] = (buffer[off] << 24) | (buffer[off + 1] << 16) | (buffer[off + 2] << 8) | (buffer[off + 3]);
+      }
       for (let t = 16; t < 64; t++) {
         const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3);
         const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
@@ -51,7 +77,14 @@
       h0 = (h0 + a) | 0; h1 = (h1 + b) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0;
       h4 = (h4 + e) | 0; h5 = (h5 + f) | 0; h6 = (h6 + g) | 0; h7 = (h7 + h) | 0;
     }
-    const hx = (x) => ('00000000' + (x >>> 0).toString(16)).slice(-8);
-    return hx(h0) + hx(h1) + hx(h2) + hx(h3) + hx(h4) + hx(h5) + hx(h6) + hx(h7);
+
+    return hexTab[(h0 >>> 24) & 0xFF] + hexTab[(h0 >>> 16) & 0xFF] + hexTab[(h0 >>> 8) & 0xFF] + hexTab[h0 & 0xFF] +
+           hexTab[(h1 >>> 24) & 0xFF] + hexTab[(h1 >>> 16) & 0xFF] + hexTab[(h1 >>> 8) & 0xFF] + hexTab[h1 & 0xFF] +
+           hexTab[(h2 >>> 24) & 0xFF] + hexTab[(h2 >>> 16) & 0xFF] + hexTab[(h2 >>> 8) & 0xFF] + hexTab[h2 & 0xFF] +
+           hexTab[(h3 >>> 24) & 0xFF] + hexTab[(h3 >>> 16) & 0xFF] + hexTab[(h3 >>> 8) & 0xFF] + hexTab[h3 & 0xFF] +
+           hexTab[(h4 >>> 24) & 0xFF] + hexTab[(h4 >>> 16) & 0xFF] + hexTab[(h4 >>> 8) & 0xFF] + hexTab[h4 & 0xFF] +
+           hexTab[(h5 >>> 24) & 0xFF] + hexTab[(h5 >>> 16) & 0xFF] + hexTab[(h5 >>> 8) & 0xFF] + hexTab[h5 & 0xFF] +
+           hexTab[(h6 >>> 24) & 0xFF] + hexTab[(h6 >>> 16) & 0xFF] + hexTab[(h6 >>> 8) & 0xFF] + hexTab[h6 & 0xFF] +
+           hexTab[(h7 >>> 24) & 0xFF] + hexTab[(h7 >>> 16) & 0xFF] + hexTab[(h7 >>> 8) & 0xFF] + hexTab[h7 & 0xFF];
   };
 });

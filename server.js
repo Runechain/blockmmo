@@ -22,7 +22,7 @@ const {
   validateBlockCandidate,
   validateChain,
 } = require('./game/chain.js');
-const { ENEMY_REWARDS, STORY, RELICS, LEVELING, BOSS_SIGILS } = require('./game/content.js');
+const { ENEMY_REWARDS, STORY, RELICS, LEVELING, BOSS_SIGILS, AUDITOR_ENDINGS } = require('./game/content.js');
 const { createAnnounceFeed } = require('./game/announce.js');
 const identity = require('./game/identity.js');
 const { createGoogleOAuth, createStore, parseCookies, serializeCookie } = require('./game/oauth-google.js');
@@ -31,6 +31,7 @@ const DEFAULT_PORT = process.env.PORT || 8080;
 const DEFAULT_SEASON_ID = 'preseason-1';
 const ACCOUNT_CREDENTIAL_TYPE = 'browser-p256-v1';
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // WebSocket magic string
+const AUDITOR_ENDING_BY_ID = new Map((AUDITOR_ENDINGS || []).map((ending) => [ending.id, ending]));
 const AUTHORITY_TIERS = Object.freeze({
   authoritative: Object.freeze([
     'economy-state',
@@ -48,11 +49,43 @@ const AUTHORITY_TIERS = Object.freeze({
     'chat-relay',
   ]),
 });
+const CHAINWELL_BLOCK_RULES = Object.freeze({
+  rawClientBlocks: 'disabled',
+  acceptedSubmission: 'server-issued-mine-submit',
+  forkPolicy: 'server-canonical-tip',
+  validator: 'validateBlockCandidate',
+  candidateMatchFields: Object.freeze(['index', 'prev', 'time', 'txs']),
+  submittedProofFields: Object.freeze(['nonce', 'hash']),
+  rejectionCodes: Object.freeze({
+    rawClientBlock: 'client_block_submission_disabled',
+    unknownCandidate: 'unknown_mining_candidate',
+    invalidCandidate: 'invalid_mining_candidate',
+    replayedCandidate: 'mining_candidate_replayed',
+    invalidBlockIndex: 'invalid_block_index',
+    invalidBlockParent: 'invalid_block_parent',
+    invalidBlockTime: 'invalid_block_time',
+    invalidBlockHash: 'invalid_block_hash',
+    invalidBlockDifficulty: 'invalid_block_difficulty',
+    invalidBlockNonce: 'invalid_block_nonce',
+  }),
+});
 const SERVER_ARBITRATED_MESSAGE_TYPES = new Set([
   'rc:pvp:hit',
   'rc:pvp:forfeit',
   'rc:pvp:result',
+  'rc:pvp:turn:state',
+  'rc:pvp:turn:result',
+  'rc:pvp:error',
 ]);
+const PVP_TURN_ACTIONS = new Set(['strike', 'guard', 'focus', 'flee']);
+const PVP_DUEL_DEFAULTS = Object.freeze({
+  hp: 100,
+  stamina: 100,
+  attack: 18,
+  focusCost: 20,
+  focusDamage: 30,
+  guardRegen: 10,
+});
 
 function createRealmServer(options = {}) {
   const port = options.port == null ? DEFAULT_PORT : options.port;
@@ -71,15 +104,25 @@ function createRealmServer(options = {}) {
   const futureSkewMs = options.futureSkewMs;
   const miningTtlMs = options.miningTtlMs == null ? 30000 : options.miningTtlMs;
   const staleThresholdMs = options.staleThresholdMs == null ? 10000 : options.staleThresholdMs;
+  const pvpTurnTimeoutMs = options.pvpTurnTimeoutMs == null ? 30000 : options.pvpTurnTimeoutMs;
+  // #89: cap unproven real-time reward claims per character per rolling window so a client
+  // cannot farm unbounded RUNE by replaying kill claims (the real-time arena has no kill proof,
+  // unlike the proven solo `segment:complete` path). [NUMBER] balance placeholder — tune freely;
+  // set rewardRateMax<=0 to disable. Generous enough never to hinder legitimate play.
+  const rewardRateMax = options.rewardRateMax == null ? 100 : options.rewardRateMax;
+  const rewardRateWindowMs = options.rewardRateWindowMs == null ? 60000 : options.rewardRateWindowMs;
   const quiet = !!options.quiet;
   const clients = new Set();
   const pendingMining = new Map();
+  const settledMiningCandidates = new Map();
   const validatedOutcomes = new Set();
+  const rewardIssueTimes = new Map();
+  const pvpDuels = new Map();
   // Sign-in flow: identity binding is OPT-IN for a safe rollout. With requireIdentity off (default),
   // the legacy device-key-only join keeps working unchanged; flip RUNECHAIN_REQUIRE_IDENTITY=1 once
   // the SSO+wallet client UI ships and the Google OAuth app is registered.
   const requireIdentity = options.requireIdentity != null ? !!options.requireIdentity : process.env.RUNECHAIN_REQUIRE_IDENTITY === '1';
-  const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, seasonId, now, requireIdentity });
+  const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, season: seasonConfig, now, requireIdentity });
   const announceFeed = options.announceFeed || createAnnounceFeed({ seasonId });
 
   // SSO leg (Google) + browser sessions. Secrets come from env, never the client.
@@ -186,6 +229,7 @@ function createRealmServer(options = {}) {
 
   function dropClient(client) {
     if (!clients.has(client)) return;
+    finishPvpDuelsForDroppedClient(client);
     clients.delete(client);
     if (client.id) broadcast({ t: 'leave', id: client.id }, client);
     log(`* ${client.name} left the realm  (${clients.size} online)`);
@@ -322,10 +366,40 @@ function createRealmServer(options = {}) {
         if (!account.ok) return account;
         return issueValidatedOutcomeMiningWork(client, message.outcome);
       }
+      case 'auditor:ending': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        return recordAuditorEndingForClient(client, message);
+      }
       case 'mine:submit': {
         const account = requireAccount(client);
         if (!account.ok) return account;
         return acceptMinedWork(client, message.candidateId, message.block);
+      }
+      case 'rc:pvp:challenge': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        return issuePvpChallenge(client, message);
+      }
+      case 'rc:pvp:accept': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        return acceptPvpChallenge(client, message.duelId);
+      }
+      case 'rc:pvp:decline': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        return declinePvpChallenge(client, message.duelId, message.reason);
+      }
+      case 'rc:pvp:turn:submit': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        return acceptPvpTurnSubmission(client, message);
+      }
+      case 'rc:pvp:turn:forfeit': {
+        const account = requireAccount(client);
+        if (!account.ok) return account;
+        return acceptPvpTurnSubmission(client, { ...message, action: 'flee' });
       }
       default:
         if (message && SERVER_ARBITRATED_MESSAGE_TYPES.has(message.t)) {
@@ -401,7 +475,7 @@ function createRealmServer(options = {}) {
   }
 
   function canonicalStateMessage(client, message) {
-    return {
+    const state = {
       t: 'state',
       id: client.id,
       characterId: client.character.id,
@@ -417,6 +491,367 @@ function createRealmServer(options = {}) {
       encounter: sanitizeText(message.encounter || '', 24) || null,
       interior: sanitizeText(message.interior || '', 40) || null,
     };
+    const ending = publicAuditorEnding(client.character);
+    if (ending) state.auditorEnding = ending;
+    return state;
+  }
+
+  function recordAuditorEndingForClient(client, message) {
+    const result = accountRegistry.recordAuditorEnding(client.accountId, message.ending || message.id || message.choice);
+    if (!result.ok) {
+      send(client, { t: 'auditor:ending:error', error: result.error });
+      return result;
+    }
+    client.character = result.character;
+    send(client, { t: 'auditor:ending', ending: result.ending, character: result.character });
+    return result;
+  }
+
+  function issuePvpChallenge(client, message) {
+    const targetPeerId = sanitizeText(message.to || '', 80);
+    const target = findClientByPeerId(targetPeerId);
+    if (!target || !target.accountId || !target.character) {
+      return sendPvpError(client, null, 'pvp_peer_unavailable', 'PvP challenge target is not available.');
+    }
+    if (target.id === client.id) {
+      return sendPvpError(client, null, 'pvp_invalid_challenge', 'PvP challenge target must be another player.');
+    }
+
+    const duelId = createPvpDuelId();
+    const duel = {
+      id: duelId,
+      status: 'pending',
+      areaId: sanitizeText(message.areaId || 'battlefield', 80),
+      createdAt: now(),
+      acceptedAt: 0,
+      finishedAt: 0,
+      sequence: 0,
+      turn: 1,
+      actorPeerId: client.id,
+      turnDeadlineAt: 0,
+      challengerPeerId: client.id,
+      challengedPeerId: target.id,
+      participants: {
+        a: createPvpParticipant(client, 'a'),
+        b: createPvpParticipant(target, 'b'),
+      },
+      seenSubmissionIds: new Set(),
+      seenActorTurns: new Set(),
+      result: null,
+    };
+    pvpDuels.set(duelId, duel);
+
+    const challenge = {
+      t: 'rc:pvp:challenge',
+      duelId,
+      from: client.id,
+      to: target.id,
+      areaId: duel.areaId,
+    };
+    send(client, {
+      ...challenge,
+      t: 'rc:pvp:challenge:created',
+    });
+    send(target, challenge);
+    return { ok: true, duelId, challenge };
+  }
+
+  function acceptPvpChallenge(client, duelId) {
+    const duel = pvpDuels.get(sanitizeText(duelId || '', 96));
+    if (!duel) return sendPvpError(client, duelId, 'pvp_duel_unknown', 'PvP duel is unknown.');
+    if (duel.status === 'finished') return sendPvpError(client, duel.id, 'pvp_duel_finished', 'PvP duel is already finished.');
+    if (duel.status !== 'pending') return sendPvpError(client, duel.id, 'pvp_duel_not_pending', 'PvP duel is not awaiting acceptance.');
+    if (client.id !== duel.challengedPeerId) return sendPvpError(client, duel.id, 'pvp_not_participant', 'Only the challenged player can accept this duel.');
+
+    duel.status = 'active';
+    duel.acceptedAt = now();
+    duel.sequence += 1;
+    duel.turn = 1;
+    duel.actorPeerId = duel.challengerPeerId;
+    duel.turnDeadlineAt = now() + pvpTurnTimeoutMs;
+
+    const accepted = {
+      t: 'rc:pvp:accept',
+      duelId: duel.id,
+      sequence: duel.sequence,
+      areaId: duel.areaId,
+      challengerPeerId: duel.challengerPeerId,
+      challengedPeerId: duel.challengedPeerId,
+      from: client.id,
+      turn: duel.turn,
+      actorPeerId: duel.actorPeerId,
+      deadlineAt: duel.turnDeadlineAt,
+      state: pvpPublicState(duel),
+    };
+    sendPvpAcceptFrame(duel, duel.challengerPeerId, duel.challengedPeerId, accepted);
+    sendPvpAcceptFrame(duel, duel.challengedPeerId, duel.challengerPeerId, accepted);
+    return { ok: true, duelId: duel.id, accepted };
+  }
+
+  function declinePvpChallenge(client, duelId, reason) {
+    const duel = pvpDuels.get(sanitizeText(duelId || '', 96));
+    if (!duel) return sendPvpError(client, duelId, 'pvp_duel_unknown', 'PvP duel is unknown.');
+    if (client.id !== duel.challengedPeerId) return sendPvpError(client, duel.id, 'pvp_not_participant', 'Only the challenged player can decline this duel.');
+    if (duel.status !== 'pending') return sendPvpError(client, duel.id, 'pvp_duel_not_pending', 'PvP duel is not awaiting a decline.');
+
+    duel.status = 'finished';
+    duel.finishedAt = now();
+    duel.result = {
+      t: 'rc:pvp:decline',
+      duelId: duel.id,
+      from: client.id,
+      reason: sanitizeText(reason || 'declined', 40) || 'declined',
+    };
+    sendPvpParticipants(duel, duel.result);
+    return { ok: true, duelId: duel.id, result: duel.result };
+  }
+
+  function acceptPvpTurnSubmission(client, message) {
+    const duelId = sanitizeText(message.duelId || '', 96);
+    const duel = pvpDuels.get(duelId);
+    if (!duel) return sendPvpError(client, duelId, 'pvp_duel_unknown', 'PvP duel is unknown.');
+    if (!pvpParticipantByPeer(duel, client.id)) {
+      return sendPvpError(client, duel.id, 'pvp_not_participant', 'Only duel participants can submit turns.');
+    }
+    if (duel.status === 'finished') return sendPvpError(client, duel.id, 'pvp_duel_finished', 'PvP duel is already finished.');
+    if (duel.status !== 'active') return sendPvpError(client, duel.id, 'pvp_duel_not_active', 'PvP duel is not active.');
+
+    const submissionId = sanitizeText(message.submissionId || message.clientTurnId || '', 96);
+    if (!submissionId) return sendPvpError(client, duel.id, 'invalid_turn_submission', 'PvP turn submission id is required.');
+    const submissionKey = client.id + '|' + submissionId;
+    if (duel.seenSubmissionIds.has(submissionKey)) {
+      return sendPvpError(client, duel.id, 'turn_submission_replayed', 'PvP turn submission has already been accepted.');
+    }
+
+    const submittedTurn = Math.trunc(Number(message.turn));
+    if (!Number.isFinite(submittedTurn) || submittedTurn < 1) {
+      return sendPvpError(client, duel.id, 'invalid_turn_submission', 'PvP turn number is required.');
+    }
+    if (submittedTurn !== duel.turn) {
+      const code = submittedTurn < duel.turn ? 'stale_turn_submission' : 'pvp_wrong_turn';
+      return sendPvpError(client, duel.id, code, 'PvP turn submission does not match the server turn.', {
+        expectedTurn: duel.turn,
+      });
+    }
+    if (client.id !== duel.actorPeerId) {
+      return sendPvpError(client, duel.id, 'pvp_wrong_actor', 'It is not this player\'s PvP turn.', {
+        expectedActorPeerId: duel.actorPeerId,
+      });
+    }
+
+    const action = sanitizeText(message.action || '', 24);
+    if (!PVP_TURN_ACTIONS.has(action)) {
+      return sendPvpError(client, duel.id, 'invalid_turn_action', 'Unsupported PvP turn action.');
+    }
+
+    const actorTurnKey = client.id + '|' + submittedTurn;
+    if (duel.seenActorTurns.has(actorTurnKey)) {
+      return sendPvpError(client, duel.id, 'turn_submission_replayed', 'PvP actor turn has already been accepted.');
+    }
+
+    const result = resolvePvpTurn(duel, client.id, submittedTurn, action, submissionId);
+    // Only consume the replay/turn slot once the action actually resolved. A rejected
+    // submission (e.g. Focus with insufficient stamina, server.js resolvePvpTurn) must NOT
+    // lock the actor out of the turn — otherwise they could never submit a valid action for
+    // this turn and would lose on the turn timeout.
+    if (result && result.ok) {
+      duel.seenSubmissionIds.add(submissionKey);
+      duel.seenActorTurns.add(actorTurnKey);
+    }
+    return result;
+  }
+
+  function resolvePvpTurn(duel, actorPeerId, submittedTurn, action, submissionId) {
+    const actor = pvpParticipantByPeer(duel, actorPeerId);
+    const target = pvpOpponent(duel, actorPeerId);
+    const events = [];
+
+    if (action === 'flee') {
+      return finishPvpDuel(duel, {
+        winnerPeerId: target.peerId,
+        loserPeerId: actor.peerId,
+        reason: 'forfeit',
+        action,
+        submissionId,
+      });
+    }
+
+    if (action === 'guard') {
+      actor.guarding = true;
+      actor.sta = Math.min(actor.maxSta, actor.sta + PVP_DUEL_DEFAULTS.guardRegen);
+      events.push({ type: 'guard', actorPeerId: actor.peerId, stamina: actor.sta });
+    } else {
+      let damage = actor.attack;
+      if (action === 'focus') {
+        if (actor.sta < PVP_DUEL_DEFAULTS.focusCost) {
+          return sendPvpError(findClientByPeerId(actor.peerId), duel.id, 'pvp_insufficient_stamina', 'Not enough server-authoritative stamina for Focus.');
+        }
+        actor.sta -= PVP_DUEL_DEFAULTS.focusCost;
+        damage = PVP_DUEL_DEFAULTS.focusDamage;
+      }
+      if (target.guarding) damage = Math.max(1, Math.ceil(damage / 2));
+      target.guarding = false;
+      target.hp = Math.max(0, target.hp - damage);
+      events.push({ type: 'damage', actorPeerId: actor.peerId, targetPeerId: target.peerId, amount: damage, action });
+    }
+
+    if (target.hp <= 0) {
+      return finishPvpDuel(duel, {
+        winnerPeerId: actor.peerId,
+        loserPeerId: target.peerId,
+        reason: 'defeat',
+        action,
+        submissionId,
+      });
+    }
+
+    duel.sequence += 1;
+    duel.turn += 1;
+    duel.actorPeerId = target.peerId;
+    duel.turnDeadlineAt = now() + pvpTurnTimeoutMs;
+
+    const frame = {
+      t: 'rc:pvp:turn:state',
+      duelId: duel.id,
+      sequence: duel.sequence,
+      turn: submittedTurn,
+      actorPeerId: actor.peerId,
+      action,
+      submissionId,
+      events,
+      nextTurn: duel.turn,
+      nextActorPeerId: duel.actorPeerId,
+      deadlineAt: duel.turnDeadlineAt,
+      state: pvpPublicState(duel),
+    };
+    sendPvpParticipants(duel, frame);
+    return { ok: true, duelId: duel.id, turn: frame };
+  }
+
+  function finishPvpDuel(duel, result) {
+    if (duel.status === 'finished') return { ok: true, duelId: duel.id, result: duel.result };
+    duel.status = 'finished';
+    duel.finishedAt = now();
+    duel.sequence += 1;
+    duel.result = {
+      t: 'rc:pvp:result',
+      duelId: duel.id,
+      sequence: duel.sequence,
+      turn: duel.turn,
+      winner: result.winnerPeerId,
+      loser: result.loserPeerId,
+      reason: result.reason,
+      action: result.action || null,
+      submissionId: result.submissionId || null,
+      state: pvpPublicState(duel),
+    };
+    sendPvpParticipants(duel, duel.result);
+    return { ok: true, duelId: duel.id, result: duel.result };
+  }
+
+  function sweepPvpTurnTimeouts() {
+    let resolved = 0;
+    const t = now();
+    for (const duel of pvpDuels.values()) {
+      if (duel.status !== 'active' || !duel.turnDeadlineAt || duel.turnDeadlineAt >= t) continue;
+      const actor = pvpParticipantByPeer(duel, duel.actorPeerId);
+      const opponent = pvpOpponent(duel, duel.actorPeerId);
+      if (!actor || !opponent) continue;
+      finishPvpDuel(duel, {
+        winnerPeerId: opponent.peerId,
+        loserPeerId: actor.peerId,
+        reason: 'timeout',
+      });
+      resolved += 1;
+    }
+    return resolved;
+  }
+
+  function createPvpParticipant(client, slot) {
+    const stats = client.character && client.character.stats || {};
+    const vigor = finiteNumber(stats.vigor);
+    const endurance = finiteNumber(stats.endurance);
+    const strength = finiteNumber(stats.strength);
+    const hp = PVP_DUEL_DEFAULTS.hp + vigor * 8;
+    const sta = PVP_DUEL_DEFAULTS.stamina + endurance * 5;
+    return {
+      slot,
+      peerId: client.id,
+      accountId: client.accountId,
+      characterId: client.character.id,
+      name: client.name,
+      hp,
+      maxHp: hp,
+      sta,
+      maxSta: sta,
+      attack: PVP_DUEL_DEFAULTS.attack + strength * 2,
+      guarding: false,
+    };
+  }
+
+  function pvpPublicState(duel) {
+    const participants = {};
+    for (const participant of Object.values(duel.participants)) {
+      participants[participant.peerId] = {
+        slot: participant.slot,
+        peerId: participant.peerId,
+        characterId: participant.characterId,
+        name: participant.name,
+        hp: participant.hp,
+        maxHp: participant.maxHp,
+        sta: participant.sta,
+        maxSta: participant.maxSta,
+        guarding: participant.guarding,
+      };
+    }
+    return {
+      status: duel.status,
+      turn: duel.turn,
+      actorPeerId: duel.actorPeerId,
+      deadlineAt: duel.turnDeadlineAt,
+      participants,
+    };
+  }
+
+  function pvpParticipantByPeer(duel, peerId) {
+    return Object.values(duel.participants).find((participant) => participant.peerId === peerId) || null;
+  }
+
+  function pvpOpponent(duel, peerId) {
+    return Object.values(duel.participants).find((participant) => participant.peerId !== peerId) || null;
+  }
+
+  function sendPvpParticipants(duel, obj) {
+    for (const participant of Object.values(duel.participants)) {
+      const target = findClientByPeerId(participant.peerId);
+      if (target) send(target, obj);
+    }
+  }
+
+  function sendPvpAcceptFrame(duel, targetPeerId, opponentPeerId, obj) {
+    const target = findClientByPeerId(targetPeerId);
+    if (target) send(target, { ...obj, from: opponentPeerId, to: targetPeerId });
+  }
+
+  function sendPvpError(client, duelId, code, message, extra) {
+    const result = blockError(code, message);
+    send(client, { t: 'rc:pvp:error', duelId: duelId || null, error: result.error, ...(extra || {}) });
+    return result;
+  }
+
+  function findClientByPeerId(peerId) {
+    for (const client of clients) {
+      if (client.id === peerId) return client;
+    }
+    return null;
+  }
+
+  function createPvpDuelId() {
+    let duelId;
+    do {
+      duelId = 'duel-' + crypto.randomBytes(8).toString('hex');
+    } while (pvpDuels.has(duelId));
+    return duelId;
   }
 
   function loadLedger() {
@@ -451,7 +886,7 @@ function createRealmServer(options = {}) {
   }
 
   function acceptBlock() {
-    return blockError('client_block_submission_disabled', 'Connected realms only accept server-issued mining work.');
+    return blockError(CHAINWELL_BLOCK_RULES.rejectionCodes.rawClientBlock, 'Connected realms only accept server-issued mining work.');
   }
 
   function appendBlock(block) {
@@ -463,6 +898,11 @@ function createRealmServer(options = {}) {
   }
 
   function issueRewardMiningWork(client, source) {
+    if (source && source.type === 'enemy') {
+      const result = blockError('invalid_reward_source', 'Direct enemy reward claims require a validated solo segment outcome.');
+      send(client, { t: 'mine:error', error: result.error });
+      return result;
+    }
     const reward = resolveRewardSource(source);
     if (!reward.ok) {
       send(client, { t: 'mine:error', error: reward.error });
@@ -474,7 +914,14 @@ function createRealmServer(options = {}) {
       send(client, { t: 'mine:error', error: result.error });
       return result;
     }
-    return issueMiningCandidate(client, (candidateId) => ({
+    // #89: bound unproven real-time reward claims per character (the kill itself is not
+    // server-verified here). Without this, a client can replay kill claims to farm RUNE.
+    const rate = checkRewardRate(client.character.id);
+    if (!rate.ok) {
+      send(client, { t: 'mine:error', error: rate.error });
+      return rate;
+    }
+    const issued = issueMiningCandidate(client, (candidateId) => ({
       to: client.character.address,
       amt: reward.amt,
       note: reward.note,
@@ -495,6 +942,27 @@ function createRealmServer(options = {}) {
         seasonId,
       },
     }));
+    // Count only successfully issued candidates toward the window (a failed issue mints nothing).
+    if (issued.ok) recordRewardIssue(client.character.id);
+    return issued;
+  }
+
+  // #89 helpers: a per-character sliding-window cap on issued reward candidates.
+  function checkRewardRate(characterId) {
+    if (!(rewardRateMax > 0)) return { ok: true };
+    const cutoff = now() - rewardRateWindowMs;
+    const times = (rewardIssueTimes.get(characterId) || []).filter((t) => t > cutoff);
+    rewardIssueTimes.set(characterId, times);
+    if (times.length >= rewardRateMax) {
+      return blockError('reward_rate_limited', 'Too many reward claims in a short window — slow down.');
+    }
+    return { ok: true };
+  }
+
+  function recordRewardIssue(characterId) {
+    const times = rewardIssueTimes.get(characterId) || [];
+    times.push(now());
+    rewardIssueTimes.set(characterId, times);
   }
 
   function issueSpendMiningWork(client, source) {
@@ -658,21 +1126,29 @@ function createRealmServer(options = {}) {
 
   function acceptMinedWork(client, candidateId, block) {
     cleanupMiningCandidates();
+    const replay = settledMiningCandidates.get(candidateId);
+    if (replay && replay.accountId === client.accountId && replay.characterId === client.character.id) {
+      const result = blockError(CHAINWELL_BLOCK_RULES.rejectionCodes.replayedCandidate, 'Mining candidate has already been accepted.');
+      send(client, { t: 'mine:error', error: result.error, chain: masterChain });
+      return result;
+    }
+
     const candidate = pendingMining.get(candidateId);
-    if (!candidate || candidate.characterId !== client.character.id) {
-      const result = blockError('unknown_mining_candidate', 'Mining candidate is unknown or no longer valid.');
+    if (!candidate || candidate.accountId !== client.accountId || candidate.characterId !== client.character.id) {
+      const result = blockError(CHAINWELL_BLOCK_RULES.rejectionCodes.unknownCandidate, 'Mining candidate is unknown or no longer valid.');
       send(client, { t: 'mine:error', error: result.error, chain: masterChain });
       return result;
     }
 
     if (!matchesMiningCandidate(candidate.block, block)) {
-      const result = blockError('invalid_mining_candidate', 'Submitted block does not match the server-issued mining candidate.');
+      const result = blockError(CHAINWELL_BLOCK_RULES.rejectionCodes.invalidCandidate, 'Submitted block does not match the server-issued mining candidate.');
       send(client, { t: 'mine:error', error: result.error, chain: masterChain });
       return result;
     }
 
     const tip = masterChain[masterChain.length - 1];
-    const result = validateBlockCandidate(block, tip, { sha256, difficulty, now, futureSkewMs });
+    const canonicalBlock = canonicalMinedBlock(candidate.block, block);
+    const result = validateBlockCandidate(canonicalBlock, tip, { sha256, difficulty, now, futureSkewMs });
     if (!result.ok) {
       if (isStaleCandidateError(result.error.code)) pendingMining.delete(candidateId);
       send(client, { t: 'mine:error', error: result.error, chain: masterChain });
@@ -680,12 +1156,18 @@ function createRealmServer(options = {}) {
     }
 
     pendingMining.delete(candidateId);
-    const accepted = appendBlock(block);
-    accountRegistry.applyAcceptedBlock(block);
+    settledMiningCandidates.set(candidateId, {
+      accountId: candidate.accountId,
+      characterId: candidate.characterId,
+      blockHash: canonicalBlock.hash,
+      settledAt: now(),
+    });
+    const accepted = appendBlock(canonicalBlock);
+    accountRegistry.applyAcceptedBlock(canonicalBlock);
     const currentCharacter = accountRegistry.getCharacterState(client.accountId);
     if (currentCharacter.ok) client.character = currentCharacter.character;
-    send(client, { t: 'mine:accepted', block });
-    broadcast({ t: 'block', block }, client);
+    send(client, { t: 'mine:accepted', block: canonicalBlock });
+    broadcast({ t: 'block', block: canonicalBlock }, client);
     return accepted;
   }
 
@@ -701,6 +1183,9 @@ function createRealmServer(options = {}) {
     for (const [candidateId, candidate] of pendingMining) {
       if (candidate.createdAt < cutoff) pendingMining.delete(candidateId);
     }
+    for (const [candidateId, candidate] of settledMiningCandidates) {
+      if (candidate.settledAt < cutoff) settledMiningCandidates.delete(candidateId);
+    }
   }
 
   function isStaleCandidateError(code) {
@@ -713,6 +1198,17 @@ function createRealmServer(options = {}) {
       submittedBlock.prev === candidateBlock.prev &&
       submittedBlock.time === candidateBlock.time &&
       JSON.stringify(submittedBlock.txs) === JSON.stringify(candidateBlock.txs);
+  }
+
+  function canonicalMinedBlock(candidateBlock, submittedBlock) {
+    return {
+      index: candidateBlock.index,
+      prev: candidateBlock.prev,
+      time: candidateBlock.time,
+      txs: clone(candidateBlock.txs),
+      nonce: submittedBlock.nonce,
+      hash: submittedBlock.hash,
+    };
   }
 
   function resolveRewardSource(source) {
@@ -877,12 +1373,30 @@ function createRealmServer(options = {}) {
   }
 
   function sweepStaleClients() {
+    sweepPvpTurnTimeouts();
     const cutoff = now() - staleThresholdMs;
     for (const client of clients) {
       if (client.id && client.lastStateAt && client.lastStateAt < cutoff) {
         broadcast({ t: 'leave', id: client.id }, client);
         client.last = {};
         client.lastStateAt = 0;
+      }
+    }
+  }
+
+  function finishPvpDuelsForDroppedClient(client) {
+    if (!client || !client.id) return;
+    for (const duel of pvpDuels.values()) {
+      if (duel.status !== 'active' && duel.status !== 'pending') continue;
+      const dropped = pvpParticipantByPeer(duel, client.id);
+      if (!dropped) continue;
+      const opponent = pvpOpponent(duel, client.id);
+      if (opponent) {
+        finishPvpDuel(duel, {
+          winnerPeerId: opponent.peerId,
+          loserPeerId: dropped.peerId,
+          reason: 'disconnect',
+        });
       }
     }
   }
@@ -914,6 +1428,7 @@ function createRealmServer(options = {}) {
     acceptBlock,
     getChain,
     getAccountRegistry: () => accountRegistry,
+    sweepPvpTurnTimeouts,
     listen,
     close,
   };
@@ -1212,6 +1727,38 @@ function createAccountRegistry(options = {}) {
     return { ok: true, character: clone(found.character) };
   }
 
+  function recordAuditorEnding(accountId, endingId, at = now()) {
+    const found = findCurrentCharacter(accountId);
+    if (!found) return accountError('unknown_character', 'Account has no character for this season.');
+    const ending = resolveAuditorEnding(endingId);
+    if (!ending) return accountError('invalid_auditor_ending', 'Auditor ending must be A, B, or C.');
+
+    normalizeCharacterState(found.character);
+    if (found.character.auditorEnding) {
+      if (found.character.auditorEnding.id !== ending.id) {
+        return accountError('auditor_ending_locked', 'Auditor ending is permanent for this account-bound character.');
+      }
+      return {
+        ok: true,
+        ending: publicAuditorEnding(found.character),
+        character: clone(found.character),
+        alreadyRecorded: true,
+      };
+    }
+
+    found.character.auditorEnding = createAuditorEndingRecord(ending, at);
+    found.character.endgameUnlocked = !!ending.endgame;
+    if (ending.sigil) mergeCollection(found.character.collection, { sigils: [ending.sigil] });
+    found.character.lastSeenAt = at;
+    saveRegistry();
+    return {
+      ok: true,
+      ending: publicAuditorEnding(found.character),
+      character: clone(found.character),
+      alreadyRecorded: false,
+    };
+  }
+
   function getCharacterState(accountId, idSeason = seasonId) {
     const account = registry.accounts[accountId];
     if (!account || !account.characters || !account.characters[idSeason]) {
@@ -1224,6 +1771,9 @@ function createAccountRegistry(options = {}) {
   function canSellCharacter(accountId, at = now(), characterId) {
     const found = characterId ? findCharacterById(characterId) : findCurrentCharacter(accountId);
     if (!found || found.account.id !== accountId) return accountError('unknown_character', 'Seller does not own that character.');
+    if (hasRecordedSaleInSeason(found.account, found.character.seasonId)) {
+      return accountError('season_sale_limit_reached', 'Account already sold a character this season.');
+    }
     const season = registry.seasons[found.character.seasonId];
     if (isSeasonOpen(season, at)) return accountError('season_open', 'Cannot sell while the season window is open.');
     if (!isSeasonComplete(found.character, season)) {
@@ -1349,6 +1899,8 @@ function createAccountRegistry(options = {}) {
       mandatoryTasks: {},
       collection: clone(carry.collection || emptyCollection()),
       stats: clone(carry.stats || zeroStats()),
+      auditorEnding: null,
+      endgameUnlocked: false,
       carry: {
         mode: carry.mode,
         sourceCharacterId: carry.sourceCharacterId || null,
@@ -1469,6 +2021,13 @@ function createAccountRegistry(options = {}) {
     return !!character.seasonComplete && isWithinSeason(character.completedAt, season) && allMandatoryTasksComplete(character, season);
   }
 
+  function hasRecordedSaleInSeason(account, idSeason) {
+    normalizeAccountState(account);
+    return Object.values(account.characters || {}).some((character) =>
+      character && character.seasonId === idSeason && !!character.sale
+    );
+  }
+
   function applyCharacterProgress(character, progress) {
     normalizeCharacterState(character);
     if (progress.stats && typeof progress.stats === 'object') {
@@ -1543,6 +2102,7 @@ function createAccountRegistry(options = {}) {
     isCharacterSeasonComplete,
     getCharacterState,
     recordCharacterProgress,
+    recordAuditorEnding,
     recordCharacterSale,
     canSellCharacter,
     characterStatus,
@@ -1639,9 +2199,39 @@ function normalizeCharacterState(character) {
   if (!character.mandatoryTasks || typeof character.mandatoryTasks !== 'object' || Array.isArray(character.mandatoryTasks)) character.mandatoryTasks = {};
   character.collection = normalizeCollection(character.collection);
   character.stats = zeroStats(character.stats);
+  if (character.auditorEnding && typeof character.auditorEnding === 'object') {
+    const ending = resolveAuditorEnding(character.auditorEnding.id);
+    character.auditorEnding = ending ? createAuditorEndingRecord(ending, character.auditorEnding.recordedAt) : null;
+  } else {
+    character.auditorEnding = null;
+  }
+  character.endgameUnlocked = !!(character.auditorEnding && character.auditorEnding.endgame);
   if (!character.carry || typeof character.carry !== 'object' || Array.isArray(character.carry)) {
     character.carry = { mode: 'legacy', sourceCharacterId: null, sourceSeasonId: null, statsReset: false };
   }
+}
+
+function resolveAuditorEnding(id) {
+  const key = sanitizeText(id, 8).toUpperCase();
+  return AUDITOR_ENDING_BY_ID.get(key) || null;
+}
+
+function createAuditorEndingRecord(ending, recordedAt) {
+  return {
+    id: ending.id,
+    key: ending.key,
+    title: ending.title,
+    recordedAt: timestampOr(recordedAt, 0),
+    public: true,
+    endgame: !!ending.endgame,
+    sigil: ending.sigil || null,
+  };
+}
+
+function publicAuditorEnding(character) {
+  if (!character || !character.auditorEnding) return null;
+  const ending = resolveAuditorEnding(character.auditorEnding.id);
+  return ending ? createAuditorEndingRecord(ending, character.auditorEnding.recordedAt) : null;
 }
 
 function zeroStats(seed = {}) {
@@ -1799,6 +2389,7 @@ if (require.main === module) {
 
 module.exports = {
   AUTHORITY_TIERS,
+  CHAINWELL_BLOCK_RULES,
   createRealmServer,
   createAccountRegistry,
   decodeFrame,

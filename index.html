@@ -145,6 +145,7 @@
     #quest{top:96px}
     #start h1{font-size:34px}
   }
+  abbr{cursor:help;text-decoration:none;border-bottom:1px dotted var(--gold)}
 </style>
 </head>
 <body>
@@ -155,7 +156,7 @@
   <div id="hp" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="120" aria-valuemax="120" aria-label="Health"><i></i></div>
   <div class="lab">Stamina</div>
   <div id="sta" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="100" aria-valuemax="100" aria-label="Stamina"><i></i></div>
-  <div class="statline">VGR <b id="sVgr">10</b> / END <b id="sEnd">10</b> / STR <b id="sStr">10</b> / DMG <b id="sDmg">34</b></div>
+  <div class="statline"><abbr title="Vigor">VGR</abbr> <b id="sVgr">10</b> / <abbr title="Endurance">END</abbr> <b id="sEnd">10</b> / <abbr title="Strength">STR</abbr> <b id="sStr">10</b> / <abbr title="Damage">DMG</abbr> <b id="sDmg">34</b></div>
   <div id="runes" class="statline"></div>
 </div>
 
@@ -212,7 +213,7 @@
     <button class="statbtn" data-stat="endurance"><span>Endurance <small>+ max stamina</small></span><span class="cost" id="cEnd"></span></button>
     <button class="statbtn" data-stat="strength"><span>Strength <small>+ attack damage</small></span><span class="cost" id="cStr"></span></button>
     <div class="itemlist" id="itemlist"></div>
-    <button id="lvclose">Leave Hearthlight (G)</button>
+    <button id="lvclose">Leave Hearthlight <kbd>G</kbd></button>
   </div>
 </div>
 
@@ -228,7 +229,7 @@
     </div>
     <div id="wlist" class="wlist"></div>
     <div class="econnote">Direct purchase, no loot boxes. Gold buys cosmetics only. Each mock wSOL split is 50% burn, 35% marketing, 15% ops fee. Devnet mock only.</div>
-    <button id="wclose">Close (B)</button>
+    <button id="wclose">Close <kbd>B</kbd></button>
   </div>
 </div>
 

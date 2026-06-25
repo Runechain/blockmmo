@@ -1,5 +1,5 @@
 # RUNECHAIN — zero-dependency Node app (serves the game client + WebSocket MMO)
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 # no dependencies to install — just copy the runtime source the client loads:
@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json ./
 COPY server.js ./
 COPY index.html ./
+COPY claim.html ./
 COPY game/ ./game/
 COPY engine/ ./engine/
 COPY assets/pixel/ ./assets/pixel/

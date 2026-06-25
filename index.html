@@ -145,6 +145,7 @@
     #quest{top:96px}
     #start h1{font-size:34px}
   }
+  abbr{cursor:help;text-decoration:none;border-bottom:1px dotted var(--gold)}
 </style>
 </head>
 <body>
@@ -155,7 +156,7 @@
   <div id="hp" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="120" aria-valuemax="120" aria-label="Health"><i></i></div>
   <div class="lab">Stamina</div>
   <div id="sta" class="bar" role="progressbar" aria-valuemin="0" aria-valuenow="100" aria-valuemax="100" aria-label="Stamina"><i></i></div>
-  <div class="statline">VGR <b id="sVgr">10</b> / END <b id="sEnd">10</b> / STR <b id="sStr">10</b> / DMG <b id="sDmg">34</b></div>
+  <div class="statline"><abbr title="Vigor">VGR</abbr> <b id="sVgr">10</b> / <abbr title="Endurance">END</abbr> <b id="sEnd">10</b> / <abbr title="Strength">STR</abbr> <b id="sStr">10</b> / <abbr title="Damage">DMG</abbr> <b id="sDmg">34</b></div>
   <div id="runes" class="statline"></div>
 </div>
 
@@ -212,7 +213,7 @@
     <button class="statbtn" data-stat="endurance"><span>Endurance <small>+ max stamina</small></span><span class="cost" id="cEnd"></span></button>
     <button class="statbtn" data-stat="strength"><span>Strength <small>+ attack damage</small></span><span class="cost" id="cStr"></span></button>
     <div class="itemlist" id="itemlist"></div>
-    <button id="lvclose">Leave Hearthlight (G)</button>
+    <button id="lvclose">Leave Hearthlight <kbd>G</kbd></button>
   </div>
 </div>
 
@@ -228,7 +229,7 @@
     </div>
     <div id="wlist" class="wlist"></div>
     <div class="econnote">Direct purchase, no loot boxes. Gold buys cosmetics only. Each mock wSOL split is 50% burn, 35% marketing, 15% ops fee. Devnet mock only.</div>
-    <button id="wclose">Close (B)</button>
+    <button id="wclose">Close <kbd>B</kbd></button>
   </div>
 </div>
 
@@ -1207,7 +1208,7 @@ function refreshGrace(){
   document.getElementById('lvBal').textContent=sp.toFixed(2);
   document.getElementById('lvCost').textContent=cost;
   for(const id of ['cVigor','cEnd','cStr'])document.getElementById(id).textContent=cost+' R';
-  document.querySelectorAll('.statbtn').forEach(b=>b.disabled=sp<cost);
+  document.querySelectorAll('.statbtn').forEach(b=>{ b.disabled=sp<cost; b.title=b.disabled?'Not enough confirmed RUNE':''; });
   renderRelics(sp);
 }
 function doLevel(stat){
@@ -1229,9 +1230,9 @@ function renderRelics(sp){
     const row=document.createElement('div'); row.className='itemrow';
     const icon=ASSETS[it.icon]&&ASSETS[it.icon].src;
     row.innerHTML=(icon?'<img class="itemicon" src="'+esc(icon)+'" alt="">':'<span></span>')+
-      '<span><b>'+esc(it.name)+'</b><small>'+esc(it.desc)+'</small></span><button>'+(own?'Forged':it.price+' R')+'</button>';
+      '<span><b>'+esc(it.name)+'</b><small>'+esc(it.desc)+'</small></span><button aria-label="'+(own?'Forged '+esc(it.name):'Forge '+esc(it.name)+' for '+it.price+' RUNE')+'">'+(own?'Forged':it.price+' R')+'</button>';
     const btn=row.querySelector('button');
-    btn.disabled=own||sp<it.price; btn.onclick=()=>forgeRelic(it);
+    btn.disabled=own||sp<it.price; if(btn.disabled) btn.title=own?'Already forged':'Not enough confirmed RUNE'; else btn.title=''; btn.onclick=()=>forgeRelic(it);
     list.appendChild(row);
   }
 }
@@ -1264,13 +1265,16 @@ function refreshWardrobe(){
     if(s.secret&&!own)continue; // exploration-only cosmetic: hidden from the shop until earned
     const eq=player.skinId===s.id;
     const row=document.createElement('div'); row.className='skin'+(eq?' equipped':'');
-    row.innerHTML='<span class="sw" style="background:'+s.body+';box-shadow:inset 0 0 0 5px '+s.trim+'"></span><span class="sn">'+esc(s.name)+'</span><button class="skinbtn">'+(eq?'Equipped':own?'Equip':s.price+' G')+'</button>';
+    row.innerHTML='<span class="sw" style="background:'+s.body+';box-shadow:inset 0 0 0 5px '+s.trim+'"></span><span class="sn">'+esc(s.name)+'</span><button class="skinbtn" aria-label="'+(eq?'Equipped '+esc(s.name):own?'Equip '+esc(s.name):'Buy '+esc(s.name)+' for '+s.price+' Gold')+'">'+(eq?'Equipped':own?'Equip':s.price+' G')+'</button>';
     const btn=row.querySelector('button');
     btn.disabled=eq||(!own&&spend<s.price);
+    if(btn.disabled) btn.title=eq?'Already equipped':(!own&&spend<s.price?'Not enough Gold':''); else btn.title='';
     btn.onclick=()=>buySkin(s);
     list.appendChild(row);
   }
-  document.getElementById('wConv').disabled=Chain.spendable(valueAddress(),'RUNE')<=0.0001;
+  const convBtn=document.getElementById('wConv');
+  convBtn.disabled=Chain.spendable(valueAddress(),'RUNE')<=0.0001;
+  convBtn.title=convBtn.disabled?'Not enough RUNE to convert':'';
 }
 function buySkin(s){
   if(!ownedSkin(s.id)){

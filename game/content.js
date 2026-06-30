@@ -348,7 +348,12 @@ const SKINS = [
   // never power, never purchasable. See AREA1_LORE 'unrecorded-vault' + index.html lore wiring.
   { id:'unrecorded', name:'Unrecorded Pilgrim', price:0, secret:true, body:'#2b2622', trim:'#b9a06a', skin:'#bfae8c' },
   // Found by discovering the Sealed Cellar interior (a hidden building off the plaza). Curiosity-only.
-  { id:'cellar-warden', name:'Cellar Warden', price:0, secret:true, body:'#20262a', trim:'#6f93a8', skin:'#b9b2a0' }
+  { id:'cellar-warden', name:'Cellar Warden', price:0, secret:true, body:'#20262a', trim:'#6f93a8', skin:'#b9b2a0' },
+  { id:'fork-pilgrim', name:'Fork Pilgrim', price:0, secret:true, body:'#2a3028', trim:'#9ab89a', skin:'#b9a68a' },
+  { id:'auditor-robe', name:"Auditor's Robe", price:0, secret:true, body:'#c8c2b4', trim:'#3a3630', skin:'#e0d8cc' },
+  { id:'void-skin', name:'Void-Skin', price:0, secret:true, body:'#0a0a10', trim:'#2a2a3a', skin:'#1a1a26' },
+  { id:'scribe-robes', name:"Scribe's Robes", price:0, secret:true, body:'#c8c2b4', trim:'#5a5a7a', skin:'#c0b0d4' },
+  { id:'canon-clerk', name:'Canon Clerk', price:0, secret:true, body:'#3a3028', trim:'#d4a83e', skin:'#c8a882' }
 ];
 
 /* ---- Area 1 — off-path lore (issue #25, world & content lane) ------------- */
@@ -431,6 +436,62 @@ const AREA1_PUZZLES=[
       'The four writs braid into a single cord and burn cold. The succession is closed.',
       'Codex: "Every debt names another. Trace far enough and you find a name that owes only the Chainwell."'
     ] }
+];
+
+const AREA2_LORE=[
+  { id:'ancestor-cairn', title:'The Ancestor Stack', x:900, y:-260, kind:'cairn',
+    lines:[
+      'A stack of crystallized debt-tablets, piled where no road leads north of the Vault.',
+      '"We came here to contest our names. The Chainwell recorded the contestation and charged us for the filing."'],
+    codex:'Inheritance is not a gift. It is a documented obligation with compound interest.' },
+  { id:'canon-founding-stone', title:'Canon Founding Inscription', x:1242, y:-340, kind:'stone',
+    lines:[
+      'An amber-lit inscription deep in the Canon passage. The lettering is precise and careful.',
+      '"First record: solvent. Every subsequent record: inherited deficit. The Chainwell notes the pattern but cannot break it."'],
+    codex:'The first debt was recorded correctly. Every generation since has added a digit.' },
+  { id:'schism-mirror-pool', title:'The Schism Reflection', x:1384, y:200, kind:'water',
+    lines:[
+      'A still pool at the edge of the Schism passage. Your reflection writes DEDROCER before you do.',
+      '"You are already Contested. The pool read you before you arrived. It reads everyone that way."'],
+    codex:'The Schism does not create contradiction. It reflects what was already there.' },
+  { id:'contested-archive', title:'The Contested Archive', x:956, y:-324, kind:'vault',
+    lines:[
+      'A small collapsed vault off the main passage, never indexed by the Chainwell.',
+      '"Unclaimed. The debt tablets here were never picked up. You take one — the ledger records the acquisition but does not bill you for it."'],
+    codex:'Some records go unclaimed so long they become property of whoever finds them first.',
+    reward:'fork-pilgrim', secret:true }
+];
+
+const AREA2_PUZZLES=[
+  { id:'fork-sequence', title:'The Fork Sequence',
+    clue:'The sequence of obligation: Canon before Schism, or debt redoubles.',
+    mechanism:'stamp', location:{x:1180,y:-80},
+    nodes:[
+      {id:'canon-seal',label:'CANON SEAL',order:1,x:1162,y:-80},
+      {id:'schism-seal',label:'SCHISM SEAL',order:2,x:1200,y:-80},
+      {id:'cross-seal',label:'CROSSING SEAL',order:3,x:1180,y:-42}
+    ],
+    reward:'codex',
+    stamp:'The seals accept the sequence. The crossing is recorded.',
+    wrong:'The sequence refuses. Canon must precede Schism.',
+    solvedLore:[
+      'Three seals press together and lock with an amber click.',
+      'Codex: "Canon first. Schism second. The crossing seals both. The order is the record."'] },
+  { id:'debt-chain-trace', title:'The Debt Chain',
+    clue:'Trace the chain: who named their inheritor first?',
+    mechanism:'touch-in-order', location:{x:1040,y:80},
+    nodes:[
+      {id:'ancestor-voss',label:'VOSS (first debtor)',order:1,x:1034,y:60},
+      {id:'ancestor-grey',label:'GREY (owes Voss)',order:2,x:1060,y:80},
+      {id:'ancestor-plinth',label:'PLINTH (owes Grey)',order:3,x:1088,y:60},
+      {id:'ancestor-chain-end',label:'SETTLED (the Chainwell)',order:4,x:1050,y:100}
+    ],
+    reward:'codex',
+    stamp:'The chain is traced. The inheritance is named.',
+    wrong:'The chain falls slack — the order of inheritance was broken.',
+    solvedLore:[
+      'The four names glow amber in sequence and go dark together.',
+      'Codex: "Every debt chain ends at the Chainwell. Walk the inheritance to find where you stand."'] }
 ];
 
 const ASSETS={
@@ -622,6 +683,14 @@ const AREA2_TOWN={id:'a2-vault-anteroom',name:'Vault Anteroom / Forklight Hearth
     {id:'vault-custodians',name:'Vault Custodians',role:'Gold cosmetics only.'}
   ],
   sideQuest:{id:'keeper-margins',interactionKey:'q06:margin-scroll',effect:'weaken-debt-foreman'}};
+const AREA3_TOWN={id:'a3-chamber-attestation',name:'Chamber of Attestation / Celestial Spark Hearthlight',
+  hearthlight:{id:'celestial-spark',free:true,safe:true},
+  npcs:[
+    {id:'hostile-archivist',name:'Archivist',role:'HOSTILE to non-compliance. Uses the Auditor to correct paradoxes. Insists Ending A is the only valid resolution. Warns B or C will unmake the record.'},
+    {id:'prime-witness',name:'The Prime Witness',role:'Dying ancient; has seen every record since the first. Confirms the paradox. Her three questions mirror the three choices. Gates the ascending platformer.'},
+    {id:'unrecorded-wanderer',name:'Unrecorded Wanderer',role:'Whispers that erasing your name is the only true freedom. Tempts toward Ending B. Looks like a ghost of what the player could become.'},
+    {id:'amendment-echo',name:'The Amendment Echo',role:'Ghost of a player who chose Ending C. Co-authored the record with the Auditor. Shows what co-authorship looks like in practice. Tempts toward Ending C.'}
+  ]};
 /* Debt Mines: descent through a forked crystallized shaft, Canon left / Schism right, forced crossing bridge at mid-depth. */
 const PLAT_DEBT_MINES={id:'a2-debt-mines',name:'Debt Mines & Ledger Cistern',width:1300,height:760,spawn:{x:100,y:90},physics:{maxRun:200,jump:458},
   fork:{splitX:650,
@@ -630,6 +699,15 @@ const PLAT_DEBT_MINES={id:'a2-debt-mines',name:'Debt Mines & Ledger Cistern',wid
     crossing:{region:{x:340,y:470,w:620,h:44},requiresBothSpellings:true,solution:'RECORDED|DEDROCER'}},
   platforms:[{id:'entrance',x:0,y:120,w:280,h:14,type:'solid'},{id:'c1',x:0,y:200,w:210,h:12,type:'solid'},{id:'c2',x:60,y:290,w:180,h:12,type:'solid'},{id:'c3',x:0,y:370,w:200,h:12,type:'solid'},{id:'c4',x:80,y:450,w:160,h:12,type:'solid'},{id:'pendulum',x:140,y:330,w:110,h:12,type:'solid',vx:48,minX:80,maxX:330},{id:'cross',x:340,y:490,w:620,h:14,type:'solid'},{id:'s1',x:1080,y:200,w:220,h:10,type:'oneWay'},{id:'s2',x:1000,y:290,w:190,h:10,type:'oneWay'},{id:'s3',x:1100,y:370,w:200,h:10,type:'oneWay'},{id:'s4',x:1020,y:450,w:170,h:10,type:'oneWay'},{id:'boss-floor',x:380,y:700,w:740,h:60,type:'solid'},{id:'boss-wall-l',x:380,y:560,w:50,h:140,type:'solid'},{id:'boss-wall-r',x:1070,y:560,w:50,h:140,type:'solid'},{id:'boss-step-l',x:440,y:640,w:120,h:14,type:'solid'},{id:'boss-step-r',x:940,y:640,w:120,h:14,type:'solid'}],
   hazards:[{id:'shard-a',type:'damage',x:90,y:285,w:30,h:12,damage:2},{id:'shard-b',type:'damage',x:180,y:365,w:30,h:12,damage:2},{id:'crystal-a',type:'projectile',x:110,y:80,w:20,h:16,interval:1.6,speedY:265,damage:3},{id:'crystal-b',type:'projectile',x:230,y:80,w:20,h:16,interval:2.2,speedY:258,damage:3},{id:'pendulum-blow',type:'knockback',x:180,y:285,w:80,h:36,damage:2,knockX:240,knockY:-200},{id:'echo-stun',type:'stun',x:80,y:356,w:36,h:14,stun:0.55},{id:'gas-a',type:'slow',x:1000,y:282,w:190,h:22,slow:0.34},{id:'gas-b',type:'slow',x:1020,y:442,w:170,h:22,slow:0.31},{id:'vent-a',type:'damage',x:1080,y:194,w:28,h:14,damage:3},{id:'vent-b',type:'damage',x:1100,y:362,w:28,h:14,damage:3},{id:'current',type:'slow',x:400,y:476,w:500,h:14,slow:0.40},{id:'crystal-s',type:'projectile',x:1140,y:80,w:20,h:16,interval:1.3,speedY:275,damage:3},{id:'gas-cross',type:'slow',x:540,y:474,w:260,h:14,slow:0.38}],
+  enemies:[
+    {id:'canon-acolyte-1',type:'skeleton',sprite:'pf-skeleton',x:100,y:195,w:24,h:40,hp:40,damage:3,speed:30,patrolMin:0,patrolMax:200,frameCount:6,scale:.9},
+    {id:'canon-acolyte-2',type:'skeleton',sprite:'pf-skeleton',x:60,y:365,w:24,h:40,hp:40,damage:3,speed:30,patrolMin:0,patrolMax:180,frameCount:6,scale:.9},
+    {id:'schism-specter-1',type:'flying-eye',sprite:'pf-flying-eye',x:1140,y:195,w:26,h:30,hp:28,damage:3,speed:55,patrolMin:1080,patrolMax:1280,frameCount:6,scale:.8,flying:true,baseY:195},
+    {id:'schism-specter-2',type:'flying-eye',sprite:'pf-flying-eye',x:1100,y:365,w:26,h:30,hp:28,damage:3,speed:55,patrolMin:1040,patrolMax:1260,frameCount:6,scale:.8,flying:true,baseY:365},
+    {id:'debt-ghost',type:'goblin',sprite:'pf-goblin',x:620,y:485,w:24,h:38,hp:36,damage:2,speed:44,patrolMin:400,patrolMax:850,frameCount:12,scale:.88},
+    {id:'ledger-eye',type:'flying-eye',sprite:'pf-flying-eye',x:700,y:610,w:28,h:32,hp:44,damage:4,speed:12,patrolMin:650,patrolMax:760,frameCount:6,scale:.9,flying:true,baseY:610},
+    {id:'debt-warden',type:'skeleton',sprite:'pf-skeleton',x:720,y:695,w:26,h:44,hp:72,damage:5,speed:36,patrolMin:440,patrolMax:1060,frameCount:6,scale:1.05}
+  ],
   bossTrigger:{id:'debt-foreman',x:660,y:620,w:180,h:80,lock:{x:400,y:530,w:700,h:240}},exit:{id:'to-ledger-vaults',x:0,y:640,w:40,h:80}};
 /* Ledger Vaults: underground split-zone arena, Canon left (amber) / Schism right (green). */
 const BATTLE_LEDGER_VAULTS={id:'a2-ledger-vaults',name:"Ledger Vaults / Well's Mouth",width:1600,height:900,spawn:{x:200,y:400},physics:{speed:175},
@@ -833,7 +911,123 @@ const NPCS=[
         'Just the dirt settling. That is what Greave says. The dirt settling, upward, in the shape of a hand.',
         'I dig the holes. The ledger fills them. I try not to think about which order it does that in.'],
         goto:'intro' },
-      farewell:{ text:['Back to the spade. Always more plots.'], end:true } }} }
+      farewell:{ text:['Back to the spade. Always more plots.'], end:true } }} },
+  {id:'keeper-ancestry', x:1068, y:-54, color:'#d4a83e', sprite:'knight', name:'Keeper of Ancestry', role:'Guardian of the ancestral ledger',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'You have arrived at the place your bloodline promised you would reach. Do not look so wounded; you did not choose the debt.',
+        'Your ancestors accrued it, amended it, and willed it forward until your name answered. The Vault Anteroom offers the Forklight, safe rest, and what guidance an old keeper can still give.'],
+        choices:[
+          {label:'My ancestry owed this?', goto:'ancestry'},
+          {label:'What waits in the vaults?', goto:'bosses'},
+          {label:'I will return.', goto:'farewell'} ] },
+      ancestry:{ text:[
+        'Your debt pre-dates your first breath. Your name appears in the ledger before you were born, written as heir, witness, and collateral.',
+        'That is the cruelty of inheritance: the hand that signs may be ash, but the ink continues through the living.'],
+        goto:'intro' },
+      bosses:{ text:[
+        'The Foreman will stamp authority into the mines, and the Bifurcated Guard will mend one half with the other.',
+        'But remember the Ledger-Bound. A golem of every ancestor who ever wrote your name into a debt-chain. It has many of their faces.'],
+        goto:'intro' },
+      farewell:{ text:['Go with care, heir of old accounts. May the Forklight mark you kindly.'], end:true },
+      again:{ text:['You return with more of the old chain broken. Good. Then you are ready to hear what the final fracture means.'],
+        choices:[
+          {label:'What happens if I sever it?', goto:'sealing'},
+          {label:'Remind me of the Ledger-Bound.', goto:'bosses'},
+          {label:'Not now.', goto:'farewell'} ] },
+      sealing:{ text:[
+        'Defeat the Ledger-Bound, and the ancestral inheritance chain can no longer carry your name.',
+        'Your name becomes your own. No inheritance, no chain. What you owe after that will at least be yours to answer for.'],
+        goto:'again' } }} },
+  {id:'custodian-archivist', x:1132, y:28, color:'#9b74ff', sprite:'sorcerer', name:'Custodian Archivist', role:'Keeper of record-stones',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Speak softly. The deep records breathe when strangers enter, and breath is very near to appetite.',
+        'Sometimes the names move inside the stones. Sometimes they move toward the surface. Both are considered normal, in the old manuals.'],
+        choices:[
+          {label:'The records move?', goto:'records'},
+          {label:'Tell me of the Ledger-Bound.', goto:'ledgerbound'},
+          {label:'I will be quiet.', goto:'farewell'} ] },
+      records:{ text:[
+        'Some records have been in the vault so long they have developed... opinions.',
+        'They prefer descendants who do not argue. They prefer names that lie still. They prefer many things they are not entitled to keep.'],
+        goto:'intro' },
+      ledgerbound:{ text:[
+        'The Ledger-Bound is not one creature. It is a consensus.',
+        'Every ancestor who agreed to pass debt down speaks through it. To defeat it, you must disagree with all of them simultaneously.'],
+        goto:'intro' },
+      farewell:{ text:['Go before the stones learn your footstep pattern.'], end:true },
+      again:{ text:['Something has stirred since your last visit. It used your surname first, then corrected itself.'],
+        choices:[
+          {label:'What do the records want?', goto:'records'},
+          {label:'Explain the consensus again.', goto:'ledgerbound'},
+          {label:'Leave the stones.', goto:'farewell'} ] } }} },
+  {id:'librarian-shade', x:1184, y:-38, color:'#4ecb7a', sprite:'sorcerer', name:'Librarian Shade', role:'Fork-lore scholar and relic vendor',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Oh, marvelous timing. The CANON/SCHISM fork is the most interesting thing I have seen in four hundred years of archiving.',
+        'CANON records debts as incurred: stable, honest, and slow. SCHISM records debts as contested: fast, risky, and rather rude to the body. Both arrive at the same vault, which is academically thrilling.'],
+        choices:[
+          {label:'Explain the fork.', goto:'fork'},
+          {label:'Tell me about relics.', goto:'relics'},
+          {label:'Another time.', goto:'farewell'} ] },
+      fork:{ text:[
+        'CANON is amber method: each debt acknowledged in the order it was made. The mine respects that pace, which is why it takes so long.',
+        'SCHISM is green objection: each debt challenged as it appears. You may win time, but the argument cuts you either way.',
+        'At the crossing bridge, the archive asks for both readings: RECORDED, then DEDROCER, the Schism mirror. Elegant, dangerous, very satisfying.'],
+        goto:'intro' },
+      relics:{ text:[
+        'Area relics here are forged from crystallized debt-material, which sounds dreadful until you see the resonance under heat.',
+        'The relics here carry the weight of inherited obligation - they hit harder because they have been owed a long time. Spend RUNE wisely.'],
+        goto:'intro' },
+      farewell:{ text:['May your footnotes be accurate and your bridge-spellings reversible.'], end:true },
+      again:{ text:['New observation: the crossing bridge does not merely test spelling. It tests whether a record can survive being read backward. Deliciously severe.'],
+        choices:[
+          {label:'Refresh me on the bridge.', goto:'fork'},
+          {label:'Refresh me on relics.', goto:'relics'},
+          {label:'Close the book.', goto:'farewell'} ] } }} },
+  {id:'keeper-margins', x:988, y:48, color:'#b9c2cf', sprite:'hollow', name:'Keeper of Margins', role:'Optional side quest giver',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Good. You look like someone with more urgency than reverence.',
+        'There is a margin scroll east of the Forklight edge. Find it, mark it, and the Debt Foreman enters his fight with less authority than he expected.'],
+        choices:[
+          {label:'How does the scroll work?', goto:'scroll'},
+          {label:'What changes after I use it?', goto:'result'},
+          {label:'I know where to go.', goto:'farewell'} ] },
+      scroll:{ text:[
+        'Every official record has a margin. Annotations are not the main text, but they affect how the record reads.',
+        "The Debt Foreman's authority is encoded in a clear record. Write in the margin, cloud the authority. It will not erase him. It will... inconvenience him."],
+        goto:'intro' },
+      result:{ text:[
+        'Once the scroll is found and used, the Foreman still fights. Bureaucracy rarely kills its own officers outright.',
+        'But his stamp lands lighter, his claim carries less weight, and the mine hears hesitation where it used to hear command. Mechanically speaking: weakened boss.'],
+        goto:'intro' },
+      farewell:{ text:["East of the Forklight. It waits. So does the Foreman's margin."], end:true },
+      again:{ text:[
+        'If you have used the margin scroll, good. The Foreman will notice when his authority fails to arrive at full strength.',
+        'If you have not, the scroll is still east of the Forklight edge. Systems only bend for people who touch the paper.'],
+        choices:[
+          {label:'Remind me how margins work.', goto:'scroll'},
+          {label:'What will it do?', goto:'result'},
+          {label:'I am going.', goto:'farewell'} ] } }} },
+  {id:'vault-custodians', x:1156, y:72, color:'#c8b89a', sprite:'knight', name:'Vault Custodians', role:'Gold cosmetics vendor',
+    dialogue:{ start:'intro', repeat:'again', nodes:{
+      intro:{ text:[
+        'Vault cosmetics desk. Appearances only.',
+        'Gold buys vestments, dyes, and presentation. It does not buy power, favor, clearance, or mercy.'],
+        choices:[
+          {label:'Gold is only style?', goto:'gold'},
+          {label:'Understood.', goto:'farewell'} ] },
+      gold:{ text:[
+        'Correct. RUNE is power. Gold is style.',
+        'It is the only currency in this vault with no bearing on debt status. That is why people enjoy spending it.'],
+        goto:'intro' },
+      farewell:{ text:['Filed.'], end:true },
+      again:{ text:['Same desk. Same terms. Gold for cosmetics only.'],
+        choices:[
+          {label:'Confirm the terms.', goto:'gold'},
+          {label:'Done.', goto:'farewell'} ] } }} }
 ];
 
 /* ---- Walk-in town interiors (top-down rooms) ----------------------------- */
@@ -980,14 +1174,130 @@ const INTERIORS=[
           bye:{ text:['Climb back to the warm. Leave the door as you found it.'], end:true },
           again:{ text:['Still here, in the cold file? Good. The wall has not won yet.'],
             choices:[ {label:'Tell me of this place.', goto:'place'}, {label:'Climb out.', goto:'bye'} ] } }} }
+    ] },
+  { id:'vault-registry', name:'The Vault Registry',
+    building:{x:1044,y:-96,w:130,h:90,wall:'#393b44',roof:'#2c2e36',door:{x:1080,y:-40},sign:'REGISTRY'},
+    w:400, h:260, spawn:{x:200,y:198}, exit:{x:200,y:246}, floor:'#22232a', wall:'#333540', accent:'#d4a83e',
+    decor:[
+      {x:140,y:80,w:120,h:50,c:'#2c2e36',top:'#d4a83e'},
+      {x:30,y:40,w:40,h:100,c:'#262830'},{x:330,y:40,w:40,h:100,c:'#262830'},
+      {x:155,y:74,w:20,h:14,c:'#b9c2cf'},{x:210,y:74,w:20,h:14,c:'#d4a83e'},
+      {x:140,y:60,w:10,h:14,c:'#d4a83e',t:'candle'},{x:250,y:60,w:10,h:14,c:'#d4a83e',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-keeper-ancestry', x:200, y:68, color:'#d4a83e', sprite:'knight', name:'Keeper of Ancestry', role:'Registry Guardian',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'In the Registry, I can read your inheritance directly. Your name was entered here before you were named.',
+            'Your ancestors filed correctly. Their debt compounded correctly. That is the tragedy of correct record-keeping.'],
+            choices:[ {label:'Who wrote me in?', goto:'wrote'}, {label:'Tell me about the chain.', goto:'chain'}, {label:'Farewell.', goto:'bye'} ] },
+          wrote:{ text:['The first ancestor accepted the debt-chain with a clear hand and a colder heart. They did not only name themselves. They named everyone after.','Every descendant became collateral in the same sentence. You were written by someone who never met you and still spent you.'], goto:'again' },
+          chain:{ text:['The Ledger-Bound holds the aggregate of that chain: every accepted debt, every inherited signature, every quiet consent passed forward.','Defeat it and you do not merely kill a guardian. You write yourself out of the inheritance.'], goto:'again' },
+          sealing:{ text:['When the Ledger-Bound falls, this table will show one fewer name in the chain. I will be here to witness it.'], goto:'again' },
+          bye:{ text:['Filed. Go earn your severance.'], end:true },
+          again:{ text:['You return to the table where your name waits. It has not moved.'],
+            choices:[ {label:'How will the sealing show?', goto:'sealing'}, {label:'Who wrote me in?', goto:'wrote'}, {label:'Leave the Registry.', goto:'bye'} ] } }} }
+    ] },
+  { id:'fissured-cistern', name:'The Fissured Cistern',
+    building:{x:1104,y:32,w:150,h:100,wall:'#3a3c44',roof:'#2e3038',door:{x:1148,y:76},sign:'CISTERN'},
+    w:460, h:300, spawn:{x:230,y:238}, exit:{x:230,y:286}, floor:'#22232a', wall:'#2e3038', accent:'#7a8a98',
+    decor:[
+      {x:0,y:100,w:230,h:100,c:'#3a2a10',t:'rug'},{x:230,y:100,w:230,h:100,c:'#0a2a18',t:'rug'},
+      {x:224,y:80,w:12,h:160,c:'#404550'},
+      {x:60,y:80,w:14,h:18,c:'#d4a83e',t:'candle'},{x:40,y:120,w:30,h:50,c:'#2a2010'},{x:80,y:140,w:30,h:40,c:'#2e2418'},
+      {x:380,y:80,w:14,h:18,c:'#4ecb7a',t:'candle'},{x:350,y:110,w:36,h:55,c:'#0a2a1a'},{x:390,y:135,w:28,h:40,c:'#122418'},
+      {x:100,y:160,w:20,h:14,c:'#262830'},{x:130,y:160,w:20,h:14,c:'#262830'},{x:310,y:160,w:20,h:14,c:'#0a2218'},{x:340,y:160,w:20,h:14,c:'#0a2218'}
+    ],
+    npcs:[
+      {id:'int-canon-drinker', x:110, y:130, color:'#d4a83e', sprite:'knight', name:'A Canon Drinker', role:'Settled Patron',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'The left side is slower. The left side pays its debts in full, on schedule, without complaint.',
+            'I have been here six generations. My family chose Canon at the fork. None of us have ever been in Schism. None of us are free.'],
+            choices:[ {label:'Why slow?', goto:'slow'}, {label:'Canon and Schism?', goto:'canon-schism'}, {label:'Farewell.', goto:'bye'} ] },
+          slow:{ text:['CANON is not punishment. It is accounting. The debt exists. CANON simply... records it correctly.'], goto:'again' },
+          'canon-schism':{ text:['They cross to our side sometimes, the Schism-walkers. They always look a little burned. But faster. I do not understand the appeal.'], goto:'again' },
+          crossing:{ text:['The bridge at the bottom requires both spellings. RECORDED from our side. DEDROCER from theirs. Think about that.'], goto:'again' },
+          bye:{ text:['Sit here long enough and the debt almost feels earned.'], end:true },
+          again:{ text:['The cup is exactly where I left it. So is the debt.'],
+            choices:[ {label:'Tell me about crossing.', goto:'crossing'}, {label:'Canon and Schism?', goto:'canon-schism'}, {label:'Leave this side.', goto:'bye'} ] } }} },
+      {id:'int-schism-drinker', x:360, y:130, color:'#4ecb7a', sprite:'sorcerer', name:'A Schism Drinker', role:'Contested Patron',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'The right side costs two damage every three-quarters of a second. I have been here six generations.',
+            'My family contested the debt at the fork. We have been contesting it ever since. We are faster. We bleed, and we are faster.'],
+            choices:[ {label:'Why fast?', goto:'fast'}, {label:'Contested?', goto:'contest'}, {label:'Farewell.', goto:'bye'} ] },
+          fast:{ text:['SCHISM does not erase the debt. It argues it is unjust. The vaults do not care about justice. But the speed is real.'], goto:'again' },
+          contest:{ text:['We are not broken. We are contested. There is a difference. A broken record cannot be argued. A contested one can.'], goto:'again' },
+          crossing:{ text:['Walk both sides before the crossing. The bridge only opens when you have been both RECORDED and DEDROCER. You cannot fake it.'], goto:'again' },
+          bye:{ text:['Faster. Worth it. Probably.'], end:true },
+          again:{ text:['New ache. Same argument. The Schism keeps excellent time.'],
+            choices:[ {label:'Tell me about crossing.', goto:'crossing'}, {label:'Why fast?', goto:'fast'}, {label:'Leave this side.', goto:'bye'} ] } }} }
+    ] },
+  { id:'archivist-reading-room', name:"The Archivist's Reading Room",
+    building:{x:980,y:-68,w:120,h:80,wall:'#35384a',roof:'#2a2d38',door:{x:1016,y:-28},sign:'ARCHIVE'},
+    w:380, h:250, spawn:{x:190,y:190}, exit:{x:190,y:238}, floor:'#22232a', wall:'#2e3040', accent:'#b9c2cf',
+    decor:[
+      {x:20,y:30,w:80,h:100,c:'#252830'},{x:140,y:30,w:100,h:100,c:'#252830'},{x:280,y:30,w:80,h:100,c:'#252830'},
+      {x:80,y:140,w:70,h:36,c:'#2c2e36'},{x:230,y:140,w:70,h:36,c:'#2c2e36'},
+      {x:160,y:90,w:60,h:40,c:'#303850',top:'#b9c2cf'},
+      {x:80,y:130,w:10,h:14,c:'#b9c2cf',t:'candle'},{x:230,y:130,w:10,h:14,c:'#b9c2cf',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-custodian-archivist', x:110, y:110, color:'#9b74ff', sprite:'sorcerer', name:'Custodian Archivist', role:'Record-Stone Tender',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'This room is where I tend the secondary records. The primaries are in the vaults. The primaries are... territorial.',
+            'I have found three new names in the overnight record. They were not there yesterday. They were not written by human hand.'],
+            choices:[ {label:'Territorial?', goto:'territorial'}, {label:'The Ledger-Bound?', goto:'ledgerbound'}, {label:'Farewell.', goto:'bye'} ] },
+          territorial:{ text:['A record-stone that has been in the vault long enough stops being data and starts being... entity. It knows what it is. It resists being updated.'], goto:'again' },
+          ledgerbound:{ text:['The Ledger-Bound is not one creature. It is the accumulated weight of every ancestor who agreed to pass their debt forward. To defeat it you must disagree with all of them at once. A single moment of total dissent.'], goto:'again' },
+          center:{ text:['When the chain splits, strike the center. Not the CANON half, not the SCHISM half. The thing that holds them both - that is where the inheritance lives.'], goto:'again' },
+          bye:{ text:['Try not to stand still long enough for the stones to learn your name. I mean that.'], end:true },
+          again:{ text:['The overnight record changed again while you were away. It is beginning to prefer certain names.'],
+            choices:[ {label:'What changed at the center?', goto:'center'}, {label:'The Ledger-Bound?', goto:'ledgerbound'}, {label:'Leave the records.', goto:'bye'} ] } }} },
+      {id:'int-librarian-shade', x:280, y:110, color:'#4ecb7a', sprite:'sorcerer', name:'Librarian Shade', role:'Fork Scholar and Relic Advisor',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'Fascinating! Another Recorded visitor. Do you know how many people walk through that fork without understanding what they are choosing? Almost all of them.',
+            'CANON and SCHISM are not just paths. They are epistemological positions on debt. CANON says: debt is a fact. SCHISM says: debt is a proposition.'],
+            choices:[ {label:'Explain the fork.', goto:'fork'}, {label:'Tell me about relics.', goto:'relics'}, {label:'Farewell.', goto:'bye'} ] },
+          fork:{ text:['The crossing bridge at the bottom requires both spellings. RECORDED from the Canon side. DEDROCER - that is RECORDED written backwards - from the Schism side. You must walk both to cross. Identity requires experiencing both propositions.'], goto:'again' },
+          relics:{ text:['Area 2 relics are forged from crystallized debt-stone - actual material compressed by centuries of obligation. They carry inherited weight. An Ancestral Edge hits harder because it has been owed a long time. Forge one at the Forklight and you will feel the difference.'], goto:'again' },
+          paper:{ text:['My paper: the crossing requires BOTH spellings because the bridge itself is a paradox-object. It exists only if you have been both Recorded and Contested simultaneously. The ledger cannot hold that. The bridge exploits the gap.'], goto:'again' },
+          bye:{ text:['Come back if you find any new inscriptions. I pay in scholarship.'], end:true },
+          again:{ text:['I finished a paper on the crossing bridge puzzle since your last visit. The conclusion is elegant and probably actionable.'],
+            choices:[ {label:'Tell me about the paper.', goto:'paper'}, {label:'Tell me about relics.', goto:'relics'}, {label:'Leave the archive.', goto:'bye'} ] } }} }
+    ] },
+  { id:'margin-chamber', name:'The Margin Chamber', reward:'canon-clerk',
+    building:{x:1160,y:-68,w:80,h:60,wall:'#2e3038',roof:'#252830',door:{x:1188,y:-38},sign:'',secret:true},
+    w:280, h:200, spawn:{x:140,y:148}, exit:{x:140,y:192}, floor:'#1e2028', wall:'#282c38', accent:'#d4a83e',
+    decor:[
+      {x:90,y:60,w:100,h:50,c:'#1c2028',top:'#9a8a6a'},
+      {x:30,y:50,w:40,h:80,c:'#1a1e24'},{x:210,y:50,w:40,h:80,c:'#1a1e24'},
+      {x:115,y:52,w:12,h:16,c:'#d4a83e',t:'candle'},
+      {x:155,y:64,w:14,h:12,c:'#28303a'},{x:172,y:66,w:10,h:10,c:'#28303a'}
+    ],
+    npcs:[
+      {id:'int-margins-keeper', x:140, y:78, color:'#b9c2cf', sprite:'hollow', name:'Keeper of Margins', role:'Margin Annotator',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'You found the chamber. Good. The Forklight staff do not know this room exists. That is by design.',
+            "Every official record in this vault has a margin. The margin is not the record - it is the annotation space beside it. The Foreman's authority is encoded in a very clear main record. Very clear records have very wide margins."],
+            choices:[ {label:'The margin-scroll?', goto:'margin-scroll'}, {label:'The Foreman?', goto:'foreman'}, {label:'Farewell.', goto:'bye'} ] },
+          'margin-scroll':{ text:["East of the Forklight, behind the lectern. There is a scroll with my marks on it. Bring it to the Foreman's door and press it against the ledger face. The marginal note becomes part of the record. His authority... crowds. The record is still true. The margin makes it... less efficient."], goto:'again' },
+          foreman:{ text:['I do not hate the Foreman. He is what the system made him. A record that achieved sentience by being too large to dispute. I just believe every sentient record deserves a margin note.'], goto:'again' },
+          bye:{ text:['East of the Forklight. The scroll already has my pen-marks on it. All you provide is the contact.'], end:true },
+          again:{ text:["Did you use the scroll yet? If not, it waits east of the Forklight. If you did, then somewhere the Foreman's record is learning how cramped a margin can become."],
+            choices:[ {label:'Remind me about the scroll.', goto:'margin-scroll'}, {label:'Why the Foreman?', goto:'foreman'}, {label:'Leave the chamber.', goto:'bye'} ] } }} }
     ] }
 ];
 
   return {
-    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, WORLD_PORTALS,
+    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, AREA2_LORE, AREA2_PUZZLES, WORLD_PORTALS,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
-    AREA2_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
+    AREA2_TOWN, AREA3_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
     PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS
   };
 });

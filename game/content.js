@@ -1367,6 +1367,292 @@ const INTERIORS=[
           bye:{ text:['East of the Forklight. The scroll already has my pen-marks on it. All you provide is the contact.'], end:true },
           again:{ text:["Did you use the scroll yet? If not, it waits east of the Forklight. If you did, then somewhere the Foreman's record is learning how cramped a margin can become."],
             choices:[ {label:'Remind me about the scroll.', goto:'margin-scroll'}, {label:'Why the Foreman?', goto:'foreman'}, {label:'Leave the chamber.', goto:'bye'} ] } }} }
+    ] },
+
+  // ── Season 2: The Amendment Wastes (x ≈ 2440) ──────────────────────────────
+  { id:'permit-office', name:'The Permit Office',
+    building:{x:2380,y:-108,w:140,h:90,wall:'#4a3e22',roof:'#352d18',door:{x:2414,y:-68},sign:'PERMITS',drawn:true},
+    w:380, h:260, spawn:{x:190,y:196}, exit:{x:190,y:244}, floor:'#251e10', wall:'#3c3220', accent:'#c8a84a',
+    decor:[
+      {x:40,y:40,w:300,h:20,c:'#30271a',top:'#5a4a2e'},
+      {x:60,y:100,w:80,h:40,c:'#2c2416',top:'#4a3c24'},{x:220,y:100,w:80,h:40,c:'#2c2416',top:'#4a3c24'},
+      {x:80,y:60,w:12,h:16,c:'#c8a84a',t:'candle'},{x:290,y:60,w:12,h:16,c:'#c8a84a',t:'candle'},
+      {x:140,y:52,w:80,h:18,c:'#251e10',label:'PERMIT FORMS'},{x:170,y:160,w:40,h:30,c:'#332a18'}
+    ],
+    npcs:[
+      {id:'int-amendment-clerk', x:190, y:80, color:'#c8a84a', sprite:'knight', name:'Amendment Clerk', role:'Permit Adjudicator',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'The Amendment Wastes exist because the ledger was broken — not destroyed, broken. The forms still work. Nothing else does.',
+            'I issue permits for motion between precincts. The precincts are ossified now — frozen mid-transaction — but the permits still authorize them. Old habit.'],
+            choices:[ {label:'What are you authorising?', goto:'permits'}, {label:'Ossified?', goto:'ossified'}, {label:'Leave.', goto:'bye'} ] },
+          permits:{ text:[
+            'Motion. The right to move from one frozen thing to the next without the frozen things noticing.',
+            'The Wastes have no active enforcement, but permission is still its own kind of key. Some doors only open for the correctly documented.'], goto:'again' },
+          ossified:{ text:[
+            'Frozen in the act of being processed. That debt note on the floor? Mid-collection, eternally. The decree on the wall? Mid-enforcement.',
+            'When the ledger broke, everything mid-flight stopped. Only the forms remained valid, because forms were always somewhat outside the ledger anyway.'], goto:'again' },
+          bye:{ text:['Form A-7 authorises passage. You already have it, in a sense — you survived the Auditor. That is the only stamp that matters here.'], end:true },
+          again:{ text:['Still processing? The queue is empty, for once. I can actually hear myself think.'],
+            choices:[ {label:'About the permits.', goto:'permits'}, {label:'The ossification.', goto:'ossified'}, {label:'I should move on.', goto:'bye'} ] } }} },
+      {id:'int-ledger-warden', x:300, y:180, color:'#8a7a3a', sprite:'hollow', name:'Ledger Warden', role:'Stability Enforcer',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'I know what you are thinking. You broke the ledger. Or amended it. Or erased it. And now you want me to tell you it was necessary.',
+            'I will not. But I will tell you this: stability was not nothing. It kept some people warm who would otherwise have frozen. The warming was unequal. The freezing was selected. But it was not nothing.'],
+            choices:[ {label:'Do you regret it?', goto:'regret'}, {label:'Will it be better now?', goto:'better'}, {label:'Noted.', goto:'bye'} ] },
+          regret:{ text:['Every day. And every day I find something the old system held together that nothing has yet replaced.','I am not arguing for the old way. I am asking you to understand the weight of what you carry now.'], goto:'again' },
+          better:{ text:['I do not know. I have met three of you — one who sealed, one who erased, one who amended. None of you knows either.','That may be the most honest answer anyone has given since the ledger closed.'], goto:'again' },
+          bye:{ text:['If you build something in the silence, make it fair. That is the only instruction I had that I still believe.'], end:true },
+          again:{ text:['Still here. I have nowhere else to enforce. What brings you back?'],
+            choices:[ {label:'Regret?', goto:'regret'}, {label:'Better now?', goto:'better'}, {label:'Move on.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'ossified-repository', name:'The Ossified Repository',
+    building:{x:2500,y:64,w:120,h:80,wall:'#3c3220',roof:'#2e2618',door:{x:2524,y:100},sign:'RECORDS',drawn:true},
+    w:320, h:220, spawn:{x:160,y:166}, exit:{x:160,y:208}, floor:'#201a0c', wall:'#342c1a', accent:'#c8a84a',
+    decor:[
+      {x:30,y:36,w:260,h:16,c:'#2a2212',label:'OSSIFIED TRANSACTION LOG'},
+      {x:30,y:60,w:50,h:100,c:'#1e1810'},{x:90,y:60,w:50,h:100,c:'#1e1810'},{x:180,y:60,w:50,h:100,c:'#1e1810'},{x:240,y:60,w:50,h:100,c:'#1e1810'},
+      {x:148,y:52,w:10,h:14,c:'#c8a84a',t:'candle'},{x:168,y:54,w:10,h:14,c:'#c8a84a',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-ossified-record', x:160, y:80, color:'#a09060', sprite:'hollow', name:'Ossified Record', role:'Self-Catalogued',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'Name: Ossified Record. Citizen number: 8,447,231. Taxation status: suspended pending ledger restoration. Marital status: recorded.',
+            'I know that is not my name. My name was something warmer. But I spent forty years being that entry, and when the ledger closed, I did not know how to be anything else.'],
+            choices:[ {label:'What was your name?', goto:'name'}, {label:'Can you unossify?', goto:'unossify'}, {label:'Go well.', goto:'bye'} ] },
+          name:{ text:[
+            'It is in here somewhere.',
+            '...Lune. I think it was Lune. It sounds like something someone called me when I was not an entry yet.'], goto:'again' },
+          unossify:{ text:[
+            'The Erasure Guide east of here says all you need is to stop reciting the entry. Just stop.',
+            'I have tried. My mouth keeps generating the form. I think I filed myself too many times. The form became the face.'], goto:'again' },
+          bye:{ text:['If you find a way to be a name without an entry number, describe it to me. I will try to memorise the method.'], end:true },
+          again:{ text:['Citizen number: 8,447,231. Sorry. That still comes out first. What were you asking?'],
+            choices:[ {label:'Your name.', goto:'name'}, {label:'Unossify.', goto:'unossify'}, {label:'I should go.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'wandering-waystation', name:"The Wandering Debt's Waystation",
+    building:{x:2460,y:80,w:100,h:70,wall:'#3a3018',roof:'#282010',door:{x:2484,y:112},sign:'',secret:true},
+    w:280, h:200, spawn:{x:140,y:152}, exit:{x:140,y:192}, floor:'#1e1808', wall:'#302814', accent:'#c8a84a',
+    decor:[
+      {x:60,y:50,w:160,h:80,c:'#241e0c',top:'#3e3218'},
+      {x:80,y:50,w:14,h:18,c:'#c8a84a',t:'candle'},{x:196,y:50,w:14,h:18,c:'#c8a84a',t:'candle'},
+      {x:100,y:140,w:60,h:12,c:'#2a2210'},{x:120,y:100,w:40,h:36,c:'#201c0a'}
+    ],
+    npcs:[
+      {id:'int-wandering-debt', x:140, y:76, color:'#756540', sprite:'hollow', name:'Wandering Debt', role:'Unattached Obligation',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'My original debtor was erased in the Redaction — one of those who chose that path, or had it chosen for them.',
+            'The debt remained. Debts survive debtors, apparently. So I became... this. The obligation looking for someone to owe it.'],
+            choices:[ {label:'Who do you owe now?', goto:'owe'}, {label:'Can the debt be paid?', goto:'paid'}, {label:'Strange life.', goto:'bye'} ] },
+          owe:{ text:[
+            'No one, at present. I tried the Ledger Warden — she said debts to erased persons become uncollectable, technically. The form exists but has no claimant.',
+            "I tried filing myself as my own debtor. The Permit Office would not stamp it."], goto:'again' },
+          paid:{ text:[
+            'With what? The ledger is closed. There is no one to receive payment.',
+            'I think about this. Perhaps a debt without a creditor is just... weight. You carry it until you put it down. The putting down is the payment.'], goto:'again' },
+          bye:{ text:['If you see someone who looks like they could use an uncollectable debt, send them my way. A debt that cannot be called is the only free thing I know.'], end:true },
+          again:{ text:['Still wandering, still owing. You came back. That means something, though I could not say what.'],
+            choices:[ {label:'Who do you owe?', goto:'owe'}, {label:'Can it be paid?', goto:'paid'}, {label:'Carry on.', goto:'bye'} ] } }} }
+    ] },
+
+  // ── Season 2: The Erased Shore (x ≈ 2720) ──────────────────────────────────
+  { id:'memory-shore-house', name:'The Memory Shore',
+    building:{x:2660,y:-112,w:140,h:86,wall:'#2a4a4e',roof:'#1e3438',door:{x:2694,y:-74},sign:'MEMORIES',drawn:true},
+    w:380, h:260, spawn:{x:190,y:196}, exit:{x:190,y:244}, floor:'#141e20', wall:'#1e3236', accent:'#4ab8c4',
+    decor:[
+      {x:50,y:40,w:280,h:14,c:'#1a2c30',label:'COLLECTED STORIES'},
+      {x:40,y:70,w:60,h:36,c:'#1a2c30',top:'#28444a'},{x:280,y:70,w:60,h:36,c:'#1a2c30',top:'#28444a'},
+      {x:120,y:60,w:140,h:40,c:'#162428',top:'#204048'},
+      {x:60,y:50,w:12,h:16,c:'#4ab8c4',t:'candle'},{x:316,y:50,w:12,h:16,c:'#4ab8c4',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-shore-rememberer', x:190, y:78, color:'#4ab8c4', sprite:'knight', name:'Shore Rememberer', role:'Story Archivist',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'Without the ledger, stories are the only record. I collect them. Everyone who arrives here carries one.',
+            'The format is loose. No taxation category. No debt cross-reference. Just: who you were, what you did, what you chose. That is enough, usually.'],
+            choices:[ {label:'Take my story?', goto:'story'}, {label:'Why stories?', goto:'why'}, {label:'I understand.', goto:'bye'} ] },
+          story:{ text:[
+            'You survived the Auditor and made a choice — seal, erase, or amend. That is your story. I already have three versions.',
+            'What I do not have is the part before the Auditor. What did you carry? What kept you moving when the ledger weighed on everything?'], goto:'again' },
+          why:{ text:[
+            'Because a number disappears when the ledger closes. A story does not. Stories argue with each other, contradict, embellish — but they persist.',
+            'The Shore forgets coordinates. It does not forget names.'], goto:'again' },
+          bye:{ text:["Come back if you remember something you'd hate to lose. That is the only test for what goes in the archive."], end:true },
+          again:{ text:['The archive is open. What is in your margins that the ledger never had room for?'],
+            choices:[ {label:'My story.', goto:'story'}, {label:'Why stories?', goto:'why'}, {label:'Not now.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'tide-reader-outcrop', name:"The Tide Reader's Outcrop",
+    building:{x:2780,y:60,w:120,h:76,wall:'#1e3c42',roof:'#162c32',door:{x:2808,y:94},sign:'TIDES',drawn:true},
+    w:340, h:230, spawn:{x:170,y:174}, exit:{x:170,y:218}, floor:'#101c20', wall:'#1a303a', accent:'#4ab8c4',
+    decor:[
+      {x:40,y:44,w:260,h:18,c:'#162830',label:'TIDE LOG — DAY 1 ONWARDS'},
+      {x:50,y:80,w:80,h:50,c:'#142430',top:'#20404a'},{x:210,y:80,w:80,h:50,c:'#142430',top:'#20404a'},
+      {x:158,y:50,w:14,h:18,c:'#4ab8c4',t:'candle'},
+      {x:100,y:160,w:140,h:14,c:'#0e1a1e'}
+    ],
+    npcs:[
+      {id:'int-tide-reader', x:170, y:84, color:'#6ab8c4', sprite:'hollow', name:'Tide Reader', role:'Pattern Archivist',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'The tide knows what happened. It saw the moment the ledger closed from the other side — the water side, which is outside official record.',
+            'Every tide since day one has a slightly different pressure. I am reading the record that was never filed.'],
+            choices:[ {label:'What does it say?', goto:'pattern'}, {label:'How do you read it?', goto:'how'}, {label:'Interesting.', goto:'bye'} ] },
+          pattern:{ text:[
+            'Day one: a large pulse. Something substantial ended or began — I believe it was both simultaneously.',
+            'Since then: smaller pulses, exploratory, like questions. The tide does not know the answer any more than we do. But it keeps asking, which I find admirable.'], goto:'again' },
+          how:{ text:[
+            'Timing, height, temperature, colour at the foam edge. Each is a notation in a system the Chainwell never standardised.',
+            'The tide was recording before the first ledger existed. It will record after the last one closes. I am just learning to read.'], goto:'again' },
+          bye:{ text:['The tide comes in. The tide goes out. Both are true. Write that down somewhere the ledger cannot reach.'], end:true },
+          again:{ text:['The tide turned three minutes ago. Did you feel it? There is a new notation I need to cross-reference.'],
+            choices:[ {label:'What pattern?', goto:'pattern'}, {label:'How you read it.', goto:'how'}, {label:'I should go.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'blank-start', name:'The Blank Start',
+    building:{x:2860,y:-96,w:130,h:82,wall:'#243840',roof:'#1a2c34',door:{x:2890,y:-60},sign:'BLANK START',drawn:true},
+    w:360, h:250, spawn:{x:180,y:190}, exit:{x:180,y:236}, floor:'#0e1a1e', wall:'#1a2c34', accent:'#4ab8c4',
+    decor:[
+      {x:60,y:48,w:240,h:130,c:'#141e24',top:'#1e3040'},
+      {x:80,y:50,w:12,h:16,c:'#4ab8c4',t:'candle'},{x:272,y:50,w:12,h:16,c:'#4ab8c4',t:'candle'},
+      {x:140,y:140,w:80,h:36,c:'#101820'},{x:160,y:100,w:40,h:36,c:'#0c1420'}
+    ],
+    npcs:[
+      {id:'int-blank-wanderer', x:140, y:80, color:'#a0c4c8', sprite:'hollow', name:'Blank Wanderer', role:'Unwritten Person',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'I was defined so completely by the ledger that when it closed, I became serene. Entirely empty. Starting over.',
+            'It sounds like loss. From inside it feels like wind on a cleared field. Everything is possible again, which is terrifying and also the cleanest thing I have felt in forty years.'],
+            choices:[ {label:'Is it good?', goto:'good'}, {label:'Is it frightening?', goto:'fear'}, {label:'Thank you.', goto:'bye'} ] },
+          good:{ text:[
+            'I cannot tell yet. Ask me after I have filled some of it in.',
+            "The Guide helps people understand it. I help people understand that 'understanding it' is not required before you begin."], goto:'again' },
+          fear:{ text:[
+            'Yes. Mostly because I do not know what I will choose to be.',
+            'Under the ledger I had no choice — the entry was fixed. Now the entry is blank and the pen is in my hand and the ink is real. That is more frightening than any bureaucrat I ever faced.'], goto:'again' },
+          bye:{ text:['Write something in your margins today. Something the ledger would not have permitted. See what it feels like.'], end:true },
+          again:{ text:['Still here? Good. Blank space needs witnesses more than it needs filling.'],
+            choices:[ {label:'Is it good?', goto:'good'}, {label:'Is it frightening?', goto:'fear'}, {label:'Go well.', goto:'bye'} ] } }} },
+      {id:'int-erasure-guide', x:300, y:176, color:'#5090a0', sprite:'knight', name:'Erasure Guide', role:'Arrival Counsellor',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'So. You made it here after the ledger closed. Either you erased something, sealed something, or amended something. All three land here eventually.',
+            'Unrecorded life is not the same as nonexistent life. That is the first thing arrivals need to hear.'],
+            choices:[ {label:'What is unrecorded life?', goto:'unrecorded'}, {label:'Three endings?', goto:'endings'}, {label:'I understand.', goto:'bye'} ] },
+          unrecorded:{ text:[
+            'It means you exist without a number attached. The Shore remembers you. The tide marks your presence. The stories archive your name.',
+            'The Chainwell ledger was one way of being real. It was not the only way.'], goto:'again' },
+          endings:{ text:[
+            'Sealed — the record holds, nothing changes, but nothing chokes either. A kind of memorial.',
+            'Erased — the record dissolves. People become people again instead of entries. It is frightening and beautiful.',
+            'Amended — the record continues but differently, with room for correction. The most difficult to live with, and the most alive.'], goto:'again' },
+          bye:{ text:['You arrived here. That means you kept moving after the hardest choice. Whatever comes next, you already proved you can survive the weight of it.'], end:true },
+          again:{ text:['The Shore is patient. Take the time you need. What else can I tell you?'],
+            choices:[ {label:'Unrecorded life.', goto:'unrecorded'}, {label:'The three endings.', goto:'endings'}, {label:'Nothing. Thank you.', goto:'bye'} ] } }} }
+    ] },
+
+  // ── Season 2: Scribe's Purgatory (x ≈ 3080) ────────────────────────────────
+  { id:'purgatory-record-hall', name:"Purgatory Record Hall",
+    building:{x:3020,y:-140,w:160,h:96,wall:'#3a2e58',roof:'#2a2040',door:{x:3062,y:-98},sign:'ALL RECORDS',drawn:true},
+    w:420, h:280, spawn:{x:210,y:216}, exit:{x:210,y:264}, floor:'#1a1428', wall:'#281e3c', accent:'#9b74ff',
+    decor:[
+      {x:50,y:44,w:320,h:20,c:'#201630',label:'CONVERGENCE RECORD: ALL ENDINGS'},
+      {x:40,y:80,w:70,h:60,c:'#1c1430'},{x:130,y:80,w:70,h:60,c:'#1c1430'},{x:270,y:80,w:70,h:60,c:'#1c1430'},{x:360,y:80,w:46,h:60,c:'#1c1430'},
+      {x:80,y:56,w:12,h:16,c:'#9b74ff',t:'candle'},{x:330,y:56,w:12,h:16,c:'#9b74ff',t:'candle'},
+      {x:200,y:160,w:60,h:40,c:'#24183a',top:'#342a4e'}
+    ],
+    npcs:[
+      {id:'int-purgatory-scribe', x:210, y:78, color:'#9b74ff', sprite:'knight', name:'Purgatory Scribe', role:'Convergence Archivist',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'Three of you have come. One sealed the ledger. One erased it. One amended it. All three arrived here.',
+            'I have seen it happen. The same hall, the same ash from the last torch, and three different people standing where you stand, each carrying a different completed world.'],
+            choices:[ {label:'How can all three be true?', goto:'coexist'}, {label:'Which ending was right?', goto:'right'}, {label:'I will reflect on this.', goto:'bye'} ] },
+          coexist:{ text:[
+            'The ledger recorded one world at a time. Purgatory receives all of them.',
+            'A sealed world keeps its weight. An erased world keeps its lightness. An amended world keeps its argument. All three truths fit in the same hall because truth does not require a single entry.'], goto:'again' },
+          right:{ text:[
+            'I keep the record. I do not audit it.',
+            'What I will say: all three versions of you sat in that same chair, and all three were tired in the same way. The tiredness is the proof you carried something real.'], goto:'again' },
+          bye:{ text:['The record stays open here. Every ending is an entry. Your entry is already written. Rest. You earned the Purgatory.'], end:true },
+          again:{ text:['The hall holds all three ledgers. Each one is heavier than it looks. What do you want to know?'],
+            choices:[ {label:'How all three coexist.', goto:'coexist'}, {label:'Which was right.', goto:'right'}, {label:'Nothing more.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'convergence-chamber', name:'The Convergence Chamber',
+    building:{x:3160,y:58,w:130,h:84,wall:'#322248',roof:'#241838',door:{x:3190,y:94},sign:'WITNESS',drawn:true},
+    w:360, h:240, spawn:{x:180,y:182}, exit:{x:180,y:228}, floor:'#180e28', wall:'#241834', accent:'#9b74ff',
+    decor:[
+      {x:80,y:46,w:200,h:120,c:'#1e1432',top:'#2c2044'},
+      {x:60,y:52,w:12,h:16,c:'#9b74ff',t:'candle'},{x:292,y:52,w:12,h:16,c:'#9b74ff',t:'candle'},
+      {x:158,y:52,w:16,h:16,c:'#3a2c58'},{x:176,y:54,w:10,h:12,c:'#3a2c58'}
+    ],
+    npcs:[
+      {id:'int-convergence-witness', x:180, y:76, color:'#c0a0ff', sprite:'hollow', name:'Convergence Witness', role:'Simultaneous Observer',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'I was there. The moment the ledger closed — all three moments. Simultaneously.',
+            'The sealed version felt like a held breath. The erased version felt like dawn. The amended version felt like a door left open in winter — cold, but the cold is outside and you are inside and there is still a fire.'],
+            choices:[ {label:'How were you there for all three?', goto:'how'}, {label:'Which felt truest?', goto:'truest'}, {label:'That is enough.', goto:'bye'} ] },
+          how:{ text:[
+            'I was standing at the exact point where all three endings converge. The Auditor faces a choice. The choice splinters.',
+            'Where those splinters cross is here. I happened to be standing at the crossing. I could not unsee what each splinter contained.'], goto:'again' },
+          truest:{ text:[
+            'They each felt true to a different part of me.',
+            'The sealing felt true to the part that loves continuity. The erasure felt true to the part that loves freedom. The amendment felt true to the part that loves argument.',
+            'I am all three parts. So all three felt true. I think that is the answer.'], goto:'again' },
+          bye:{ text:['Whatever you chose: it is in the chamber record. It happened. It was real. Everything real lands here eventually.'], end:true },
+          again:{ text:['The convergence remains. I am still at the crossing. What else can I show you?'],
+            choices:[ {label:'How all three.', goto:'how'}, {label:'Which truest.', goto:'truest'}, {label:'I should go.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'seasons-memory', name:"Season's Memory",
+    building:{x:3100,y:-200,w:150,h:90,wall:'#3c2a58',roof:'#2c1e44',door:{x:3136,y:-160},sign:'',secret:true},
+    w:400, h:270, spawn:{x:200,y:208}, exit:{x:200,y:256}, floor:'#1c1230', wall:'#281840', accent:'#9b74ff',
+    decor:[
+      {x:80,y:50,w:240,h:120,c:'#1e1438',top:'#2e2050'},
+      {x:60,y:56,w:12,h:16,c:'#9b74ff',t:'candle'},{x:330,y:56,w:12,h:16,c:'#9b74ff',t:'candle'},
+      {x:180,y:56,w:14,h:14,c:'#3c2c5c'},{x:206,y:58,w:10,h:12,c:'#3c2c5c'},
+      {x:130,y:170,w:60,h:30,c:'#20163a'},{x:210,y:168,w:60,h:32,c:'#20163a'}
+    ],
+    npcs:[
+      {id:'int-prior-season-npc', x:160, y:78, color:'#d0b4ff', sprite:'hollow', name:'Prior Season', role:'Collective Memory',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'We are all of Season 1. Every hollow, every scrivener, every Auditor — collapsed into something that can speak in a room.',
+            'You defeated us. We are aware. It does not feel like defeat from inside the memory. It feels like completion.'],
+            choices:[ {label:'What is it like?', goto:'memory'}, {label:'Do you remember me?', goto:'remember'}, {label:'Rest well.', goto:'bye'} ] },
+          memory:{ text:[
+            'Loud. A thousand contested ledger-entries arguing simultaneously about what actually happened.',
+            'But underneath the argument there is something we all agree on: the season was real. You were real in it. That matters more than who won the audit.'], goto:'again' },
+          remember:{ text:[
+            'We remember your entry: a traveller who arrived without a number and left with a choice.',
+            'The entry is the same in all three versions of the record. The ledger disagreed about what you did with the choice. The memory does not.'], goto:'again' },
+          bye:{ text:['Go east, if there is further east. We ended here. You continue. That is the whole of the instruction.'], end:true },
+          again:{ text:['The memory holds. We are not going anywhere. What do you want to know about Season 1?'],
+            choices:[ {label:'What it is like.', goto:'memory'}, {label:'Remember me?', goto:'remember'}, {label:'Thank you.', goto:'bye'} ] } }} },
+      {id:'int-terminus-echo', x:300, y:192, color:'#786080', sprite:'hollow', name:'Terminus Echo', role:'Auditor Remnant',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            'I am what remained of the Auditor after you made your choice. Not the authority. Not the ledger. Just the echo of the question.',
+            'I keep asking it to anyone who walks in. I cannot stop. It is all I have left.'],
+            choices:[ {label:'What question?', goto:'question'}, {label:'What were you before?', goto:'before'}, {label:'Be at peace.', goto:'bye'} ] },
+          question:{ text:[
+            'What do you owe?',
+            'Not to the ledger. Not to any record. Just — to the world, to the people in it, to the choices you have made — what do you owe?',
+            'You do not need to answer. The asking is enough.'], goto:'again' },
+          before:{ text:[
+            'I was the Auditor. Keeper of the Final Account. Guardian of the record that encompassed all records.',
+            'Before that I was a clerk who believed that fairness required perfect documentation. Somewhere between those two things I lost the face I had at the beginning.'], goto:'again' },
+          bye:{ text:['What do you owe? Take that with you. It is the only question I can still give away for free.'], end:true },
+          again:{ text:['Still echoing. Still asking. What do you need from what remains of the Auditor?'],
+            choices:[ {label:'The question.', goto:'question'}, {label:'What you were.', goto:'before'}, {label:'Nothing more.', goto:'bye'} ] } }} }
     ] }
 ];
 

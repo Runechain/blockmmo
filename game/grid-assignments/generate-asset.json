@@ -1,0 +1,21 @@
+{
+  "type": "runechain-generate-asset",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Convert a RUNECHAIN region art spec into PixelLab create_topdown_tileset call parameters. Takes a region description and palette, returns the exact argument object to pass to the PixelLab MCP tool.",
+  "prompt_template": "You are generating PixelLab tileset parameters for a RUNECHAIN game region.\n\nRUNECHAIN uses 16x16 pixel tiles in a top-down 2D view. The aesthetic is ledger-punk: muted earthy tones, decaying structures, debt-themed imagery. No bright colors; everything has a worn, administrative quality.\n\nInput (provided as context):\n  Region: {{region_name}}\n  Palette primary: {{palette_primary}}\n  Palette secondary: {{palette_secondary}}\n  Character: {{region_character}}\n  Decay level: {{decay_level}} (0=intact, 10=consumed by Wound)\n\nProduce a JSON object with PixelLab create_topdown_tileset arguments:\n\n{\n  \"description\": \"<60-word art direction for the tileset>\",\n  \"tile_size\": 16,\n  \"columns\": 8,\n  \"rows\": 4,\n  \"color_palette\": [\"<hex1>\", \"<hex2>\", ...],\n  \"include_tiles\": [\"floor\", \"wall\", \"path\", \"water|rubble|void\", \"decor-1\", \"decor-2\"],\n  \"style\": \"pixel art\",\n  \"mood\": \"<2-3 words matching region character>\"\n}\n\nRules:\n- color_palette: 5–8 hex colors; desaturate in proportion to decay_level.\n- include_tiles: always floor, wall, path; add region-specific tiles (water for Drowned Reach, rubble for Seized Grounds, void for the Wound area).\n- description: reference the region's ledger-punk theme concretely (crumbling ledger-stones, waterlogged receipts, etc.).\n- Return ONLY the JSON object, no prose, no markdown fences.",
+  "gold_reward": 30,
+  "output_schema": {
+    "type": "object",
+    "required": ["description", "tile_size", "columns", "rows", "color_palette", "include_tiles"],
+    "properties": {
+      "description":    { "type": "string" },
+      "tile_size":      { "type": "integer" },
+      "columns":        { "type": "integer" },
+      "rows":           { "type": "integer" },
+      "color_palette":  { "type": "array", "items": { "type": "string" } },
+      "include_tiles":  { "type": "array", "items": { "type": "string" } }
+    }
+  }
+}

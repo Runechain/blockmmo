@@ -1,0 +1,18 @@
+{
+  "type": "runechain-validate-candidate",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Run a candidate season manifest through all 6 RUNECHAIN season validators and return a structured pass/fail report. Each gate is checked independently; the overall result is the logical AND of all gates.",
+  "prompt_template": "You are validating a candidate RUNECHAIN season manifest against the 6 season gates.\n\nThe candidate season JSON is provided below as context:\n{{candidate_json}}\n\nThe 6 validation gates (from issue #102) are:\n\n1. SCHEMA: All required fields present per game/schema/season.json (meta.id, meta.name, canonState, regions[], towns[], connections[], halvingEffect).\n2. REFS: All exits[].to reference existing region IDs; all towns[].regionId reference existing region IDs; halvingEffect.coldHearths are subset of towns[].hearthId.\n3. REACHABILITY: BFS from regions[0].id reaches all other regions via connections and exits (treating gated exits as passable for this check).\n4. LORE: Each region has a name and tileset; each town has a hearthBrightness in 0–1. At least one region has a hearth entity. Canon is coherent (no contradictory storyBeats).\n5. ECONOMY: halvingEffect.coldHearths is non-empty (at least one hearth goes cold per Halving). newPlayerItems does not grant RUNE-denominated power items (Gold/cosmetic only).\n6. SEASON_DELTA: The season differs meaningfully from S1 — different dwindlingLevel, at least one new region, or at least one new story beat.\n\nFor each gate, produce a result:\n  { \"gate\": \"<name>\", \"pass\": true|false, \"reason\": \"<one sentence>\" }\n\nReturn ONLY a JSON object:\n{\n  \"overall\": true|false,\n  \"gates\": [ ...6 gate results... ],\n  \"summary\": \"<one paragraph summary of what passed and what needs fixing>\"\n}",
+  "gold_reward": 40,
+  "output_schema": {
+    "type": "object",
+    "required": ["overall", "gates", "summary"],
+    "properties": {
+      "overall":  { "type": "boolean" },
+      "gates":    { "type": "array", "items": { "type": "object" } },
+      "summary":  { "type": "string" }
+    }
+  }
+}

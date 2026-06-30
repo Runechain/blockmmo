@@ -395,6 +395,7 @@ const Story=(function(){
   function completeStep(){
     const q=quest(), st=step();
     if(st)log('<b style="color:#f1c75b">Objective complete:</b> '+esc(st.text));
+    E.emit('quest.progressed', {questId:q&&q.id, stepIndex:state.stepIndex, event:st&&st.done&&st.done.event}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'town'});
     state.stepIndex++; state.stepCount=0;
     if(q && state.stepIndex>=q.steps.length){
       state.completed.push(q.id);
@@ -609,6 +610,43 @@ let player={
 };
 const enemies=[], particles=[], projectiles=[], remotes={};
 const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set(), portals:new Set()};
+const movementEvent={at:-999,x:null,y:null,mode:null};
+
+function playerEventSnapshot(){
+  return {
+    id:(progress&&progress.playerId)||'anon',
+    hp:player.hp,
+    maxHp:player.maxHp,
+    stamina:player.sta,
+    maxStamina:player.maxSta,
+    level:player.level,
+    dead:player.dead,
+    skin:player.skinId
+  };
+}
+function positionEventSnapshot(extra={}){
+  return Object.assign({
+    mode:state.mode||'town',
+    areaId:state.mode==='interior'&&activeInterior?activeInterior.id:'gracefall-parish',
+    x:player.x,
+    y:player.y,
+    vx:player.vx,
+    vy:player.vy,
+    dirX:player.dirX,
+    dirY:player.dirY,
+    moving:player.moving
+  },extra);
+}
+function emitMovementEvent(force=false){
+  if(!state.started||player.dead)return;
+  if(state.mode!=='town'&&state.mode!=='interior')return;
+  const mode=state.mode||'town';
+  const delta=movementEvent.x==null?Infinity:Math.hypot(player.x-movementEvent.x,player.y-movementEvent.y);
+  const modeChanged=movementEvent.mode!==mode;
+  if(!force && !modeChanged && state.time-movementEvent.at<.5 && delta<18)return;
+  E.emit('player.moved', {moving:!!player.moving}, playerEventSnapshot(), positionEventSnapshot());
+  movementEvent.at=state.time; movementEvent.x=player.x; movementEvent.y=player.y; movementEvent.mode=mode;
+}
 
 function recalcStats(fullHeal){
   const b=itemBonuses();
@@ -1755,6 +1793,7 @@ function updatePlayer(dt){
     if(mw.hitX)player.vx=0; if(mw.hitY)player.vy=0;
   }
   player.x=clamp(player.x,-WORLD_LIMIT,WORLD_LIMIT); player.y=clamp(player.y,-WORLD_LIMIT,WORLD_LIMIT);
+  emitMovementEvent(false);
 }
 function update(dt){
   state.time+=dt;
@@ -2125,7 +2164,7 @@ function nearestNpc(){
 function doInteract(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||Dialogue.isOpen())return;
   if(state.mode==='interior'){
-    const n=nearestNpc(); if(n){ Dialogue.open(n); return; }
+    const n=nearestNpc(); if(n){ E.emit('player.interacted', {targetId:n.id||n.name, interactionType:'dialogue'}, playerEventSnapshot(), positionEventSnapshot({mode:'interior'})); Dialogue.open(n); return; }
     if(nearInteriorExit()){ exitInterior(); return; }
     return;
   }
@@ -2133,6 +2172,7 @@ function doInteract(){
   const i=nearestInteractable();
   if(i){
     if(!i.repeat)progress.interactions.add(interactionKey(i));
+    E.emit('player.interacted', {targetId:i.target, id:i.id, interactionType:i.townBeat?'town_beat':'interactable'}, playerEventSnapshot(), positionEventSnapshot({mode:'town'}));
     if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
     log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
     const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
@@ -2154,7 +2194,7 @@ function doInteract(){
   const portal=nearestPortal();
   if(portal){ enterPortal(portal); return; }
   const n=nearestNpc();
-  if(n)Dialogue.open(n);
+  if(n){ E.emit('player.interacted', {targetId:n.id||n.name, interactionType:'dialogue'}, playerEventSnapshot(), positionEventSnapshot({mode:'town'})); Dialogue.open(n); }
 }
 /* ---- World-to-interior portals (issue #19): walk to an entrance, press E to descend -------- */
 const PORTALS=(WORLD_PORTALS||[]);
@@ -2234,6 +2274,7 @@ function updateInterior(dt){
   if(player.moving)faceToward(player.x+n.x,player.y+n.y);
   player.x=clamp(player.x+player.vx*dt,INTERIOR_MARGIN,it.w-INTERIOR_MARGIN);
   player.y=clamp(player.y+player.vy*dt,INTERIOR_MARGIN,it.h-INTERIOR_MARGIN);
+  emitMovementEvent(false);
   // Camera follows but stays clamped so the room walls stay framed.
   const cx=clamp(player.x,VIEW_W/2,Math.max(VIEW_W/2,it.w-VIEW_W/2));
   const cy=clamp(player.y,VIEW_H/2,Math.max(VIEW_H/2,it.h-VIEW_H/2));
@@ -2738,7 +2779,8 @@ function startGame(){
   document.body.classList.add('playing');
   state.started=true; state.introMercy=4; recalcStats(true);
   Story.event('start'); Net.connect(); Net.updatePeers();
-  E.emit('player.spawned', {}, {id: (progress&&progress.playerId)||'anon'}, {mode: state.mode||'town'});
+  E.emit('player.spawned', {}, playerEventSnapshot(), positionEventSnapshot());
+  emitMovementEvent(true);
   window.__rc_eventBuffer = E; // S2 entropy pipeline reads from here
   if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach();
   log('Hearthlight is safe. Let the registry record you, then move east.');

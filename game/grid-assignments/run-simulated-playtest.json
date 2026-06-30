@@ -1,0 +1,20 @@
+{
+  "type": "runechain-run-simulated-playtest",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Simulate a player's path through a RUNECHAIN region using a headless traversability harness. Returns pacing, dead-ends, and a traversability verdict without a running game server.",
+  "prompt_template": "You are simulating a player path through a RUNECHAIN region to check traversability and pacing.\n\nRegion data (provided as context):\n{{region_json}}\n\nPlatformer section data (if available):\n{{platformer_json}}\n\nSimulate THREE player archetypes traversing this region:\n  1. EXPLORER: visits all entities, enters every interior and platformer portal.\n  2. RUSHER: takes the shortest path to the exit.\n  3. GRINDER: loops combat encounters until capped, then proceeds.\n\nFor each archetype, model:\n- Estimated time in minutes (assume 2 min per combat encounter, 1 min per interior, 0.5 min per NPC).\n- Whether the exit is reachable without backtracking through gated content the player hasn't unlocked.\n- Any dead-ends (entities the player can enter but cannot exit without help).\n\nReturn ONLY a JSON object:\n{\n  \"region_id\": \"<id>\",\n  \"traversable\": true|false,\n  \"archetypes\": [\n    { \"name\": \"explorer\",  \"minutes\": <number>, \"reachable\": true|false, \"dead_ends\": [] },\n    { \"name\": \"rusher\",    \"minutes\": <number>, \"reachable\": true|false, \"dead_ends\": [] },\n    { \"name\": \"grinder\",   \"minutes\": <number>, \"reachable\": true|false, \"dead_ends\": [] }\n  ],\n  \"pacing\": \"<short|medium|long>\",\n  \"issues\": [\"<any traversability or pacing issues>\"]\n}",
+  "gold_reward": 35,
+  "output_schema": {
+    "type": "object",
+    "required": ["region_id", "traversable", "archetypes", "pacing"],
+    "properties": {
+      "region_id":   { "type": "string" },
+      "traversable": { "type": "boolean" },
+      "archetypes":  { "type": "array" },
+      "pacing":      { "type": "string" },
+      "issues":      { "type": "array" }
+    }
+  }
+}

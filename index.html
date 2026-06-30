@@ -259,6 +259,9 @@
 <script src="game/sha256.js"></script>
 <script src="game/chain.js"></script>
 <script src="game/content.js"></script>
+<script src="game/events.js"></script>
+<script src="engine/s2/entropy.js"></script>
+<script src="engine/s2/submit.js"></script>
 <script src="game/overworld.js"></script>
 <script src="game/account.js"></script>
 <script src="game/wallet.js"></script>
@@ -275,8 +278,9 @@ const Content = window.RUNECHAIN_CONTENT;
 const Overworld = window.RUNECHAIN_OVERWORLD;
 if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.RUNECHAIN_ACCOUNT || !window.RUNECHAIN_WALLET || !window.RUNECHAIN_SIGNIN) throw new Error('RUNECHAIN core scripts failed to load');
 if (!Overworld) throw new Error('RUNECHAIN overworld failed to load');
+const E = typeof RUNECHAIN_EVENTS !== 'undefined' ? RUNECHAIN_EVENTS : { emit: () => {} };
 const {
-  ECON, STORY, RELICS, SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, WORLD_PORTALS,
+  ECON, STORY, RELICS, SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, AREA2_LORE, AREA2_PUZZLES, WORLD_PORTALS,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
@@ -394,6 +398,7 @@ const Story=(function(){
     state.stepIndex++; state.stepCount=0;
     if(q && state.stepIndex>=q.steps.length){
       state.completed.push(q.id);
+      E.emit('quest.completed', {questId: q.id}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'town'});
       say(q.onComplete);
       if(q.rewards&&q.rewards.rune)awardRune({type:'story',questId:q.id},q.rewards.rune,'story: '+q.title);
       if(q.next){
@@ -651,6 +656,7 @@ function hurtPlayer(amount){
   floatText(player.x,player.y-18,'-'+amount,'#e24a4a');
   if(player.hp<=0){
     player.dead=true;
+    E.emit('player.died', {sourceType:'enemy'}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'town'});
     document.getElementById('death').style.display='flex';
     document.getElementById('respawn').focus();
     log('You died. Hearthlight will reset your body, not the chain.');
@@ -766,6 +772,7 @@ function killEnemy(e){
   const reward=+(e.type.reward*(1+bonus.runeMult+(player.runeMult||0))).toFixed(2);
   const localReward=awardRune({type:'enemy',key:e.key},reward,e.type.name+' slain');
   Story.event('kill',{key:e.key});
+  E.emit('combat.creature_defeated', {targetId:e.key, targetType:'enemy', rewardRune:e.reward||reward||0}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'town'});
   log('<b>'+esc(e.type.name)+'</b> slain. '+(localReward?'+'+reward.toFixed(2)+' RUNE pending.':'RUNE proof requested from the realm server.'));
   if(e.type.boss){
     const boss=act1Boss(e.key);
@@ -806,13 +813,32 @@ function openAuditorChoice(enemy){
   }
   auditorReached=true;
   if(Dialogue.isOpen())return;
-  Dialogue.open(auditorEndingNpc());
+  const auditor=auditorEndingNpc();
+  const intro=auditor&&auditor.dialogue&&auditor.dialogue.nodes&&auditor.dialogue.nodes.intro;
+  if(intro){
+    intro.text=[
+      'The record has a discrepancy: you are Recorded, yet you carry no inheritance.',
+      'The ledger cannot hold both states simultaneously.',
+      'One of us must resolve the contradiction. You are the one who arrived — so it falls to you.'
+    ].concat(intro.text||[]);
+  }
+  Dialogue.open(auditor);
 }
 function resolveAuditorChoice(id){
   if(progress.ending)return; // permanent, account-bound
   const ending=(AUDITOR_ENDINGS||[]).find((e)=>e.id===id);
   if(!ending)return;
   progress.ending=ending.id;
+  const _endingCosmeticMap = {A:'auditor-robe', B:'void-skin', C:'scribe-robes'};
+  const _endingCosmetic = _endingCosmeticMap[ending.id];
+  if(_endingCosmetic){
+    if(!progress.cosmetics) progress.cosmetics = {};
+    progress.cosmetics[_endingCosmetic] = true;
+  }
+  if(ending.id === 'B') progress.ledgerErased = true;
+  // NOTE: Ledger is preserved per scope ruling (no RUNE wipe, no relic destruction).
+  // ledgerErased is a display flag only — used to show the Void-Skin by default and
+  // show HUD flavor text "UNRECORDED" instead of player name on repeat visits.
   log('<b style="color:#f0f0e8">Ending '+esc(ending.id)+' — '+esc(ending.title.replace(/^Ending [A-C] — /,''))+'</b> is recorded. It is permanent and account-bound.');
   (ending.lines||[]).forEach((t)=>log('<span style="color:#d8d2c4">'+esc(t)+'</span>'));
   // Ledger is PRESERVED across every ending — no RUNE wipe / relic destruction (scope ruling).
@@ -826,6 +852,11 @@ function resolveAuditorChoice(id){
   // Resolve (not kill) the Auditor: it leaves the field without a combat death / unconditional mint.
   if(auditorEnemy){ auditorEnemy.dead=true; auditorEnemy.deathT=1.2; }
   Story.event('ending',{choice:ending.id}); // completes q13 (done.event==='ending')
+  E.emit('ending.chosen', {choice: ending.id}, {id:(progress&&progress.playerId)||'anon'}, {mode:'town'});
+  if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach(); // refresh seed with ending signal
+  if (typeof RUNECHAIN_S2_SUBMIT !== 'undefined') {
+    fetch('/rc-config.json').then(r=>r.json()).then(cfg=>{ if(cfg.broker) RUNECHAIN_S2_SUBMIT.init(cfg.broker); }).catch(()=>{});
+  }
   lootFlash('<b>'+esc(ending.title)+'</b><br><span style="font-size:13px;color:#d8d2c4">Ending recorded'+(ending.sigil?' · Amended Record sealed':'')+'</span>');
   updateHud();
 }
@@ -1031,7 +1062,7 @@ const engineApi={
   onZoneCleared(id){ log('Safe ground secured: '+id); }, onMeleeHit(){},
   onDuelAccepted(m){ log('Duel accepted.'); if(state.mode==='battlefield')startTurnDuel(m&&m.from,m&&m.duelId,m); },
   onDuelResult(r){ if(bossSeq&&state.mode==='sequencer'){ bossSeq.segmentEvent('duel',r); return; } log('Duel: '+((r&&r.reason)||'over')); },
-  onBossComplete(script){ const e=bossEncounterEnemy; log((script&&script.name||'The boss')+' is overcome.'); endBossSequence(); if(e&&!e.dead)killEnemy(e); } };
+  onBossComplete(script){ const e=bossEncounterEnemy; log((script&&script.name||'The boss')+' is overcome.'); E.emit('boss.defeated', {bossId: (script&&script.id)||'boss', result:'won'}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'turnbased'}); endBossSequence(); if(e&&!e.dead)killEnemy(e); } };
 function engineInput(){
   return { left:keys.KeyA||keys.ArrowLeft, right:keys.KeyD||keys.ArrowRight, up:keys.KeyW||keys.ArrowUp, down:keys.KeyS||keys.ArrowDown,
     moveLeft:keys.KeyA||keys.ArrowLeft, moveRight:keys.KeyD||keys.ArrowRight, moveUp:keys.KeyW||keys.ArrowUp, moveDown:keys.KeyS||keys.ArrowDown,
@@ -1160,6 +1191,7 @@ function startBossEncounter(enemy){
   bossSeq=RCEngine.createSegmentSequencer(useScript);
   bossSeq.enter(engineApi, { startMode:startSegmentMode, exitMode(){ if(modeManager)modeManager.setMode(null, ctx, engineApi); }, log:(m)=>log(m) });
   state.mode='sequencer'; Net.updatePeers();
+  E.emit('boss.triggered', {bossId: enemy.key}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'turnbased'});
   log('Encounter: '+script.name+'. (T to retreat)');
 }
 function updateBossSequence(dt){
@@ -1217,6 +1249,7 @@ function doLevel(stat){
   Chain.spend(valueAddress(),cost,'leveled '+stat);
   player[stat]++; player.level++; recalcStats(true);
   Story.event('level',{stat,level:player.level});
+  E.emit('player.stat_leveled', {stat, oldValue: player.level-1, newValue: player.level}, {id:(progress&&progress.playerId)||'anon'}, {mode:'town'});
   log('Leveled <b>'+stat+'</b> to '+player[stat]+'.');
   refreshGrace();
 }
@@ -1242,6 +1275,7 @@ function forgeRelic(it){
   Chain.mintItem(valueAddress(),it.id);
   progress.forged=true;
   recalcStats(false); Story.event('forge',{item:it.id});
+  E.emit('player.relic_forged', {relicId: it.id}, {id:(progress&&progress.playerId)||'anon'}, {mode:'town'});
   lootFlash('Relic forged<br><small>'+esc(it.name)+'</small>');
   refreshGrace();
 }
@@ -2263,7 +2297,7 @@ function drawBuildings(){
   }
 }
 /* ---- Off-path lore / Codex (issue #25): rewarded curiosity, never power ---- */
-const LORE=(AREA1_LORE||[]);
+const LORE=[...(AREA1_LORE||[]),...(AREA2_LORE||[])];
 function nearestLore(){
   let best=null, bestD=999;
   for(const node of LORE){
@@ -2311,7 +2345,7 @@ function drawLore(){
 /* ---- Ledger puzzles / Q-N3 (issue #26): read the clue, deduce the order ----
    The engine NEVER reveals the solution order. A node only advances the puzzle if it is the
    next id in puzzle.order; a wrong stamp blanks that puzzle's progress. Solving reveals lore. */
-const PUZZLES=(AREA1_PUZZLES||[]);
+const PUZZLES=[...(AREA1_PUZZLES||[]),...(AREA2_PUZZLES||[])];
 const puzzleProgress={}; // id -> count of correct stamps so far this attempt
 function puzzleStep(p){ return puzzleProgress[p.id]||0; }
 function puzzleSolved(p){ return progress.puzzles.has(p.id); }
@@ -2704,6 +2738,9 @@ function startGame(){
   document.body.classList.add('playing');
   state.started=true; state.introMercy=4; recalcStats(true);
   Story.event('start'); Net.connect(); Net.updatePeers();
+  E.emit('player.spawned', {}, {id: (progress&&progress.playerId)||'anon'}, {mode: state.mode||'town'});
+  window.__rc_eventBuffer = E; // S2 entropy pipeline reads from here
+  if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach();
   log('Hearthlight is safe. Let the registry record you, then move east.');
 }
 document.getElementById('go').onclick=startGame;
@@ -2767,6 +2804,7 @@ async function autoConnectWallet(){
 })();
 document.getElementById('respawn').onclick=()=>{
   player.x=0; player.y=0; player.hp=player.maxHp; player.sta=player.maxSta; player.dead=false; player.invuln=1; player.lock=null;
+  E.emit('player.respawned', {}, {id:(progress&&progress.playerId)||'anon'}, {mode:'town'});
   document.getElementById('death').style.display='none';
 };
 
@@ -2777,6 +2815,7 @@ initWorld();
 Story.updateHud();
 Net.updatePeers();
 updateHud();
+window.__rc_eventBuffer = E; // S2 entropy pipeline reads from here
 document.getElementById('name').focus();
 </script>
 </body>

@@ -1,0 +1,182 @@
+[
+  {
+    "id": "gen-area4-npc-1",
+    "title": "Generate Area 4 NPC: The Amendment Clerk",
+    "type": "npc_dialogue",
+    "area": "area4",
+    "prompt": "Write a 3-node NPC dialogue tree for 'Amendment Clerk' in the Amendment Wastes of RUNECHAIN. The Wastes are a society frozen by the preserved ledger — every action is recorded, nothing is permitted to change. The Clerk is a minor bureaucrat who validates paper permits for movement between ossified precincts. Voice: weary, procedural, genuinely believes the forms protect people. Output as a JSON object with keys: intro (text:[], choices:[]), permit (text:[], goto), farewell (text:[], end:true). Each text array has 2-3 strings. Choices have label and goto. Use ledger and record metaphors. Terse sentences. No heroics.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 600
+  },
+  {
+    "id": "gen-area4-npc-2",
+    "title": "Generate Area 4 NPC: The Ossified Record",
+    "type": "npc_dialogue",
+    "area": "area4",
+    "prompt": "Write a 3-node NPC dialogue tree for 'Ossified Record' in the Amendment Wastes. This NPC is a person who has been so thoroughly catalogued by the Ledger that they've forgotten how to speak unprompted — they can only recite their own record entry. Voice: flat, repetitive, occasionally glitching into something human. Nodes: intro (recitation of their record), prompted (a flicker of self), farewell (back to recitation). Output as JSON with text:[] arrays (2-3 strings each) and choices with label/goto. Unsettling, not comedic.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 600
+  },
+  {
+    "id": "gen-area4-lore-1",
+    "title": "Generate Area 4 lore: The Amendment Tablets",
+    "type": "lore_fragment",
+    "area": "area4",
+    "prompt": "Write 3 lines of environmental lore for a stone tablet in the Amendment Wastes of RUNECHAIN. The Wastes are society after the ledger was kept — everything is recorded, change is forbidden. The tablet commemorates the 'Final Amendment' — the last permitted change before the ledger sealed. Voice: bureaucratic, solemn, slightly horrifying in its mundanity. 3 short lines only. No quotation marks. Use ledger/ink/record metaphors. Example cadence: 'The road was widened on the fourteenth count. / The committee found no objection. / No further amendments are scheduled.'",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 200
+  },
+  {
+    "id": "gen-area4-lore-2",
+    "title": "Generate Area 4 lore: The Permit Wall",
+    "type": "lore_fragment",
+    "area": "area4",
+    "prompt": "Write 3 lines of environmental lore for a wall covered in layered permit-stamps in the Amendment Wastes of RUNECHAIN. Each stamp is a different era's bureaucratic approval for a different trivial action. The topmost stamps are illegible — the ink has merged. Voice: archaeological, dry, hinting at vast time. 3 short lines. No quotation marks. Use layering, ink, and preservation metaphors.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 200
+  },
+  {
+    "id": "gen-area4-boss-script",
+    "title": "Generate Area 4 boss: The Grand Auditor's intro monologue",
+    "type": "boss_script",
+    "area": "area4",
+    "prompt": "Write a boss encounter script for 'The Grand Auditor' — the final guardian of the Amendment Wastes in RUNECHAIN. The Grand Auditor is not evil; they are the perfect servant of the preserved ledger, and they believe they are protecting the world from chaos. Format: { intro: string (3-4 sentences, spoken as the arena seals), phase1_callout: string (1 terse line as they cross 66% HP), phase2_callout: string (1 terse line at 33% HP), defeat: string (2 sentences, quiet realisation they never questioned the ledger's right to exist) }. Output as JSON only. Voice: formal, certain, then cracking.",
+    "complexity_tier": "mid",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 800
+  },
+  {
+    "id": "gen-area4-intro",
+    "title": "Generate Area 4 entrance log message",
+    "type": "area_intro_text",
+    "area": "area4",
+    "prompt": "Write a 2-sentence entrance log message for when a player arrives in the Amendment Wastes in RUNECHAIN. These messages appear in the game's bottom log bar. They should feel like a ledger entry acknowledging the player's arrival — cold, official, slightly menacing. Example style: 'Gracefall opens. One weak Hollow waits outside Hearthlight.' Output only the 2 sentences, no quotes.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 150
+  },
+  {
+    "id": "gen-area5-npc-1",
+    "title": "Generate Area 5 NPC: The Shore Rememberer",
+    "type": "npc_dialogue",
+    "area": "area5",
+    "prompt": "Write a 3-node NPC dialogue tree for 'Shore Rememberer' in the Erased Shore of RUNECHAIN. The Shore is the world after the ledger was destroyed — no records, no names, no debt. Freedom and chaos equally. The Rememberer collects stories from strangers because without the ledger, stories are the only record. Voice: warm, slightly desperate, building an oral archive. Nodes: intro (explains their work), story (asks to hear yours), farewell. JSON with text:[] (2-3 strings) and choices (label/goto). Not melancholy — curious.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 600
+  },
+  {
+    "id": "gen-area5-npc-2",
+    "title": "Generate Area 5 NPC: The Blank Wanderer",
+    "type": "npc_dialogue",
+    "area": "area5",
+    "prompt": "Write a 3-node NPC dialogue tree for 'Blank Wanderer' in the Erased Shore of RUNECHAIN. The Wanderer was so thoroughly defined by their ledger entry that when the ledger was destroyed, they lost their sense of self. Not distressed — serene, emptied, starting over. Voice: present-tense only, short observations about the immediate world. Nodes: intro (a simple observation), question (they ask who you are, genuinely curious), farewell (another observation). JSON with text:[] (1-2 strings) and choices. Zen but melancholy.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 600
+  },
+  {
+    "id": "gen-area5-lore-1",
+    "title": "Generate Area 5 lore: The Tide Line",
+    "type": "lore_fragment",
+    "area": "area5",
+    "prompt": "Write 3 lines of environmental lore for a high-water mark scratched into a cliff face in the Erased Shore of RUNECHAIN. The mark is from before the ledger was destroyed — someone recording a flood the old way, with a stick. It has no official stamp, no bureaucratic form. Voice: wistful, quiet, the oldest informal record. 3 short lines. No quotation marks. Use water, erasure, and informal marks as metaphors.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 200
+  },
+  {
+    "id": "gen-area5-lore-2",
+    "title": "Generate Area 5 lore: The Name Pool",
+    "type": "lore_fragment",
+    "area": "area5",
+    "prompt": "Write 3 lines of environmental lore for a tide pool in the Erased Shore where people leave objects that belonged to their old ledger-names — tags, permits, identity papers, slowly dissolving. Voice: ritualistic, gentle, hopeful-sad. 3 short lines. Use dissolution, tide, and new names as metaphors. No quotation marks.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 200
+  },
+  {
+    "id": "gen-area5-boss-script",
+    "title": "Generate Area 5 boss: The Tide Keeper's intro monologue",
+    "type": "boss_script",
+    "area": "area5",
+    "prompt": "Write a boss encounter script for 'The Tide Keeper' — guardian of the Erased Shore. The Keeper believes the erasure of the ledger was right, but they've appointed themselves protector of the new chaos — they kill anyone who tries to impose new order. Format: { intro: string (3-4 sentences, philosophical, addressed directly to the player), phase1_callout: string (1 line, dismissive), phase2_callout: string (1 line, grudging respect), defeat: string (2 sentences, accepts that order and chaos need each other) }. JSON only. Voice: wild, principled, not malevolent.",
+    "complexity_tier": "mid",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 800
+  },
+  {
+    "id": "gen-area5-intro",
+    "title": "Generate Area 5 entrance log message",
+    "type": "area_intro_text",
+    "area": "area5",
+    "prompt": "Write a 2-sentence entrance log message for arriving in the Erased Shore in RUNECHAIN. The shore exists where the ledger's authority ended — open water, no records, genuine freedom. The log message should feel like the game itself is uncertain how to describe an unrecorded place. Output only the 2 sentences, no quotes. Example cadence: 'The Wastes have a gate. The Shore does not.'",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 150
+  },
+  {
+    "id": "gen-area6-npc-1",
+    "title": "Generate Area 6 NPC: The Purgatory Scribe",
+    "type": "npc_dialogue",
+    "area": "area6",
+    "prompt": "Write a 3-node NPC dialogue tree for 'Purgatory Scribe' in Scribe's Purgatory — the convergence of all RUNECHAIN endings. The Scribe has seen players arrive from all three endings (ledger preserved, ledger erased, ledger amended). They know there are multiple truths. Voice: tired, meta-aware, speaks in conditional clauses. Nodes: intro (acknowledges the player's ending), reflect (offers perspective on all three paths), farewell. JSON with text:[] (2-3 strings) and choices. Tone: world-weary wisdom, not smug.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 600
+  },
+  {
+    "id": "gen-area6-npc-2",
+    "title": "Generate Area 6 NPC: The Terminus Echo",
+    "type": "npc_dialogue",
+    "area": "area6",
+    "prompt": "Write a 3-node NPC dialogue tree for 'Terminus Echo' in Scribe's Purgatory. The Echo is a fading remnant of the Auditor — not the boss you fought, but a memory of them that persists in the convergence zone. They've processed their defeat and have one thing left to say. Voice: fading, honest, finished. Nodes: intro (recognises the player), admission (something the Auditor never said aloud), farewell (dissolves). JSON with text:[] (1-2 strings each) and choices. Poignant, not maudlin.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 600
+  },
+  {
+    "id": "gen-area6-lore-1",
+    "title": "Generate Area 6 lore: The Convergence Arch",
+    "type": "lore_fragment",
+    "area": "area6",
+    "prompt": "Write 3 lines of environmental lore for an arch at the entrance to Scribe's Purgatory — carved by scribes from all three ending-paths working together. One stone from each world, mortared with something that doesn't appear in any ledger. Voice: architectural, collaborative, quietly miraculous. 3 short lines. No quotation marks. Use stone, mortar, and three-ness as motifs.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 200
+  },
+  {
+    "id": "gen-area6-lore-2",
+    "title": "Generate Area 6 lore: The Final Entry",
+    "type": "lore_fragment",
+    "area": "area6",
+    "prompt": "Write 3 lines of environmental lore for the last page of the original Ledger — preserved in a case at the heart of Purgatory. The final entry is an acknowledgement that the Ledger itself was uncertain about its own authority. Voice: legal, hedged, the bureaucratic form of doubt. 3 short lines. No quotation marks. The horror is in the hedge-clauses.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 200
+  },
+  {
+    "id": "gen-area6-boss-script",
+    "title": "Generate Area 6 boss: The Prior Season's intro monologue",
+    "type": "boss_script",
+    "area": "area6",
+    "prompt": "Write a boss encounter script for 'The Prior Season' — the final boss of Season 2 in RUNECHAIN, fought in Scribe's Purgatory. The Prior Season is a composite entity made from the collective memory of Season 1 — every player's journey, compressed into an adversary. It attacks differently depending on which ending the player chose. Format: { intro: string (4-5 sentences, speaks in first-person plural 'we', acknowledges knowing the player's full arc), phase1_callout: string (references the player's ending choice specifically — use 'your ending' as a placeholder), phase2_callout: string (the entity fragmenting, multiple voices at once), defeat: string (3 sentences, the entity accepts succession, Season 2 begins properly) }. JSON only. Epic but intimate.",
+    "complexity_tier": "mid",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 900
+  },
+  {
+    "id": "gen-area6-intro",
+    "title": "Generate Area 6 entrance log message",
+    "type": "area_intro_text",
+    "area": "area6",
+    "prompt": "Write a 2-sentence entrance log message for arriving in Scribe's Purgatory in RUNECHAIN. This is where all endings converge — players from all three paths arrive here eventually. The message should acknowledge that something is different about this place, as if the game itself pauses. Output only the 2 sentences, no quotes. Quiet and significant.",
+    "complexity_tier": "local",
+    "entropy_seed": "__RC_SEED__",
+    "max_tokens": 150
+  }
+]

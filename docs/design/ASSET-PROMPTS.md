@@ -129,6 +129,30 @@ Import as a 3-frame strip: `node scripts/import_assets.js prop --name sigil-icon
 
 ---
 
+## Region Tilesets (automated — scripts/generate_region_tileset.js)
+
+These prompts are embedded in `scripts/generate_region_tileset.js` and are reproduced here
+for human review. Regenerating a tileset: `PIXELLAB_API_KEY=<key> node scripts/generate_region_tileset.js <regionId> [--force]`
+
+| Region ID | Tileset name | Palette anchor |
+|---|---|---|
+| `gracefall-parish` | `tileset-gracefall` | warm gold `#c8a84a`, amber, aged parchment, dusty sage, warm stone |
+| `mempool-moor` | `tileset-mempool` | fog grey `#9aaa9a`, muted teal `#6a8a8a`, pale moss, dark mud |
+| `shroud-vaults` | `tileset-shroud` | deep stone `#404050`, vault grey, dark purple `#4a3060`, bone white, rust |
+| `drowned-reach` | `tileset-drowned` | muted teal `#4a8080`, submerged blue `#3a6070`, pale sand, dark silt |
+| `seized-grounds` | `tileset-seized` | cracked earth `#8a6040`, rust red `#904040`, ash grey, scorched stone |
+| `archive-causeway` | `tileset-archive` | near-black `#282828`, ash white `#c8c0b8`, deep void, pale paper, faint amber |
+
+**Global constraints:** 16×16 tiles, 8 columns × 4 rows sheet (128×64px), muted palette,
+thin dark outline, top-down perspective, ledger-punk aesthetic, original IP.
+
+Generate all 6:
+```bash
+PIXELLAB_API_KEY=<key> node scripts/generate_region_tileset.js all
+```
+
+---
+
 ## Optional — Meshy 3D *(only if the project ever returns to a 3D client)*
 
 Non-blocking; the playable demo stays web-pixel-first (see `models/README.md`). Costs

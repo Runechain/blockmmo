@@ -773,6 +773,83 @@ const AREA3_ENCOUNTERS={
     {mode:'battlefield',name:'The Temporal Rift',payload:BATTLE_SEIZED_YARD,beatText:'Past versions of every enemy spawn. Beyond them, the Auditor waits to be answered.',complete:{event:'cleared'}}
   ]}
 };
+/* ---- Season 2 area stubs (x=1880→3560, gated on progress.ending) --------- */
+/* TODO: gate Area 4/5/6 access behind progress.ending check in index.html portal logic */
+const AREA4_TOWN={id:'a4-amendment-wastes',name:'The Amendment Wastes',x:1880,endX:2440,palette:{primary:'#c8a84a',secondary:'#8a7a3a',bg:'#2a2418'},
+  npcs:[
+    {id:'amendment-clerk',name:'Amendment Clerk',role:'Validates permits for movement between ossified precincts. Believes the forms protect people.'},
+    {id:'ossified-record',name:'Ossified Record',role:'A person so thoroughly catalogued they can only recite their own ledger entry.'},
+    {id:'wandering-debt',name:'Wandering Debt',role:'A debt note given human form when its original debtor was erased — it wanders seeking someone to claim it.'},
+    {id:'ledger-warden',name:'Ledger Warden',role:'Enforces the prohibition on unsanctioned change. Genuinely believes stability is mercy.'}
+  ],
+  hearthlight:{x:1960,y:-80,label:'Ossified Spark'},
+  sideQuest:{id:'final-amendment',interactionKey:'q07:amendment-permit',effect:'unlock-warden-dialogue'}};
+const PLAT_AMENDMENT_WASTES={id:'a4-amendment-plat',name:'The Petrified Stacks',width:1400,height:780,spawn:{x:80,y:100},physics:{maxRun:180,jump:440},
+  fork:null,
+  platforms:[{id:'entry',x:0,y:130,w:300,h:14,type:'solid'},{id:'stack-1',x:320,y:220,w:200,h:12,type:'solid'},{id:'stack-2',x:560,y:310,w:200,h:12,type:'solid'},{id:'stack-3',x:400,y:400,w:240,h:12,type:'solid'},{id:'boss-floor',x:600,y:720,w:600,h:50,type:'solid'}],
+  hazards:[{id:'permit-stamp',type:'slow',x:200,y:210,w:100,h:14,slow:0.4}],
+  enemies:[],
+  bossTrigger:{id:'grand-auditor',x:880,y:660,w:160,h:70,lock:{x:580,y:620,w:640,h:160}},exit:{id:'to-erased-shore',x:1380,y:710,w:40,h:80}};
+const BATTLE_AMENDMENT_VAULTS={id:'a4-amendment-vaults',name:'Amendment Vault',width:1400,height:860,spawn:{x:200,y:380},physics:{speed:160},
+  creatures:{default:{hp:22,speed:44,damage:3,reach:16,radius:10,color:'#c8a84a'}},
+  zones:[{id:'record-hall',x:100,y:200,w:500,h:300,regen:10,clearFor:14},{id:'permit-chamber',x:750,y:200,w:500,h:300,regen:8,clearFor:16}]};
+const AREA4_ENCOUNTERS={
+  grand_auditor:{id:'grand-auditor',name:'The Grand Auditor',beat:0.85,segments:[
+    {mode:'platformer',name:'The Petrified Stacks',payload:PLAT_AMENDMENT_WASTES,beatText:'The permits do not permit this.',complete:{event:'boss'}},
+    {mode:'battlefield',name:'The Amendment Vault',payload:BATTLE_AMENDMENT_VAULTS,beatText:'Every record fights back.',complete:{event:'cleared'}}
+  ]}
+};
+
+const AREA5_TOWN={id:'a5-erased-shore',name:'The Erased Shore',x:2440,endX:3000,palette:{primary:'#4ab8c4',secondary:'#2a8090',bg:'#1a2830'},
+  npcs:[
+    {id:'shore-rememberer',name:'Shore Rememberer',role:'Collects stories from strangers — without the ledger, stories are the only record.'},
+    {id:'tide-reader',name:'Tide Reader',role:'Reads the tide patterns as a new kind of record. Believes the shore writes its own ledger.'},
+    {id:'blank-wanderer',name:'Blank Wanderer',role:'Was so defined by the ledger that its destruction left them serene and empty. Starting over.'},
+    {id:'erasure-guide',name:'Erasure Guide',role:'Helps arrivals from the Wastes understand that unrecorded life is not the same as nonexistence.'}
+  ],
+  hearthlight:{x:2520,y:-80,label:'Tide Spark'},
+  sideQuest:{id:'the-naming',interactionKey:'q08:shore-name',effect:'unlock-tide-reader-dialogue'}};
+const PLAT_ERASED_SHORE={id:'a5-erased-plat',name:'The Unmapped Cliffs',width:1400,height:760,spawn:{x:80,y:80},physics:{maxRun:220,jump:480},
+  fork:null,
+  platforms:[{id:'entry-shelf',x:0,y:110,w:260,h:14,type:'solid'},{id:'tide-1',x:280,y:200,w:180,h:10,type:'oneWay',vx:60,minX:220,maxX:500},{id:'cliff-a',x:540,y:290,w:220,h:12,type:'solid'},{id:'cliff-b',x:800,y:380,w:200,h:12,type:'solid'},{id:'boss-shelf',x:580,y:700,w:680,h:50,type:'solid'}],
+  hazards:[{id:'tide-current',type:'slow',x:340,y:180,w:200,h:20,slow:0.35},{id:'void-edge',type:'damage',x:1380,y:0,w:20,h:760,damage:5}],
+  enemies:[],
+  bossTrigger:{id:'tide-keeper',x:900,y:640,w:160,h:70,lock:{x:560,y:650,w:700,h:160}},exit:{id:'to-purgatory',x:1380,y:690,w:40,h:80}};
+const BATTLE_ERASED_VAULTS={id:'a5-erased-vaults',name:'The Unrecorded Vault',width:1400,height:860,spawn:{x:200,y:380},physics:{speed:185},
+  creatures:{default:{hp:18,speed:60,damage:3,reach:14,radius:9,color:'#4ab8c4'}},
+  zones:[{id:'tide-pool',x:100,y:220,w:500,h:300,regen:12,clearFor:12},{id:'open-water',x:750,y:200,w:500,h:340,regen:6,clearFor:18}]};
+const AREA5_ENCOUNTERS={
+  tide_keeper:{id:'tide-keeper',name:'The Tide Keeper',beat:0.85,segments:[
+    {mode:'platformer',name:'The Unmapped Cliffs',payload:PLAT_ERASED_SHORE,beatText:'No map has been made of this place.',complete:{event:'boss'}},
+    {mode:'battlefield',name:'The Unrecorded Vault',payload:BATTLE_ERASED_VAULTS,beatText:'It fights for the right to remain unwritten.',complete:{event:'cleared'}}
+  ]}
+};
+
+const AREA6_TOWN={id:'a6-scribes-purgatory',name:"Scribe's Purgatory",x:3000,endX:3560,palette:{primary:'#9b74ff',secondary:'#6a4ab8',bg:'#1a1428'},
+  npcs:[
+    {id:'purgatory-scribe',name:'Purgatory Scribe',role:'Has seen all three endings arrive. Knows multiple truths can coexist in the same ledger.'},
+    {id:'convergence-witness',name:'Convergence Witness',role:'Was present at the moment the ledger sealed, erased, and amended — simultaneously, somehow.'},
+    {id:'prior-season',name:'Prior Season',role:'A composite entity from the collective memory of Season 1. Fought as the final boss.'},
+    {id:'terminus-echo',name:'Terminus Echo',role:'A fading remnant of the Auditor — memory of who they were before they became guardian.'}
+  ],
+  hearthlight:{x:3080,y:-80,label:'Convergence Flame'},
+  sideQuest:{id:'convergence-record',interactionKey:'q09:purgatory-record',effect:'unlock-final-cosmetic'}};
+const PLAT_PURGATORY={id:'a6-purgatory-plat',name:'The Convergence Stacks',width:1400,height:800,spawn:{x:80,y:90},physics:{maxRun:200,jump:460},
+  fork:null,
+  platforms:[{id:'entry-arch',x:0,y:120,w:280,h:14,type:'solid'},{id:'tier-1',x:300,y:220,w:200,h:12,type:'solid'},{id:'tier-2',x:560,y:320,w:220,h:12,type:'solid'},{id:'tier-3',x:820,y:220,w:200,h:12,type:'solid'},{id:'apex',x:640,y:120,w:240,h:14,type:'solid'},{id:'boss-floor',x:560,y:750,w:700,h:40,type:'solid'}],
+  hazards:[{id:'memory-bleed',type:'slow',x:400,y:300,w:160,h:14,slow:0.3}],
+  enemies:[],
+  bossTrigger:{id:'prior-season-boss',x:880,y:690,w:160,h:70,lock:{x:540,y:700,w:760,h:160}},exit:{id:'s2-complete',x:1380,y:740,w:40,h:80}};
+const BATTLE_PURGATORY_VAULT={id:'a6-purgatory-vault',name:'The Memory Archive',width:1400,height:900,spawn:{x:200,y:400},physics:{speed:175},
+  creatures:{default:{hp:28,speed:50,damage:4,reach:18,radius:11,color:'#9b74ff'}},
+  zones:[{id:'amber-memory',x:80,y:200,w:400,h:320,regen:10,clearFor:14},{id:'teal-memory',x:560,y:200,w:400,h:320,regen:10,clearFor:14},{id:'convergence-point',x:1000,y:200,w:320,h:320,regen:14,clearFor:10}]};
+const AREA6_ENCOUNTERS={
+  prior_season:{id:'prior-season-boss',name:'The Prior Season',beat:0.95,segments:[
+    {mode:'platformer',name:'The Convergence Stacks',payload:PLAT_PURGATORY,beatText:'It knows every choice you made.',complete:{event:'boss'}},
+    {mode:'battlefield',name:'The Memory Archive',payload:BATTLE_PURGATORY_VAULT,beatText:'Season 1 defends itself.',complete:{event:'cleared'}}
+  ]}
+};
+
 /* ---- NPCs — branching dialogue (issue #22, lore/dialogue lane) ----------- */
 /* DIALOGUE DATA FORMAT (reusable for Area 2/3 NPCs — the index.html Dialogue UI consumes this):
    npc.dialogue = { start:'nodeId', repeat:'nodeId'(optional), nodes:{ id:node, ... } }
@@ -1298,6 +1375,9 @@ const INTERIORS=[
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
     AREA2_TOWN, AREA3_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
-    PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS
+    PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS,
+    AREA4_TOWN, PLAT_AMENDMENT_WASTES, BATTLE_AMENDMENT_VAULTS, AREA4_ENCOUNTERS,
+    AREA5_TOWN, PLAT_ERASED_SHORE, BATTLE_ERASED_VAULTS, AREA5_ENCOUNTERS,
+    AREA6_TOWN, PLAT_PURGATORY, BATTLE_PURGATORY_VAULT, AREA6_ENCOUNTERS
   };
 });

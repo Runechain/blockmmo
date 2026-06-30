@@ -92,6 +92,16 @@ function createRealmServer(options = {}) {
   const port = options.port == null ? DEFAULT_PORT : options.port;
   const ledgerFile = options.ledgerFile || path.join(__dirname, 'ledger.json');
   const accountsFile = options.accountsFile || path.join(__dirname, 'accounts.json');
+  const s2ContentFile = options.s2ContentFile || path.join(__dirname, 's2_content.json');
+  const MOLT_BROKER_URL = options.moltBrokerUrl || process.env.MOLT_BROKER_URL || '';
+  const MOLT_INGEST_KEY = options.moltIngestKey || process.env.MOLT_INGEST_KEY || '';
+  const S2_CONTENT_TYPES = new Set(['npc_dialogue','lore_fragment','boss_script','quest_outline','cosmetic_name','area_intro_text']);
+  let s2Content = [];
+  try { s2Content = JSON.parse(fs.readFileSync(s2ContentFile, 'utf8')); } catch (_) { s2Content = []; }
+  function saveS2Content() {
+    const tmp = s2ContentFile + '.tmp';
+    fs.writeFile(tmp, JSON.stringify(s2Content, null, 2), err => { if (!err) fs.rename(tmp, s2ContentFile, () => {}); });
+  }
   const seasonConfig = normalizeSeasonConfig(options.season || options.seasonState || {
     id: options.seasonId || DEFAULT_SEASON_ID,
     opensAt: options.seasonOpensAt,
@@ -165,6 +175,38 @@ function createRealmServer(options = {}) {
     if (/^\/claim(\/|$)/.test(req.url.split('?')[0])) {
       handleClaimRoute(req, res);
       return;
+    }
+
+    // S2 player-compute endpoints
+    if (req.url.split('?')[0] === '/rc-config.json') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({ broker: MOLT_BROKER_URL }));
+    }
+
+    if (req.url.split('?')[0] === '/api/s2/content') {
+      if (req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({ chunks: s2Content.filter(c => c.status === 'approved').map(c => ({ id: c.id, type: c.type, area: c.area, payload_json: c.payload_json })) }));
+      }
+      if (req.method === 'POST') {
+        if (MOLT_INGEST_KEY && req.headers.authorization !== 'Bearer ' + MOLT_INGEST_KEY) {
+          res.writeHead(401, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'unauthorized' }));
+        }
+        let body = '';
+        req.on('data', d => { body += d; if (body.length > 65536) req.destroy(); });
+        req.on('end', () => {
+          try {
+            const { id, type, area, payload_json, entropy_seed } = JSON.parse(body);
+            if (!id || !type || !area || !payload_json) { res.writeHead(400, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'missing_fields' })); }
+            if (!S2_CONTENT_TYPES.has(type)) { res.writeHead(400, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'invalid_type' })); }
+            if (s2Content.find(c => c.id === id)) { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ ok: true, id, duplicate: true })); }
+            s2Content.push({ id, type, area, payload_json, entropy_seed: entropy_seed || null, status: 'approved', created_at: Date.now() });
+            saveS2Content();
+            res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ ok: true, id }));
+          } catch (_) { res.writeHead(400, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'invalid_json' })); }
+        });
+        return;
+      }
     }
 
     const route = req.url.split('?')[0];

@@ -260,6 +260,7 @@
 <script src="game/content.js"></script>
 <script src="game/events.js"></script>
 <script src="engine/s2/entropy.js"></script>
+<script src="engine/s2/submit.js"></script>
 <script src="game/overworld.js"></script>
 <script src="game/account.js"></script>
 <script src="game/wallet.js"></script>
@@ -852,6 +853,9 @@ function resolveAuditorChoice(id){
   Story.event('ending',{choice:ending.id}); // completes q13 (done.event==='ending')
   E.emit('ending.chosen', {choice: ending.id}, {id:(progress&&progress.playerId)||'anon'}, {mode:'town'});
   if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach(); // refresh seed with ending signal
+  if (typeof RUNECHAIN_S2_SUBMIT !== 'undefined') {
+    fetch('/rc-config.json').then(r=>r.json()).then(cfg=>{ if(cfg.broker) RUNECHAIN_S2_SUBMIT.init(cfg.broker); }).catch(()=>{});
+  }
   lootFlash('<b>'+esc(ending.title)+'</b><br><span style="font-size:13px;color:#d8d2c4">Ending recorded'+(ending.sigil?' · Amended Record sealed':'')+'</span>');
   updateHud();
 }

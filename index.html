@@ -259,6 +259,7 @@
 <script src="game/chain.js"></script>
 <script src="game/content.js"></script>
 <script src="game/events.js"></script>
+<script src="engine/s2/entropy.js"></script>
 <script src="game/overworld.js"></script>
 <script src="game/account.js"></script>
 <script src="game/wallet.js"></script>
@@ -850,6 +851,7 @@ function resolveAuditorChoice(id){
   if(auditorEnemy){ auditorEnemy.dead=true; auditorEnemy.deathT=1.2; }
   Story.event('ending',{choice:ending.id}); // completes q13 (done.event==='ending')
   E.emit('ending.chosen', {choice: ending.id}, {id:(progress&&progress.playerId)||'anon'}, {mode:'town'});
+  if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach(); // refresh seed with ending signal
   lootFlash('<b>'+esc(ending.title)+'</b><br><span style="font-size:13px;color:#d8d2c4">Ending recorded'+(ending.sigil?' · Amended Record sealed':'')+'</span>');
   updateHud();
 }
@@ -2728,6 +2730,7 @@ function startGame(){
   Story.event('start'); Net.connect(); Net.updatePeers();
   E.emit('player.spawned', {}, {id: (progress&&progress.playerId)||'anon'}, {mode: state.mode||'town'});
   window.__rc_eventBuffer = E; // S2 entropy pipeline reads from here
+  if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach();
   log('Hearthlight is safe. Let the registry record you, then move east.');
 }
 document.getElementById('go').onclick=startGame;

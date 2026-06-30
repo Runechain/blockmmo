@@ -284,7 +284,10 @@ const {
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
-  PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS
+  PLAT_ASCENT_TESTIMONY, BATTLE_SEIZED_YARD, TURN_SCRIVENER, TURN_CASCADE, TURN_AUDITOR, AREA3_ENCOUNTERS,
+  AREA4_TOWN, PLAT_AMENDMENT_WASTES, BATTLE_AMENDMENT_VAULTS, AREA4_ENCOUNTERS,
+  AREA5_TOWN, PLAT_ERASED_SHORE, BATTLE_ERASED_VAULTS, AREA5_ENCOUNTERS,
+  AREA6_TOWN, PLAT_PURGATORY, BATTLE_PURGATORY_VAULT, AREA6_ENCOUNTERS
 } = Content;
 const SHA256 = window.RUNECHAIN_SHA256;
 const Chain = window.RUNECHAIN_CHAIN.createChain({ sha256: SHA256 });
@@ -715,8 +718,16 @@ function initWorld(){
   spawnEnemy('hollow',1996,46,0,{unlockQuest:'q12'});
   spawnEnemy('cascade',2060,0,0,{unlockQuest:'q12'});
   spawnEnemy('auditor',2280,0,0,{unlockQuest:'q13'});
+  spawnEnemy('grand-auditor',2520,0,0,{unlockQuest:'q13',requiresEnding:true});
+  spawnEnemy('hollow',2660,-52,0,{unlockQuest:'q13',requiresEnding:true});
+  spawnEnemy('hollow',2720,46,0,{unlockQuest:'q13',requiresEnding:true});
+  spawnEnemy('tide-keeper',2800,0,0,{unlockQuest:'q13',requiresEnding:true});
+  spawnEnemy('hollow',2940,-52,0,{unlockQuest:'q13',requiresEnding:true});
+  spawnEnemy('hollow',3000,46,0,{unlockQuest:'q13',requiresEnding:true});
+  spawnEnemy('prior-season-boss',3080,0,0,{unlockQuest:'q13',requiresEnding:true});
 }
 function enemyUnlocked(e){
+  if(e.requiresEnding && !progress.ending)return false;
   if(e.unlockQuest && !Story.questReached(e.unlockQuest))return false;
   if(e.key==='sexton'||e.key==='mempool'||e.key==='tallow')return Story.stepMatchesMonster(e.key);
   if(typeof e.minHollows==='number')return progress.hollows>=e.minHollows;
@@ -1157,11 +1168,12 @@ function endBossSequence(){
   player.hp=Math.max(1,Math.round(engineApi.player.hp)); player.sta=engineApi.player.sta;
   bossSeq=null; bossEncounterEnemy=null; state.mode='town'; Net.updatePeers();
 }
-const BOSS_ENCOUNTER_KEYS=['sexton','mempool','tallow','foreman','bifurcated','ledgerbound','scrivener','cascade','auditor'];
+const BOSS_ENCOUNTER_KEYS=['sexton','mempool','tallow','foreman','bifurcated','ledgerbound','scrivener','cascade','auditor','grand-auditor','tide-keeper','prior-season-boss'];
 function nearestBossEncounter(){
   let best=null, bd=70;
   for(const e of enemies){
-    if(e.dead||!BOSS_ENCOUNTER_KEYS.includes(e.key)||!(AREA1_ENCOUNTERS[e.key]||AREA2_ENCOUNTERS[e.key]||AREA3_ENCOUNTERS[e.key])||!enemyUnlocked(e))continue;
+    const s2enc=progress.ending&&(AREA4_ENCOUNTERS[e.key]||AREA5_ENCOUNTERS[e.key]||AREA6_ENCOUNTERS[e.key]);
+    if(e.dead||!BOSS_ENCOUNTER_KEYS.includes(e.key)||!(AREA1_ENCOUNTERS[e.key]||AREA2_ENCOUNTERS[e.key]||AREA3_ENCOUNTERS[e.key]||s2enc)||!enemyUnlocked(e))continue;
     const d=dist(e,player);
     if(d<bd){ bd=d; best=e; }
   }
@@ -1171,7 +1183,7 @@ function startBossEncounter(enemy){
   // The Auditor: once already reached (or once answered) re-engaging reopens the choice directly
   // rather than re-running the ascent/rift — the climax is the answer, not the fight.
   if(enemy&&enemy.key==='auditor'&&(auditorReached||progress.ending)){ openAuditorChoice(enemy); return; }
-  const script=enemy&&(AREA1_ENCOUNTERS[enemy.key]||AREA2_ENCOUNTERS[enemy.key]||AREA3_ENCOUNTERS[enemy.key]);
+  const script=enemy&&(AREA1_ENCOUNTERS[enemy.key]||AREA2_ENCOUNTERS[enemy.key]||AREA3_ENCOUNTERS[enemy.key]||(progress.ending&&(AREA4_ENCOUNTERS[enemy.key]||AREA5_ENCOUNTERS[enemy.key]||AREA6_ENCOUNTERS[enemy.key])));
   if(!modeManager||!RCEngine||!RCEngine.createSegmentSequencer||!script||!state.started||player.dead||state.mode!=='town')return;
   if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
   const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;

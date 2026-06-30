@@ -876,6 +876,169 @@
     return out;
   }
 
+  // ─── Player state / game-logic layer ─────────────────────────────────────
+  var PLAYER_RADIUS = 8;
+  var PLAYER_SPEED = 120;  // world units per second
+  var CAM_LERP = 6;        // camera convergence per second
+  var EXIT_TRIGGERS = LANDMARKS.filter(function (m) { return m.kind === 'portal' || m.kind === 'boss'; });
+  var HEARTH_TRIGGERS = LANDMARKS.filter(function (m) { return m.kind === 'hearth'; });
+
+  // Return the spawn position for a named entry point (hearth/landmark id or 'default').
+  function resolveEntry(regionId, entryPointId) {
+    // Prefer exact landmark id match.
+    var mark = null;
+    for (var i = 0; i < LANDMARKS.length; i += 1) {
+      if (LANDMARKS[i].id === entryPointId) { mark = LANDMARKS[i]; break; }
+    }
+    if (!mark && regionId) {
+      // Fall back to region's first hearth.
+      for (var j = 0; j < LANDMARKS.length; j += 1) {
+        var reg = regionAt(LANDMARKS[j].x, LANDMARKS[j].y);
+        if (reg && reg.id === regionId && LANDMARKS[j].kind === 'hearth') { mark = LANDMARKS[j]; break; }
+      }
+    }
+    // Ultimate fallback: origin (Hearthlight at 0,0).
+    return mark ? { x: mark.x, y: mark.y } : { x: 0, y: 0 };
+  }
+
+  // Create a fresh overworld state object (pure data — no DOM references).
+  function createOverworldState(config) {
+    var pos = resolveEntry(config && config.regionId, config && config.entryPointId);
+    return {
+      x: pos.x,
+      y: pos.y,
+      camX: pos.x,
+      camY: pos.y,
+      facing: 'south',
+      remote: [],        // [{ id, x, y, name }] from server presence
+      pendingExit: null, // { type: 'platformer'|'interior'|'region', target: id }
+    };
+  }
+
+  // Enter overworld mode: returns the initial state.
+  function enterOverworld(regionId, entryPointId) {
+    return createOverworldState({ regionId: regionId, entryPointId: entryPointId });
+  }
+
+  // Read (and clear) a pending exit transition from the state.
+  // Returns null if no exit is queued, or { type, target } and clears the field.
+  function exitOverworld(state) {
+    var ex = state.pendingExit;
+    state.pendingExit = null;
+    return ex;
+  }
+
+  // Update player state: handle movement, collision, camera, exit detection.
+  // dt: elapsed seconds; input: { dx, dy } each -1|0|1.
+  // options: same tile-options as tileAt (questReached, blockLockedGates, etc.).
+  function updateOverworld(state, dt, input, options) {
+    var dx = (input && input.dx) || 0;
+    var dy = (input && input.dy) || 0;
+
+    // Update facing direction.
+    if (dx > 0) state.facing = 'east';
+    else if (dx < 0) state.facing = 'west';
+    else if (dy > 0) state.facing = 'south';
+    else if (dy < 0) state.facing = 'north';
+
+    // Normalise diagonal movement.
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 0) { dx /= dist; dy /= dist; }
+
+    var body = { x: state.x, y: state.y, radius: PLAYER_RADIUS };
+    moveCircle(body, dx * PLAYER_SPEED * dt, dy * PLAYER_SPEED * dt, options);
+    state.x = body.x;
+    state.y = body.y;
+
+    // Smooth camera lerp toward player.
+    var t = 1 - Math.pow(1 - Math.min(CAM_LERP * dt, 1), 1);
+    state.camX = lerp(state.camX, state.x, t);
+    state.camY = lerp(state.camY, state.y, t);
+
+    // Exit detection: platformer portals and boss arenas.
+    if (!state.pendingExit) {
+      for (var i = 0; i < EXIT_TRIGGERS.length; i += 1) {
+        var mark = EXIT_TRIGGERS[i];
+        var ex = mark.radius || 32;
+        var ddx = state.x - mark.x;
+        var ddy = state.y - mark.y;
+        if (ddx * ddx + ddy * ddy < ex * ex) {
+          state.pendingExit = { type: 'platformer', target: mark.id };
+          break;
+        }
+      }
+    }
+    // Hearth / interior transitions.
+    if (!state.pendingExit) {
+      for (var j = 0; j < HEARTH_TRIGGERS.length; j += 1) {
+        var hearth = HEARTH_TRIGGERS[j];
+        var hr = (hearth.radius || 20) * 0.6;  // smaller trigger — must walk into hearth
+        var hx = state.x - hearth.x;
+        var hy = state.y - hearth.y;
+        if (hx * hx + hy * hy < hr * hr) {
+          state.pendingExit = { type: 'interior', target: hearth.id };
+          break;
+        }
+      }
+    }
+
+    return state;
+  }
+
+  // Store updated remote player positions in state.
+  function setRemotePlayers(state, players) {
+    state.remote = players || [];
+    return state;
+  }
+
+  // Draw the complete overworld scene into ctx.
+  // viewW/viewH: canvas dimensions in pixels.
+  // time: monotonic seconds (for animations).
+  function drawOverworld(ctx, state, viewW, viewH, time, options) {
+    var halfW = (viewW || 320) / 2;
+    var halfH = (viewH || 180) / 2;
+    var camera = { x: state.camX - halfW, y: state.camY - halfH };
+
+    drawGround(ctx, camera, viewW, viewH, time, options);
+    drawProps(ctx, camera, viewW, viewH, time, options);
+    drawLandmarks(ctx, camera, viewW, viewH, time, options);
+
+    // Remote players — simple colored circles with name labels.
+    if (state.remote && state.remote.length) {
+      for (var r = 0; r < state.remote.length; r += 1) {
+        var rp = state.remote[r];
+        var rpx = rp.x - camera.x;
+        var rpy = rp.y - camera.y;
+        ctx.save();
+        ctx.fillStyle = '#b8a060';
+        ctx.beginPath();
+        ctx.arc ? ctx.arc(rpx, rpy, 5, 0, Math.PI * 2) : ctx.fillRect(rpx - 5, rpy - 5, 10, 10);
+        ctx.fill && ctx.fill();
+        if (rp.name) {
+          ctx.fillStyle = '#e8d8a0';
+          ctx.font = ctx.font || '8px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(rp.name, rpx, rpy - 9);
+        }
+        ctx.restore();
+      }
+    }
+
+    // Local player dot.
+    var px = state.x - camera.x;
+    var py = state.y - camera.y;
+    ctx.save();
+    ctx.fillStyle = '#f1c75b';
+    ctx.beginPath();
+    ctx.arc ? ctx.arc(px, py, PLAYER_RADIUS, 0, Math.PI * 2) : ctx.fillRect(px - PLAYER_RADIUS, py - PLAYER_RADIUS, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
+    ctx.fill && ctx.fill();
+    ctx.restore();
+
+    // Minimap in top-right corner.
+    var minimapW = 160, minimapH = 60;
+    drawMinimap(ctx, (viewW || 320) - minimapW - 8, 8, minimapW, minimapH, { x: state.x, y: state.y }, options);
+  }
+
   return Object.freeze({
     VERSION: VERSION,
     TILE: TILE,
@@ -902,6 +1065,12 @@
     drawProps: drawProps,
     drawLandmarks: drawLandmarks,
     drawRegionTitle: drawRegionTitle,
-    drawMinimap: drawMinimap
+    drawMinimap: drawMinimap,
+    createOverworldState: createOverworldState,
+    enterOverworld: enterOverworld,
+    exitOverworld: exitOverworld,
+    updateOverworld: updateOverworld,
+    setRemotePlayers: setRemotePlayers,
+    drawOverworld: drawOverworld
   });
 });

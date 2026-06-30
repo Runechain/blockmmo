@@ -774,7 +774,7 @@ const AREA3_ENCOUNTERS={
   ]}
 };
 /* ---- Season 2 area stubs (x=1880→3560, gated on progress.ending) --------- */
-/* TODO: gate Area 4/5/6 access behind progress.ending check in index.html portal logic */
+/* S2 access is gated by progress.ending in index.html (enemyUnlocked + boss encounter lookup). */
 const AREA4_TOWN={id:'a4-amendment-wastes',name:'The Amendment Wastes',x:1880,endX:2440,palette:{primary:'#c8a84a',secondary:'#8a7a3a',bg:'#2a2418'},
   npcs:[
     {id:'amendment-clerk',name:'Amendment Clerk',role:'Validates permits for movement between ossified precincts. Believes the forms protect people.'},
@@ -794,7 +794,7 @@ const BATTLE_AMENDMENT_VAULTS={id:'a4-amendment-vaults',name:'Amendment Vault',w
   creatures:{default:{hp:22,speed:44,damage:3,reach:16,radius:10,color:'#c8a84a'}},
   zones:[{id:'record-hall',x:100,y:200,w:500,h:300,regen:10,clearFor:14},{id:'permit-chamber',x:750,y:200,w:500,h:300,regen:8,clearFor:16}]};
 const AREA4_ENCOUNTERS={
-  grand_auditor:{id:'grand-auditor',name:'The Grand Auditor',beat:0.85,segments:[
+  'grand-auditor':{id:'grand-auditor',name:'The Grand Auditor',beat:0.85,segments:[
     {mode:'platformer',name:'The Petrified Stacks',payload:PLAT_AMENDMENT_WASTES,beatText:'The permits do not permit this.',complete:{event:'boss'}},
     {mode:'battlefield',name:'The Amendment Vault',payload:BATTLE_AMENDMENT_VAULTS,beatText:'Every record fights back.',complete:{event:'cleared'}}
   ]}
@@ -819,7 +819,7 @@ const BATTLE_ERASED_VAULTS={id:'a5-erased-vaults',name:'The Unrecorded Vault',wi
   creatures:{default:{hp:18,speed:60,damage:3,reach:14,radius:9,color:'#4ab8c4'}},
   zones:[{id:'tide-pool',x:100,y:220,w:500,h:300,regen:12,clearFor:12},{id:'open-water',x:750,y:200,w:500,h:340,regen:6,clearFor:18}]};
 const AREA5_ENCOUNTERS={
-  tide_keeper:{id:'tide-keeper',name:'The Tide Keeper',beat:0.85,segments:[
+  'tide-keeper':{id:'tide-keeper',name:'The Tide Keeper',beat:0.85,segments:[
     {mode:'platformer',name:'The Unmapped Cliffs',payload:PLAT_ERASED_SHORE,beatText:'No map has been made of this place.',complete:{event:'boss'}},
     {mode:'battlefield',name:'The Unrecorded Vault',payload:BATTLE_ERASED_VAULTS,beatText:'It fights for the right to remain unwritten.',complete:{event:'cleared'}}
   ]}
@@ -844,7 +844,7 @@ const BATTLE_PURGATORY_VAULT={id:'a6-purgatory-vault',name:'The Memory Archive',
   creatures:{default:{hp:28,speed:50,damage:4,reach:18,radius:11,color:'#9b74ff'}},
   zones:[{id:'amber-memory',x:80,y:200,w:400,h:320,regen:10,clearFor:14},{id:'teal-memory',x:560,y:200,w:400,h:320,regen:10,clearFor:14},{id:'convergence-point',x:1000,y:200,w:320,h:320,regen:14,clearFor:10}]};
 const AREA6_ENCOUNTERS={
-  prior_season:{id:'prior-season-boss',name:'The Prior Season',beat:0.95,segments:[
+  'prior-season-boss':{id:'prior-season-boss',name:'The Prior Season',beat:0.95,segments:[
     {mode:'platformer',name:'The Convergence Stacks',payload:PLAT_PURGATORY,beatText:'It knows every choice you made.',complete:{event:'boss'}},
     {mode:'battlefield',name:'The Memory Archive',payload:BATTLE_PURGATORY_VAULT,beatText:'Season 1 defends itself.',complete:{event:'cleared'}}
   ]}

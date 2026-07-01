@@ -1346,6 +1346,147 @@ const INTERIORS=[
           again:{ text:['I finished a paper on the crossing bridge puzzle since your last visit. The conclusion is elegant and probably actionable.'],
             choices:[ {label:'Tell me about the paper.', goto:'paper'}, {label:'Tell me about relics.', goto:'relics'}, {label:'Leave the archive.', goto:'bye'} ] } }} }
     ] },
+  // ── Area 3: Chamber of Attestation (x ≈ 1900–2200) ────────────────────────
+  // These four NPCs are the narrative heart of S1 — they set up the three endings.
+  { id:'chamber-of-attestation', name:'Chamber of Attestation', unlock:'q11',
+    building:{x:1900,y:-108,w:160,h:96,wall:'#443830',roof:'#322a24',door:{x:1946,y:-66},sign:'ATTESTATION',drawn:true},
+    w:440, h:300, spawn:{x:220,y:236}, exit:{x:220,y:280}, floor:'#1e1c18', wall:'#302a26', accent:'#f0f0e8',
+    decor:[
+      {x:50,y:44,w:340,h:20,c:'#28231e',label:'THE THREE ACCOUNTS'},
+      {x:30,y:80,w:90,h:120,c:'#221e1a'},{x:140,y:80,w:90,h:120,c:'#221e1a'},{x:310,y:80,w:90,h:120,c:'#221e1a'},
+      {x:200,y:58,w:14,h:18,c:'#f0f0e8',t:'candle'},{x:226,y:60,w:14,h:18,c:'#f0f0e8',t:'candle'},
+      {x:100,y:200,w:80,h:24,c:'#28231e'},{x:260,y:200,w:80,h:24,c:'#28231e'}
+    ],
+    npcs:[
+      {id:'int-prime-witness', x:220, y:78, color:'#e8e0d0', sprite:'sorcerer', name:'The Prime Witness', role:'First Observer',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            "I have watched every record since the first was scratched. I have seen the Auditor four times across four seasons. Each time, someone stands where you are standing now.",
+            "You will make a choice. Before you do, I have three questions. Not to judge. Just to show you what you are actually choosing."],
+            choices:[ {label:'Ask your questions.', goto:'q1'}, {label:'What happened to the others?', goto:'others'}, {label:'I already know my choice.', goto:'certain'} ] },
+          q1:{ text:[
+            "First question. If the ledger is sealed exactly as written — if everything that is recorded stays recorded, forever — who is protected by that permanence?",
+            "Think carefully. Not who benefits most. Who is protected. There is a difference."],
+            goto:'q2' },
+          q2:{ text:[
+            "Second question. If the ledger is erased — if every record, every name, every debt simply dissolves — what is lost that cannot be replaced by living?",
+            "Something is. I need you to know what it is before you choose erasure."],
+            goto:'q3' },
+          q3:{ text:[
+            "Third question. If the ledger is amended — if you co-author the record with the Auditor, sharing the authority over what is true — what are you agreeing to be responsible for?",
+            "Every future entry. Every future correction. The whole weight of an ongoing record with your name as co-author.",
+            "Take those three weights with you. The Auditor waits east."],
+            goto:'again' },
+          others:{ text:[
+            "The first sealed. She believed stability was mercy, and she was right for her season.",
+            "The second erased. He believed freedom outweighed continuity, and he was right for his season.",
+            "The third amended. She believed the record should continue but differently, and she was right for her season.",
+            "All three were right. All three carried what they chose for the rest of their lives."], goto:'again' },
+          certain:{ text:[
+            "Good. Certainty is not the enemy of wisdom. But humour an old woman — do you know WHY you are certain?",
+            "Because the Auditor will ask. Not the choice — the reason. And the record will hold the reason too."], goto:'again' },
+          bye:{ text:['Go. The road east is the longest short walk there is. I will be here when you return, whichever version of the world comes back with you.'], end:true },
+          again:{ text:['Three questions. You can sit with them or you can carry them. Either way you carry them.'],
+            choices:[ {label:'The three questions again.', goto:'q1'}, {label:'The others who chose.', goto:'others'}, {label:'Thank you.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'hostile-archivist-chamber', name:"The Record Chamber", unlock:'q11',
+    building:{x:1980,y:64,w:140,h:84,wall:'#4a3a26',roof:'#362c1e',door:{x:2016,y:100},sign:'RECORDS',drawn:true},
+    w:400, h:270, spawn:{x:200,y:208}, exit:{x:200,y:254}, floor:'#1e1810', wall:'#2e2418', accent:'#d4a83e',
+    decor:[
+      {x:20,y:34,w:360,h:18,c:'#28201a',label:'VALID RECORDS ONLY. ONE ENDING.'},
+      {x:20,y:64,w:80,h:100,c:'#221a10'},{x:120,y:64,w:80,h:100,c:'#221a10'},{x:220,y:64,w:80,h:100,c:'#221a10'},{x:320,y:64,w:60,h:100,c:'#221a10'},
+      {x:90,y:50,w:12,h:16,c:'#d4a83e',t:'candle'},{x:310,y:50,w:12,h:16,c:'#d4a83e',t:'candle'},
+      {x:170,y:164,w:60,h:30,c:'#24180c',top:'#3e2c14'}
+    ],
+    npcs:[
+      {id:'int-hostile-archivist', x:200, y:78, color:'#d4a83e', sprite:'knight', name:'The Archivist', role:'Record Enforcer',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            "You have fought your way to the threshold. I will not pretend I am glad to see you — you are a paradox inside a system designed to have no paradoxes.",
+            "But I will be honest, which the Auditor will not. There is only one valid resolution. Seal the record. Sign it as written. Walk out of here as the Recorded, not as someone who broke what was keeping the world in place."],
+            choices:[ {label:'Why seal it?', goto:'seal'}, {label:'What if I erase it?', goto:'erase'}, {label:'What if I amend it?', goto:'amend'} ] },
+          seal:{ text:[
+            "Because the record is the only thing between order and entropy. You erase it? Every debt dissolves — the just ones alongside the unjust. Every valid name, gone.",
+            "You amend it? You take on an obligation you cannot possibly fulfil. You become the Auditor. And the Auditor is what this whole world was built to avoid being.",
+            "Seal the ledger. Let the weight be held by what was built to hold it. You get to leave. That matters."], goto:'again' },
+          erase:{ text:[
+            "Then you destroy every proof of every person who ever mattered to this system. Their debts, yes. But also their names. Their legitimate claims. Their confirmed identities.",
+            "The ones with nothing lose nothing. But the ones with something — the ones who worked, within the rules, to make something real — they lose it all equally.",
+            "That is not freedom. That is a flood that does not discriminate."], goto:'again' },
+          amend:{ text:[
+            "The amendment path sounds like compromise. It is not. It is the hardest path there is, and most who choose it break eventually.",
+            "You become responsible for every future entry in a record that never closes. Think about that. Every correction. Every new injustice. You cannot unsign a co-authored document.",
+            "Seal the record. Be done. Be remembered as the one who held rather than scattered."], goto:'again' },
+          bye:{ text:["Go. Make the right choice. If you don't — I am going to have to watch this system unwind, and I am very, very tired."], end:true },
+          again:{ text:['Still here. Still one valid answer. What else do you need me to explain?'],
+            choices:[ {label:'Why seal it.', goto:'seal'}, {label:'Erasure.', goto:'erase'}, {label:'Amendment.', goto:'amend'}, {label:'I understand.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'wanderers-hollow', name:"The Wanderer's Hollow", unlock:null,
+    building:{x:2076,y:-152,w:110,h:76,wall:'#1e1c24',roof:'#141218',door:{x:2104,y:-120},sign:'',secret:true},
+    w:320, h:220, spawn:{x:160,y:168}, exit:{x:160,y:208}, floor:'#0e0c10', wall:'#18161e', accent:'#4ecb7a',
+    decor:[
+      {x:80,y:50,w:160,h:80,c:'#141018',top:'#201c28'},
+      {x:60,y:56,w:12,h:16,c:'#4ecb7a',t:'candle'},{x:252,y:56,w:12,h:16,c:'#4ecb7a',t:'candle'},
+      {x:130,y:150,w:60,h:16,c:'#18141e'}
+    ],
+    npcs:[
+      {id:'int-unrecorded-wanderer', x:160, y:74, color:'#4ecb7a', sprite:'hollow', name:'Unrecorded Wanderer', role:'Free Name',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            "You look like someone the ledger has nearly finished with.",
+            "My name is not in any record. It was, once. I erased it — not the big ending you are heading toward, just mine, personally, out of one specific ledger.",
+            "It was the kindest thing I ever did for myself."],
+            choices:[ {label:'What happened after?', goto:'after'}, {label:'What did you lose?', goto:'lost'}, {label:'The Auditor.', goto:'auditor'} ] },
+          after:{ text:[
+            "A week of terror. The officials kept trying to find me in their records and couldn't. All their systems designed to locate me, suddenly useless.",
+            "Then — nothing. Then — this. I have been a person instead of an entry ever since. It is quieter. I forgot how much noise a record makes."], goto:'again' },
+          lost:{ text:[
+            "The benefits. The legitimate protections. The confirmation that I existed in a way the system recognises.",
+            "My name did not disappear from memory. Just from their records. People still remember me. Memory and record are not the same thing. The Archivist does not want you to know that."], goto:'again' },
+          auditor:{ text:[
+            "The big erasure is harder. The whole ledger, not just one name.",
+            "But think about what you are actually offering everyone: the right to be a person first, not a record. The Archivist will tell you that is a flood. It is. Some floods are necessary.",
+            "Not telling you to do it. Just — know what it actually is before you decide. It is mercy. Rough mercy. The only kind the current system can receive."], goto:'again' },
+          bye:{ text:['If you erase it — welcome to the unrecorded. We are small and quiet and very, very free.'], end:true },
+          again:{ text:['Still here. Good. The hollow has better acoustics for difficult thoughts. What else?'],
+            choices:[ {label:'What happened after.', goto:'after'}, {label:'What you lost.', goto:'lost'}, {label:'The Auditor choice.', goto:'auditor'}, {label:'I should go.', goto:'bye'} ] } }} }
+    ] },
+
+  { id:'echo-hall', name:'The Echo Hall', unlock:'q12',
+    building:{x:2108,y:68,w:130,h:82,wall:'#2c2438',roof:'#20182a',door:{x:2142,y:106},sign:'ECHO HALL',drawn:true},
+    w:380, h:260, spawn:{x:190,y:198}, exit:{x:190,y:244}, floor:'#18141e', wall:'#241a30', accent:'#b9a3cc',
+    decor:[
+      {x:60,y:44,w:260,h:120,c:'#1c1828',top:'#2c2040'},
+      {x:80,y:52,w:12,h:16,c:'#b9a3cc',t:'candle'},{x:292,y:52,w:12,h:16,c:'#b9a3cc',t:'candle'},
+      {x:170,y:52,w:18,h:16,c:'#342848'},{x:194,y:54,w:14,h:14,c:'#342848'},
+      {x:120,y:170,w:60,h:30,c:'#1e1830'},{x:200,y:168,w:60,h:30,c:'#1e1830'}
+    ],
+    npcs:[
+      {id:'int-amendment-echo', x:190, y:74, color:'#b9a3cc', sprite:'hollow', name:'The Amendment Echo', role:'Co-Author',
+        dialogue:{ start:'intro', repeat:'again', nodes:{
+          intro:{ text:[
+            "I chose Ending C. I am still here, which is the first thing you should know.",
+            "Still here, still in the record, still responsible for every entry that comes in. The Auditor and I share the quill now. That is not a metaphor."],
+            choices:[ {label:'What is it like?', goto:'like'}, {label:'Do you regret it?', goto:'regret'}, {label:'How did the Auditor respond?', goto:'auditor'} ] },
+          like:{ text:[
+            "Exhausting. Clarifying. The most alive I have felt since before the first debt was written.",
+            "The Auditor was designed to be singular, final, perfect. It was not designed for two voices. We argue. We compromise. The compromise produces records that neither of us would have written alone.",
+            "Some of those records are better. Some are worse. All of them are real in a way the single-authored ones were not."], goto:'again' },
+          regret:{ text:[
+            "Every third day. Then I read what we wrote together that day and the regret goes away.",
+            "The hard part is not the responsibility. The hard part is that it never ends. The record stays open. The Auditor and I are the record, now, as long as there is a record to be kept."], goto:'again' },
+          auditor:{ text:[
+            "It looked at me for a long time. Then it said: 'You are claiming co-authorship of a document that predates your birth by four thousand years.'",
+            "I said: 'Yes.'",
+            "It was quiet. Then it said: 'The quill is shared.'",
+            "That is the whole conversation. That is all it took. I do not know if it was afraid or relieved or neither. It does not express those things. But the record changed after that."], goto:'again' },
+          bye:{ text:['If you choose amendment — we will need help. The record is very long. It has always been very long.'], end:true },
+          again:{ text:['I am still writing. Come back when you have decided. Either way, come back.'],
+            choices:[ {label:'What it is like.', goto:'like'}, {label:'Regret?', goto:'regret'}, {label:'The Auditor.', goto:'auditor'}, {label:'Thank you.', goto:'bye'} ] } }} }
+    ] },
+
   { id:'margin-chamber', name:'The Margin Chamber', reward:'canon-clerk',
     building:{x:1160,y:-68,w:80,h:60,wall:'#2e3038',roof:'#252830',door:{x:1188,y:-38},sign:'',secret:true},
     w:280, h:200, spawn:{x:140,y:148}, exit:{x:140,y:192}, floor:'#1e2028', wall:'#282c38', accent:'#d4a83e',

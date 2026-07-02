@@ -357,7 +357,8 @@ const Settlement = {
     return {
       kind:'runechain.settlement.v1',
       builtBy:'server',            // never client-constructed in production (U7)
-      payer, sol,
+      payer,
+      sol,
       split:{
         burn:{ pct:ECON.SPLIT.burn, address:ECON.BURN_ADDR },
         marketing:{ pct:ECON.SPLIT.marketing, address:ECON.MARKETING_ADDR },
@@ -394,7 +395,15 @@ const Story=(function(){
   }
   function completeStep(){
     const q=quest(), st=step();
-    if(st)log('<b style="color:#f1c75b">Objective complete:</b> '+esc(st.text));
+    if(st){
+      E.emit(
+        'quest.progressed',
+        {questId:q&&q.id, stepIndex:state.stepIndex, stepText:st.text, stepEvent:st.done&&st.done.event},
+        {id:(progress&&progress.playerId)||'anon'},
+        {mode:state.mode||'town'}
+      );
+      log('<b style="color:#f1c75b">Objective complete:</b> '+esc(st.text));
+    }
     state.stepIndex++; state.stepCount=0;
     if(q && state.stepIndex>=q.steps.length){
       state.completed.push(q.id);
@@ -433,6 +442,56 @@ const Story=(function(){
   }
   return {state,event,updateHud,currentQuest,currentStep,questReached,stepMatchesMonster};
 })();
+
+const movementFeedState = {
+  lastEmit: 0,
+  lastX: null,
+  lastY: null,
+  lastMode: null,
+};
+const MOVEMENT_MINDIST = 18;
+const MOVEMENT_MIN_MS = 500;
+
+function playerEventSnapshot(extra) {
+  return Object.assign({
+    id: (progress&&progress.playerId)||'anon'
+  }, extra || {});
+}
+
+function positionEventSnapshot(extra) {
+  const snapshot = {
+    mode: state.mode || 'town',
+    x: player && player.x,
+    y: player && player.y,
+    moving: !!(player && player.moving) };
+  if (state.mode === 'interior' && activeInterior && activeInterior.name) snapshot.area = activeInterior.name;
+  else if (state.mode !== 'interior') snapshot.area = 'town';
+  if (typeof player === 'object' && player) {
+    if (typeof player.vx === 'number') snapshot.vx = player.vx;
+    if (typeof player.vy === 'number') snapshot.vy = player.vy;
+    if (typeof player.dirX === 'number') snapshot.dirX = player.dirX;
+    if (typeof player.dirY === 'number') snapshot.dirY = player.dirY;
+  }
+  return Object.assign(snapshot, extra || {});
+}
+
+function emitMovementEvent(force) {
+  if (!state || !state.started || !player) return;
+  const mode = state.mode || 'town';
+  if (mode !== 'town' && mode !== 'interior') return;
+  const x = player.x;
+  const y = player.y;
+  const now = performance.now();
+  const moved = movementFeedState.lastX === null || movementFeedState.lastY === null ? true
+    : Math.hypot(x - movementFeedState.lastX, y - movementFeedState.lastY) > MOVEMENT_MINDIST;
+  const timedOut = now - movementFeedState.lastEmit > MOVEMENT_MIN_MS;
+  if (!force && movementFeedState.lastEmit && !moved && !timedOut) return;
+  E.emit('player.moved', { moved, mode }, playerEventSnapshot(), positionEventSnapshot());
+  movementFeedState.lastEmit = now;
+  movementFeedState.lastX = x;
+  movementFeedState.lastY = y;
+  movementFeedState.lastMode = mode;
+}
 
 /* --------------------------- Overworld layer ---------------------------- */
 /* Hybrid integration of the Gameworld overworld kit (game/overworld.js).
@@ -796,8 +855,7 @@ function auditorEndingNpc(){
       'The Auditor faces you, a column of scrolling text. "Your account does not reconcile. One entry must be corrected."',
       'It offers you the registry, and a second quill. There is no killing this. Only an answer — and it is permanent.'
     ],
-    choices:(AUDITOR_ENDINGS||[]).map((e)=>({ label:e.label, goto:'end-'+e.id, ending:e.id }))
-  } };
+    choices:(AUDITOR_ENDINGS||[]).map((e)=>({ label:e.label, goto:'end-'+e.id, ending:e.id })) } };
   (AUDITOR_ENDINGS||[]).forEach((e)=>{ nodes['end-'+e.id]={ speaker:'The Auditor', text:e.lines }; });
   return { id:'the-auditor', name:'The Auditor', role:'Archive of Attestation', color:'#f0f0e8',
     dialogue:{ start:'intro', nodes },
@@ -1098,6 +1156,11 @@ function exitEngineMode(opts){
     camera.x=player.x; camera.y=player.y; syncMouseWorld();
     if(opts.completed)progress.portals.add(activePortal.id);
     state.mode='town'; Net.updatePeers();
+    E.emit('area.exited', {
+      type: 'portal',
+      id: activePortal.id || activePortal.label,
+      reason: opts.completed ? 'completed' : 'retreat'
+    }, playerEventSnapshot(), positionEventSnapshot({area: 'town'}));
     log(opts.completed?('You climb back out of '+esc(activePortal.label)+', the receipts settled behind you.'):('You retreat from '+esc(activePortal.label)+'.'));
     activePortal=null;
     return;
@@ -1113,6 +1176,11 @@ function enterPortal(p){
   activePortal=p;
   const mode=platformerMode=RCEngine.createPlatformerMode(p.level);
   modeManager.setMode(mode, ctx, engineApi); state.mode='platformer'; Net.updatePeers();
+  E.emit('area.entered', {
+    type:'portal',
+    id:p.id || p.label,
+    areaMode: p.mode || 'platformer'
+  }, playerEventSnapshot(), positionEventSnapshot({mode:'platformer', area:'portal:'+ (p.id || p.label)}));
   if(p.intro)log('<span style="color:#bcae8c">'+esc(p.intro)+'</span>');
   log('You descend into '+esc(p.label)+'. Reach the far exit, or press <b>T</b> to climb back out.');
 }
@@ -1184,8 +1252,7 @@ function startBossEncounter(enemy){
     const full={a:{hp:70,label:'CANON',color:'#d4a83e'},b:{hp:70,label:'SCHISM',color:'#4ecb7a'},crossHeal:false};
     const weakened={a:{hp:50,label:'CANON',color:'#d4a83e'},b:{hp:50,label:'SCHISM',color:'#4ecb7a'},crossHeal:false};
     useScript=Object.assign({},script,{segments:script.segments.map(s=> s.mode==='turnbased'
-      ? Object.assign({},s,{payload:Object.assign({},s.payload,{dualChain:weak?weakened:full,opponent:Object.assign({},s.payload.opponent,{attack:weak?12:16})})})
-      : s)});
+      ? Object.assign({},s,{payload:Object.assign({},s.payload,{dualChain:weak?weakened:full,opponent:Object.assign({},s.payload.opponent,{attack:weak?12:16})})})     : s)});
     log(weak?'The Keeper of Margins has testified — the Foreman is weakened.':'The Foreman stands at full strength.');
   }
   bossSeq=RCEngine.createSegmentSequencer(useScript);
@@ -1755,6 +1822,7 @@ function updatePlayer(dt){
     if(mw.hitX)player.vx=0; if(mw.hitY)player.vy=0;
   }
   player.x=clamp(player.x,-WORLD_LIMIT,WORLD_LIMIT); player.y=clamp(player.y,-WORLD_LIMIT,WORLD_LIMIT);
+  emitMovementEvent(false);
 }
 function update(dt){
   state.time+=dt;
@@ -1999,8 +2067,7 @@ const RUINS=[
 const TREES=[
   {x:-248,y:-126},{x:-172,y:104,dead:true},{x:-42,y:128},{x:146,y:-142},
   {x:286,y:122},{x:404,y:-132,dead:true},{x:538,y:142,dead:true},{x:706,y:-126,dead:true},{x:826,y:106,dead:true},
-  // off-path thickets marking the lore dead-ends (north cairn, south marsh, west track, hidden vault)
-  {x:212,y:-352,dead:true},{x:284,y:-300,dead:true},
+  // off-path thickets marking the lore dead-ends (north cairn, south marsh, west track, hidden vault) {x:212,y:-352,dead:true},{x:284,y:-300,dead:true},
   {x:556,y:352,dead:true},{x:486,y:300,dead:true},
   {x:-356,y:158,dead:true},
   {x:-560,y:-256,dead:true},{x:-652,y:-262,dead:true},{x:-616,y:-352,dead:true},{x:-540,y:-336,dead:true}
@@ -2014,8 +2081,7 @@ const CANDLES=[
 ];
 const BRAMBLES=[
   {x:442,y:-118,w:74,h:34,n:12},{x:500,y:94,w:82,h:42,n:14},{x:674,y:-96,w:96,h:46,n:18},{x:832,y:68,w:86,h:38,n:16},
-  // bramble wall ringing the Unrecorded Vault into a concealed alcove (open only from the north)
-  {x:-600,y:-250,w:150,h:30,n:24},{x:-678,y:-300,w:34,h:96,n:18},{x:-522,y:-300,w:34,h:96,n:18}
+  // bramble wall ringing the Unrecorded Vault into a concealed alcove (open only from the north) {x:-600,y:-250,w:150,h:30,n:24},{x:-678,y:-300,w:34,h:96,n:18},{x:-522,y:-300,w:34,h:96,n:18}
 ];
 const FENCES=[
   {x:-178,y:58,len:82,dir:'h'},{x:-216,y:98,len:76,dir:'v'},{x:120,y:92,len:92,dir:'h'},{x:158,y:130,len:54,dir:'v'}
@@ -2092,6 +2158,11 @@ function enterWorldEntry(entry){
   if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
   const ep=engineApi.player; ep.maxHp=player.maxHp; ep.maxSta=player.maxSta; ep.hp=player.hp; ep.sta=player.sta; ep.name=player.name;
   activeWorldEntry=entry;
+  E.emit('area.entered', {
+    type:'world_entry',
+    id: entry.id || entry.label || entry.title,
+    mode: entry.mode || 'platformer'
+  }, playerEventSnapshot(), positionEventSnapshot({area: 'world:'+ (entry.id || entry.label || entry.title)}));
   let mode;
   if(entry.mode==='battlefield')mode=RCEngine.createBattlefieldMode(entry.level);
   else if(entry.mode==='turnbased')mode=RCEngine.createTurnBasedMode(entry.level);
@@ -2111,6 +2182,11 @@ function completeWorldEntry(id){
   player.x=ret.x; player.y=ret.y; player.vx=0; player.vy=0; player.moving=false;
   camera.x=player.x; camera.y=player.y; syncMouseWorld();
   activeWorldEntry=null; state.mode='town'; Net.updatePeers();
+  E.emit('area.exited', {
+    type:'world_entry',
+    id: entry.id || entry.label || entry.title,
+    mode: entry.mode || 'platformer'
+  }, playerEventSnapshot(), positionEventSnapshot({area:'town'}));
   log('Returned from '+esc(entry.title||entry.label||'the interior')+'.');
   return true;
 }
@@ -2125,8 +2201,17 @@ function nearestNpc(){
 function doInteract(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||Dialogue.isOpen())return;
   if(state.mode==='interior'){
-    const n=nearestNpc(); if(n){ Dialogue.open(n); return; }
-    if(nearInteriorExit()){ exitInterior(); return; }
+    const n=nearestNpc();
+    if(n){
+      E.emit('player.interacted', {type:'npc', target:n.id}, playerEventSnapshot(), positionEventSnapshot({area:activeInterior&&activeInterior.name}));
+      Dialogue.open(n);
+      return;
+    }
+    if(nearInteriorExit()){
+      E.emit('player.interacted', {type:'interior_exit', interior:activeInterior&&activeInterior.name}, playerEventSnapshot(), positionEventSnapshot({area:activeInterior&&activeInterior.name}));
+      exitInterior();
+      return;
+    }
     return;
   }
   if(state.mode!=='town')return;
@@ -2134,6 +2219,7 @@ function doInteract(){
   if(i){
     if(!i.repeat)progress.interactions.add(interactionKey(i));
     if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
+    E.emit('player.interacted', {type:'interactable', target:i.id, id:i.target, source:'town'}, playerEventSnapshot(), positionEventSnapshot());
     log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
     const beat=i.townBeat&&ACT1_GRACEFALL&&ACT1_GRACEFALL.townBeats&&ACT1_GRACEFALL.townBeats.find(b=>b.id===i.townBeat);
     const lines=beat?beat.lines:(ACT1_GRACEFALL&&ACT1_GRACEFALL.interactions&&ACT1_GRACEFALL.interactions[i.target]);
@@ -2142,25 +2228,44 @@ function doInteract(){
   }
   const entry=nearestWorldEntry();
   if(entry){
+    E.emit('player.interacted', {type:'world_entry', target:entry.mode||'interior', id:entry.id||entry.title||entry.label}, playerEventSnapshot(), positionEventSnapshot({area:'town'}));
     enterWorldEntry(entry);
     return;
   }
   const lore=nearestLore();
-  if(lore){ discoverLore(lore); return; }
+  if(lore){
+    E.emit('player.interacted', {type:'lore', target:lore.id}, playerEventSnapshot(), positionEventSnapshot({area:'town'}));
+    discoverLore(lore);
+    return;
+  }
   const pz=nearestPuzzleTarget();
-  if(pz){ if(pz.clue) readPuzzleClue(pz.puzzle); else stampPuzzle(pz.puzzle,pz.node); return; }
+  if(pz){
+    E.emit('player.interacted', {type:'puzzle', target:pz.puzzle}, playerEventSnapshot(), positionEventSnapshot({area:'town'}));
+    if(pz.clue) readPuzzleClue(pz.puzzle); else stampPuzzle(pz.puzzle,pz.node);
+    return;
+  }
   const door=nearestDoor();
-  if(door){ enterInterior(door); return; }
+  if(door){ E.emit('player.interacted', {type:'interior_enter', target:door && door.id || 'door', building:door&&door.name}, playerEventSnapshot(), positionEventSnapshot({area:'town'})); enterInterior(door); return; }
   const portal=nearestPortal();
-  if(portal){ enterPortal(portal); return; }
+  if(portal){ E.emit('player.interacted', {type:'portal_enter', target:portal&&portal.id}, playerEventSnapshot(), positionEventSnapshot({area:'town'})); enterPortal(portal); return; }
   const n=nearestNpc();
-  if(n)Dialogue.open(n);
+  if(n){
+    E.emit('player.interacted', {type:'npc', target:n.id}, playerEventSnapshot(), positionEventSnapshot());
+    Dialogue.open(n);
+  }
 }
 /* ---- World-to-interior portals (issue #19): walk to an entrance, press E to descend -------- */
 const PORTALS=(WORLD_PORTALS||[]);
 // Story-gate (folded in from #78): a portal with an `unlock` quest stays closed until it's reached,
 // so the entrance is an earned reward, not a hole in the wall. No `unlock` => always open.
-function portalUnlocked(p){ return !p.unlock || Story.questReached(p.unlock); }
+function portalUnlocked(p){
+  if(!p)return false;
+  if(p.unlock && !Story.questReached(p.unlock)) return false;
+  if(!p.requiredEnding) return true;
+  if (p.requiredEnding === true) return !!progress.ending;
+  if (Array.isArray(p.requiredEnding)) return p.requiredEnding.includes(progress.ending);
+  return p.requiredEnding === progress.ending;
+}
 function nearestPortal(){
   let best=null, bestD=30;
   for(const p of PORTALS){ if(!portalUnlocked(p))continue; const d=Math.hypot(player.x-p.x,player.y-p.y); if(d<bestD){ best=p; bestD=d; } }
@@ -2200,6 +2305,7 @@ function enterInterior(it){
   if(!it||!state.started||player.dead||state.mode!=='town')return;
   if(state.graceOpen)closeGrace(); if(state.wardrobeOpen)closeWardrobe();
   interiorReturn={x:it.building.door.x,y:it.building.door.y};   // re-emerge at the door
+  E.emit('area.entered', {type:'interior', id:it.id || it.name}, playerEventSnapshot(), positionEventSnapshot({area:it.id||it.name, mode:'interior'}));
   activeInterior=it; state.mode='interior';
   player.x=it.spawn.x; player.y=it.spawn.y; player.vx=0; player.vy=0; player.moving=false; player.lock=null;
   camera.x=player.x; camera.y=player.y;
@@ -2220,6 +2326,7 @@ function exitInterior(){
   player.x=r.x; player.y=r.y+18; player.vx=0; player.vy=0; player.moving=false;   // just outside the door
   camera.x=player.x; camera.y=player.y;
   Net.updatePeers();
+  E.emit('area.exited', {type:'interior', id:name}, playerEventSnapshot(), positionEventSnapshot({area:'town'}));
   log('You step back out of '+esc(name)+'.');
 }
 const INTERIOR_MARGIN=20;
@@ -2239,6 +2346,7 @@ function updateInterior(dt){
   const cy=clamp(player.y,VIEW_H/2,Math.max(VIEW_H/2,it.h-VIEW_H/2));
   camera.x=lerp(camera.x,it.w<VIEW_W?it.w/2:cx,Math.min(1,dt*8));
   camera.y=lerp(camera.y,it.h<VIEW_H?it.h/2:cy,Math.min(1,dt*8));
+  emitMovementEvent(false);
   Net.tick(dt);
   if(sigilSig()!==player.sigilSig)recalcStats(false);
   updateHud();
@@ -2550,8 +2658,7 @@ function drawParticles(){
   for(const p of particles){
     const s=worldToScreen(p.x,p.y);
     if(p.kind==='slash'){
-      // crescent weapon trail swept across the facing arc (replaces the old gold bar)
-      const k=p.t/p.max, ang=Math.atan2(p.dy||0,p.dx||1);
+      // crescent weapon trail swept across the facing arc (replaces the old gold bar)     const k=p.t/p.max, ang=Math.atan2(p.dy||0,p.dx||1);
       const cx=s.x+p.dx*9, cy=s.y-14+p.dy*7, r=15+ (1-k)*4;
       ctx.globalAlpha=k*0.9; ctx.strokeStyle='#f1e6c8'; ctx.lineWidth=3; ctx.lineCap='round';
       ctx.beginPath(); ctx.arc(cx,cy,r, ang-0.95, ang+0.95); ctx.stroke();
@@ -2630,8 +2737,7 @@ function draw(){
   if(state.mapOpen){
     Overworld.drawMinimap(ctx, VIEW_W-196, VIEW_H-76, 184, 64, player, {
       onlyUnlocked:true,
-      questReached:id=>Story.questReached(id)
-    });
+      questReached:id=>Story.questReached(id)   });
   }
   if(Dialogue.isOpen())Dialogue.render();
 }
@@ -2739,6 +2845,7 @@ function startGame(){
   state.started=true; state.introMercy=4; recalcStats(true);
   Story.event('start'); Net.connect(); Net.updatePeers();
   E.emit('player.spawned', {}, {id: (progress&&progress.playerId)||'anon'}, {mode: state.mode||'town'});
+  emitMovementEvent(true);
   window.__rc_eventBuffer = E; // S2 entropy pipeline reads from here
   if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach();
   log('Hearthlight is safe. Let the registry record you, then move east.');

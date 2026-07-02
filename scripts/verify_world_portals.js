@@ -42,6 +42,7 @@ for (const sym of ['WORLD_PORTALS', 'progress.portals', 'function enterPortal', 
 assert(/Story\.questReached\(p\.unlock\)/.test(index), 'portalUnlocked must consult Story.questReached(p.unlock)');
 assert((index.match(/if\(!portalUnlocked\(p\)\)continue/g) || []).length >= 2,
   'both nearestPortal and drawPortals must skip locked portals');
+assert(/progress\.ending/.test(index), 'portalUnlocked should support ending-based gating via progress.ending');
 // doInteract descends through a nearby portal.
 assert(/enterPortal\(portal\)/.test(index), 'doInteract must call enterPortal for a nearby portal');
 assert(/drawPortals\(\)/.test(index), 'render loop must call drawPortals()');

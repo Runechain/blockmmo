@@ -53,18 +53,42 @@
 
   // ---- Task submission ------------------------------------------------------
 
-  function selectTasks(templates) {
-    // Bias toward local-tier tasks (lighter on player device); always include at most 1 mid-tier.
-    const local = templates.filter(t => t.complexity_tier === 'local');
-    const mid   = templates.filter(t => t.complexity_tier !== 'local');
-    const picked = [];
-    // Shuffle local
-    for (let i = local.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const tmp = local[i]; local[i] = local[j]; local[j] = tmp;
+  function fnv1a32(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
     }
-    picked.push(...local.slice(0, Math.min(5, local.length)));
-    if (mid.length && picked.length < MAX_TASKS) picked.push(mid[0]);
+    return h;
+  }
+
+  function deterministicSeed(input) {
+    return fnv1a32(input) || 0x9e3779b9;
+  }
+
+  function rankTemplates(templates, seed) {
+    return templates.map((template, index) => {
+      const key = String(template.id || template.title || index);
+      const weight = deterministicSeed(seed + ':' + key);
+      return { template, weight };
+    }).sort((a, b) => {
+      if (a.weight !== b.weight) return a.weight - b.weight;
+      return String(a.template.id || '').localeCompare(String(b.template.id || ''));
+    }).map((entry) => entry.template);
+  }
+
+  function selectTasks(templates, seed) {
+    const available = Array.isArray(templates) ? templates.slice() : [];
+    const local = rankTemplates(available.filter(t => t.complexity_tier === 'local'), String(seed || 'seedless-local'));
+    const mid = rankTemplates(available.filter(t => t.complexity_tier !== 'local'), String(seed || 'seedless-mid'));
+    const maxLocal = 5;
+    const picked = [];
+    for (let i = 0; i < local.length && picked.length < maxLocal; i++) {
+      picked.push(local[i]);
+    }
+    if (mid.length && picked.length < MAX_TASKS) {
+      picked.push(mid[0]);
+    }
     return picked.slice(0, MAX_TASKS);
   }
 
@@ -79,7 +103,7 @@
     const res = await fetch('/engine/s2/objectives.json');
     if (!res.ok) throw new Error('objectives.json unavailable');
     const templates = await res.json();
-    const tasks = selectTasks(templates).map(t => patchSeed(t, seed));
+    const tasks = selectTasks(templates, seed).map(t => patchSeed(t, seed));
 
     let sent = 0;
     for (const task of tasks) {
@@ -146,5 +170,5 @@
     };
   }
 
-  return { init, submit, getStatus };
+  return { init, submit, getStatus, _selectTasks: selectTasks };
 });

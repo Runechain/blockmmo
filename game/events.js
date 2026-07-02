@@ -3,24 +3,63 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.RUNECHAIN_EVENTS = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
-  const RING_SIZE = 200;
+  const RING_SIZE = 500;
   const ALLOWED_MODES = ['town', 'interior', 'platformer', 'battlefield', 'turnbased', 'sequencer', 'server'];
+  const SENSITIVE_KEYS = new Set([
+    'email',
+    'wallet',
+    'walletAddress',
+    'wallet_address',
+    'authToken',
+    'auth_token',
+    'token',
+    'secret',
+    'authorization',
+    'cookie',
+    'ip',
+    'ipAddress',
+    'ip_address',
+  ].map(normalizeKey));
   const buffer = [];
   let counter = 0;
 
-  function cleanObject(value) {
-    if (!value || typeof value !== 'object') return {};
+  function isObject(value) {
+    return value && typeof value === 'object';
+  }
+
+  function normalizeKey(value) {
+    return String(value || '').toLowerCase();
+  }
+
+  function cleanValue(value) {
+    if (!isObject(value)) return value;
+    if (Array.isArray(value)) return value.map(cleanValue);
     const out = {};
-    Object.keys(value).forEach((key) => {
-      const v = value[key];
-      if (v !== undefined) out[key] = v;
-    });
+    for (const key of Object.keys(value)) {
+      if (SENSITIVE_KEYS.has(normalizeKey(key))) continue;
+      out[key] = cleanValue(value[key]);
+    }
+    return out;
+  }
+
+  function cleanObject(value) {
+    if (!isObject(value)) return {};
+    const out = {};
+    for (const key of Object.keys(value)) {
+      if (SENSITIVE_KEYS.has(normalizeKey(key))) continue;
+      if (value[key] !== undefined) out[key] = value[key];
+    }
     return out;
   }
 
   function sourceFrom(snapshot) {
     const mode = snapshot && ALLOWED_MODES.includes(snapshot.mode) ? snapshot.mode : 'town';
-    return { mode };
+    const source = { mode };
+    if (snapshot && snapshot.areaId) source.areaId = snapshot.areaId;
+    if (snapshot && snapshot.questId) source.questId = snapshot.questId;
+    if (snapshot && snapshot.sessionId) source.sessionId = snapshot.sessionId;
+    if (snapshot && snapshot.segmentId) source.segmentId = snapshot.segmentId;
+    return source;
   }
 
   function positionFrom(snapshot) {
@@ -30,12 +69,14 @@
     ['z', 'vx', 'vy', 'dirX', 'dirY'].forEach((key) => {
       if (typeof snapshot[key] === 'number') position[key] = snapshot[key];
     });
+    if (typeof snapshot.area === 'string') position.area = snapshot.area;
+    if (typeof snapshot.areaId === 'string') position.area = position.area || snapshot.areaId;
     if (typeof snapshot.moving === 'boolean') position.moving = snapshot.moving;
     return position;
   }
 
   function stateFrom(snapshot) {
-    if (!snapshot || typeof snapshot !== 'object') return null;
+    if (!isObject(snapshot)) return null;
     const state = {};
     if (typeof snapshot.hp === 'number') state.hp = snapshot.hp;
     if (typeof snapshot.maxHp === 'number' && snapshot.maxHp > 0) state.maxHp = snapshot.maxHp;
@@ -53,11 +94,11 @@
     const event = {
       schemaVersion: '1.0.0',
       eventId: 'ev-' + Date.now() + '-' + (++counter),
-      type: type,
+      type: String(type || 'event.unknown'),
       occurredAt: new Date().toISOString(),
       player: { id: String(player.id || 'anon') },
       source: sourceFrom(sourceSnapshot),
-      payload: cleanObject(payload)
+      payload: cleanValue(payload),
     };
     const position = positionFrom(positionSnapshot);
     const state = stateFrom(playerSnapshot);
@@ -76,6 +117,12 @@
     buffer.length = 0;
   }
 
+  function flushEvents() {
+    const out = getBuffer();
+    clear();
+    return out;
+  }
+
   function summary() {
     const typeCounts = {};
     buffer.forEach((event) => {
@@ -90,5 +137,5 @@
     };
   }
 
-  return { emit, getBuffer, clear, summary, RING_SIZE };
+  return { emit, getBuffer, flushEvents, clear, summary, RING_SIZE };
 });

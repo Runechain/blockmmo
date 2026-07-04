@@ -453,10 +453,46 @@ const overworldOptions = {
   drawGates: true,
   questReached: id => Story.questReached(id)
 };
-/* Kit collision applies only east of the seam; the authored zone keeps the
-   game's original free movement. */
+function circleRectHit(cx,cy,r,rect){
+  const nx=clamp(cx,rect.x,rect.x+rect.w), ny=clamp(cy,rect.y,rect.y+rect.h);
+  return Math.hypot(cx-nx,cy-ny)<r;
+}
+function authoredBuildingSolid(b,cx,cy,r){
+  if(!b)return false;
+  const rect={x:b.x-b.w/2,y:b.y-b.h/2,w:b.w,h:b.h};
+  const door=b.door;
+  if(door&&Math.abs(cx-door.x)<20&&Math.abs(cy-door.y)<28)return false;
+  return circleRectHit(cx,cy,r,rect);
+}
+function authoredZoneBlocked(cx,cy,r=12){
+  for(const o of BUILDINGS||[]){
+    if(buildingUnlocked(o.it)&&authoredBuildingSolid(o.b,cx,cy,r))return true;
+  }
+  for(const b of BRAMBLES||[]){
+    if(circleRectHit(cx,cy,r,{x:b.x-b.w/2,y:b.y-b.h/2,w:b.w,h:b.h}))return true;
+  }
+  for(const f of FENCES||[]){
+    const rect=f.dir==='h'
+      ? {x:f.x-f.len/2,y:f.y-5,w:f.len,h:10}
+      : {x:f.x-5,y:f.y-f.len/2,w:10,h:f.len};
+    if(circleRectHit(cx,cy,r,rect))return true;
+  }
+  return false;
+}
+function moveWithAuthoredCollision(actor,dx,dy){
+  const r=actor.radius||12;
+  const startX=actor.x, startY=actor.y;
+  let hitX=false, hitY=false;
+  const nextX=startX+dx;
+  if(!authoredZoneBlocked(nextX,startY,r))actor.x=nextX; else hitX=true;
+  const nextY=startY+dy;
+  if(!authoredZoneBlocked(actor.x,nextY,r))actor.y=nextY; else hitY=true;
+  return {hitX,hitY};
+}
+/* Kit collision owns the generated east, while authored west collision blocks
+   the same buildings, fences, and bramble walls that the renderer draws. */
 function moveOverworldActor(actor, dx, dy){
-  if(actor.x < OVERWORLD_SEAM_X){ actor.x+=dx; actor.y+=dy; return {hitX:false,hitY:false}; }
+  if(actor.x < OVERWORLD_SEAM_X)return moveWithAuthoredCollision(actor,dx,dy);
   return Overworld.moveCircle(actor, dx, dy, overworldOptions);
 }
 
@@ -2473,10 +2509,13 @@ function drawNpcs(){
     const s=worldToScreen(n.x,n.y), col=n.color||'#cfa982';
     const bob=Math.round(Math.sin(state.time*2+n.x)*1);
     ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fillRect(s.x-8,s.y+1,16,4);
-    rect(s.x-7,s.y-18+bob,14,18,'#2a2620');           // robe / body
-    rect(s.x-6,s.y-17+bob,12,6,col);                  // collar accent
-    rect(s.x-4,s.y-27+bob,8,9,'#cfa982');             // head
-    rect(s.x-4,s.y-30+bob,8,4,col);                   // hood / hat
+    const drewSprite=n.sprite&&drawSheet(n.sprite,n.x,n.y+bob,0,ENTITY_SCALE*.88);
+    if(!drewSprite){
+      rect(s.x-7,s.y-18+bob,14,18,'#2a2620');           // robe / body
+      rect(s.x-6,s.y-17+bob,12,6,col);                  // collar accent
+      rect(s.x-4,s.y-27+bob,8,9,'#cfa982');             // head
+      rect(s.x-4,s.y-30+bob,8,4,col);                   // hood / hat
+    }
     ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#d8cbae';
     ctx.fillText(n.name,s.x,s.y-34+bob);
     if(near===n){

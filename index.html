@@ -2454,7 +2454,11 @@ function drawLore(){
 /* ---- Ledger puzzles / Q-N3 (issue #26): read the clue, deduce the order ----
    The engine NEVER reveals the solution order. A node only advances the puzzle if it is the
    next id in puzzle.order; a wrong stamp blanks that puzzle's progress. Solving reveals lore. */
-const PUZZLES=[...(AREA1_PUZZLES||[]),...(AREA2_PUZZLES||[])];
+// Area 2 puzzles carry the sequence as per-node numeric `order` instead of a puzzle-level id
+// array; normalize to the array form the stamp/draw logic expects.
+const PUZZLES=[...(AREA1_PUZZLES||[]),...(AREA2_PUZZLES||[])].map(p=>p.order?p:Object.assign({},p,{
+  order:(p.nodes||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(n=>n.id)
+}));
 const puzzleProgress={}; // id -> count of correct stamps so far this attempt
 function puzzleStep(p){ return puzzleProgress[p.id]||0; }
 function puzzleSolved(p){ return progress.puzzles.has(p.id); }

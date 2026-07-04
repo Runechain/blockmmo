@@ -1,0 +1,21 @@
+{
+  "type": "runechain-propose-region",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Generate a candidate region manifest for a RUNECHAIN world region. Produces a JSON object conforming to the season.json region schema that the validator suite can accept.",
+  "prompt_template": "You are generating a candidate region manifest for the RUNECHAIN game world.\n\nRUNECHAIN is a browser MMO where the world is oval and radial, decaying inward toward a singularity called the Wound. The aesthetic is ledger-punk: debt, record-keeping, Chainwell (a blockchain metaphor), RUNE (in-world currency that buys power), Gold (cosmetics only). Tone is dry, foreboding, occasionally sardonic.\n\nProduce a JSON object representing ONE new region that could slot into the season manifest. The object must match this shape:\n\n{\n  \"id\": \"<kebab-case-id>\",\n  \"name\": \"<Human-readable name>\",\n  \"tileset\": \"tileset-<id>\",\n  \"position\": { \"x\": <number>, \"y\": <number> },\n  \"exits\": [\n    { \"to\": \"<existing-region-id>\", \"direction\": \"north|south|east|west\" }\n  ],\n  \"entities\": [\n    { \"id\": \"<id>\", \"type\": \"hearth|dungeon-portal|platformer-portal|secret|npc|landmark\", \"pos\": { \"x\": 0, \"y\": 0 }, \"label\": \"<label>\", \"refId\": \"<optional>\" }\n  ],\n  \"platformerSections\": []\n}\n\nExisting region IDs you can connect to: gracefall-parish, mempool-moor, shroud-vaults, drowned-reach, seized-grounds, archive-causeway.\n\nRules:\n- The region name and id must be unique and RUNECHAIN-flavored (ledger metaphors, debt imagery, Chainwell references).\n- Include at least one hearth entity if the region is inhabited, or none if it is ruined/consumed.\n- Position the region on the radial map: x in [-8, 8], y in [-6, 6]. The Wound is at approximately x=5, y=1.\n- Decay increases toward the Wound; choose hearthBrightness accordingly (0.0 = cold, 1.0 = fully lit).\n- Return ONLY the JSON object, no prose, no markdown fences.",
+  "gold_reward": 50,
+  "output_schema": {
+    "type": "object",
+    "required": ["id", "name", "tileset", "position", "exits"],
+    "properties": {
+      "id":       { "type": "string" },
+      "name":     { "type": "string" },
+      "tileset":  { "type": "string" },
+      "position": { "type": "object" },
+      "exits":    { "type": "array" },
+      "entities": { "type": "array" }
+    }
+  }
+}

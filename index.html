@@ -398,7 +398,7 @@ const Story=(function(){
     if(st){
       E.emit(
         'quest.progressed',
-        {questId:q&&q.id, stepIndex:state.stepIndex, stepText:st.text, stepEvent:st.done&&st.done.event},
+        {questId:q&&q.id, stepId:'step-'+state.stepIndex, event:st.done&&st.done.event},
         {id:(progress&&progress.playerId)||'anon'},
         {mode:state.mode||'town'}
       );
@@ -442,56 +442,6 @@ const Story=(function(){
   }
   return {state,event,updateHud,currentQuest,currentStep,questReached,stepMatchesMonster};
 })();
-
-const movementFeedState = {
-  lastEmit: 0,
-  lastX: null,
-  lastY: null,
-  lastMode: null,
-};
-const MOVEMENT_MINDIST = 18;
-const MOVEMENT_MIN_MS = 500;
-
-function playerEventSnapshot(extra) {
-  return Object.assign({
-    id: (progress&&progress.playerId)||'anon'
-  }, extra || {});
-}
-
-function positionEventSnapshot(extra) {
-  const snapshot = {
-    mode: state.mode || 'town',
-    x: player && player.x,
-    y: player && player.y,
-    moving: !!(player && player.moving) };
-  if (state.mode === 'interior' && activeInterior && activeInterior.name) snapshot.area = activeInterior.name;
-  else if (state.mode !== 'interior') snapshot.area = 'town';
-  if (typeof player === 'object' && player) {
-    if (typeof player.vx === 'number') snapshot.vx = player.vx;
-    if (typeof player.vy === 'number') snapshot.vy = player.vy;
-    if (typeof player.dirX === 'number') snapshot.dirX = player.dirX;
-    if (typeof player.dirY === 'number') snapshot.dirY = player.dirY;
-  }
-  return Object.assign(snapshot, extra || {});
-}
-
-function emitMovementEvent(force) {
-  if (!state || !state.started || !player) return;
-  const mode = state.mode || 'town';
-  if (mode !== 'town' && mode !== 'interior') return;
-  const x = player.x;
-  const y = player.y;
-  const now = performance.now();
-  const moved = movementFeedState.lastX === null || movementFeedState.lastY === null ? true
-    : Math.hypot(x - movementFeedState.lastX, y - movementFeedState.lastY) > MOVEMENT_MINDIST;
-  const timedOut = now - movementFeedState.lastEmit > MOVEMENT_MIN_MS;
-  if (!force && movementFeedState.lastEmit && !moved && !timedOut) return;
-  E.emit('player.moved', { moved, mode }, playerEventSnapshot(), positionEventSnapshot());
-  movementFeedState.lastEmit = now;
-  movementFeedState.lastX = x;
-  movementFeedState.lastY = y;
-  movementFeedState.lastMode = mode;
-}
 
 /* --------------------------- Overworld layer ---------------------------- */
 /* Hybrid integration of the Gameworld overworld kit (game/overworld.js).
@@ -668,6 +618,43 @@ let player={
 };
 const enemies=[], particles=[], projectiles=[], remotes={};
 const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set(), portals:new Set()};
+const movementEvent={at:-999,x:null,y:null,mode:null};
+
+function playerEventSnapshot(){
+  return {
+    id:(progress&&progress.playerId)||'anon',
+    hp:player.hp,
+    maxHp:player.maxHp,
+    stamina:player.sta,
+    maxStamina:player.maxSta,
+    level:player.level,
+    dead:player.dead,
+    skin:player.skinId
+  };
+}
+function positionEventSnapshot(extra={}){
+  return Object.assign({
+    mode:state.mode||'town',
+    areaId:state.mode==='interior'&&activeInterior?activeInterior.id:'gracefall-parish',
+    x:player.x,
+    y:player.y,
+    vx:player.vx,
+    vy:player.vy,
+    dirX:player.dirX,
+    dirY:player.dirY,
+    moving:player.moving
+  },extra);
+}
+function emitMovementEvent(force=false){
+  if(!state.started||player.dead)return;
+  if(state.mode!=='town'&&state.mode!=='interior')return;
+  const mode=state.mode||'town';
+  const delta=movementEvent.x==null?Infinity:Math.hypot(player.x-movementEvent.x,player.y-movementEvent.y);
+  const modeChanged=movementEvent.mode!==mode;
+  if(!force && !modeChanged && state.time-movementEvent.at<.5 && delta<18)return;
+  E.emit('player.moved', {input:'keyboard'}, playerEventSnapshot(), positionEventSnapshot());
+  movementEvent.at=state.time; movementEvent.x=player.x; movementEvent.y=player.y; movementEvent.mode=mode;
+}
 
 function recalcStats(fullHeal){
   const b=itemBonuses();
@@ -2203,12 +2190,12 @@ function doInteract(){
   if(state.mode==='interior'){
     const n=nearestNpc();
     if(n){
-      E.emit('player.interacted', {type:'npc', target:n.id}, playerEventSnapshot(), positionEventSnapshot({area:activeInterior&&activeInterior.name}));
+      E.emit('player.interacted', {targetId:String(n.id||n.name||'npc'), targetType:'npc'}, playerEventSnapshot(), positionEventSnapshot());
       Dialogue.open(n);
       return;
     }
     if(nearInteriorExit()){
-      E.emit('player.interacted', {type:'interior_exit', interior:activeInterior&&activeInterior.name}, playerEventSnapshot(), positionEventSnapshot({area:activeInterior&&activeInterior.name}));
+      E.emit('player.interacted', {targetId:(activeInterior&&activeInterior.id)||'exit', targetType:'interior_exit'}, playerEventSnapshot(), positionEventSnapshot());
       exitInterior();
       return;
     }
@@ -2218,6 +2205,7 @@ function doInteract(){
   const i=nearestInteractable();
   if(i){
     if(!i.repeat)progress.interactions.add(interactionKey(i));
+    E.emit('player.interacted', {targetId:i.target, id:i.id, interactionType:i.townBeat?'town_beat':'interactable'}, playerEventSnapshot(), positionEventSnapshot({mode:'town'}));
     if(!i.townBeat)Story.event('interact',{target:i.target,id:i.id});
     E.emit('player.interacted', {type:'interactable', target:i.id, id:i.target, source:'town'}, playerEventSnapshot(), positionEventSnapshot());
     log('<b style="color:#f1c75b">Ledger marked:</b> '+esc(i.label));
@@ -2245,12 +2233,12 @@ function doInteract(){
     return;
   }
   const door=nearestDoor();
-  if(door){ E.emit('player.interacted', {type:'interior_enter', target:door && door.id || 'door', building:door&&door.name}, playerEventSnapshot(), positionEventSnapshot({area:'town'})); enterInterior(door); return; }
+  if(door){ E.emit('player.interacted', {targetId:(door&&door.id)||'door', targetType:'interior_enter'}, playerEventSnapshot(), positionEventSnapshot()); enterInterior(door); return; }
   const portal=nearestPortal();
-  if(portal){ E.emit('player.interacted', {type:'portal_enter', target:portal&&portal.id}, playerEventSnapshot(), positionEventSnapshot({area:'town'})); enterPortal(portal); return; }
+  if(portal){ E.emit('player.interacted', {targetId:(portal&&portal.id)||'portal', targetType:'portal_enter'}, playerEventSnapshot(), positionEventSnapshot()); enterPortal(portal); return; }
   const n=nearestNpc();
   if(n){
-    E.emit('player.interacted', {type:'npc', target:n.id}, playerEventSnapshot(), positionEventSnapshot());
+    E.emit('player.interacted', {targetId:String(n.id||n.name||'npc'), targetType:'npc'}, playerEventSnapshot(), positionEventSnapshot());
     Dialogue.open(n);
   }
 }
@@ -2341,6 +2329,7 @@ function updateInterior(dt){
   if(player.moving)faceToward(player.x+n.x,player.y+n.y);
   player.x=clamp(player.x+player.vx*dt,INTERIOR_MARGIN,it.w-INTERIOR_MARGIN);
   player.y=clamp(player.y+player.vy*dt,INTERIOR_MARGIN,it.h-INTERIOR_MARGIN);
+  emitMovementEvent(false);
   // Camera follows but stays clamped so the room walls stay framed.
   const cx=clamp(player.x,VIEW_W/2,Math.max(VIEW_W/2,it.w-VIEW_W/2));
   const cy=clamp(player.y,VIEW_H/2,Math.max(VIEW_H/2,it.h-VIEW_H/2));
@@ -2844,7 +2833,7 @@ function startGame(){
   document.body.classList.add('playing');
   state.started=true; state.introMercy=4; recalcStats(true);
   Story.event('start'); Net.connect(); Net.updatePeers();
-  E.emit('player.spawned', {}, {id: (progress&&progress.playerId)||'anon'}, {mode: state.mode||'town'});
+  E.emit('player.spawned', {}, playerEventSnapshot(), positionEventSnapshot());
   emitMovementEvent(true);
   window.__rc_eventBuffer = E; // S2 entropy pipeline reads from here
   if (typeof RUNECHAIN_S2_ENTROPY !== 'undefined') RUNECHAIN_S2_ENTROPY.attach();

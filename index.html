@@ -613,7 +613,7 @@ const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 const keys={}, pressed={}, released={}, mouse={x:VIEW_W/2,y:VIEW_H/2,worldX:0,worldY:0,down:false};
 const camera={x:0,y:0};
-const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false,mapOpen:false,mode:'town'};
+const state={started:false,last:performance.now(),time:0,shake:0,introMercy:0,graceOpen:false,wardrobeOpen:false,wallet:false,mapOpen:false,mode:'town',guestPreview:false};
 const ASSET_PROOF_MODE=new URLSearchParams(location.search).get('assets')||'';
 const GRACE={x:0,y:0};
 for(const k in ASSETS){
@@ -857,7 +857,10 @@ function killEnemy(e){
   const localReward=awardRune({type:'enemy',key:e.key},reward,e.type.name+' slain');
   Story.event('kill',{key:e.key});
   E.emit('combat.creature_defeated', {targetId:e.key, targetType:'enemy', rewardRune:e.reward||reward||0}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'town'});
-  log('<b>'+esc(e.type.name)+'</b> slain. '+(localReward?'+'+reward.toFixed(2)+' RUNE pending.':'RUNE proof requested from the realm server.'));
+  const rewardNote=localReward
+    ? '+'+reward.toFixed(2)+' RUNE pending.'
+    : (state.guestPreview?'Guest preview — sign in to claim realm rewards.':'RUNE proof requested from the realm server.');
+  log('<b>'+esc(e.type.name)+'</b> slain. '+rewardNote);
   if(e.type.boss){
     const boss=act1Boss(e.key);
     if(boss&&boss.defeatLines)sayAct1(boss.defeatLines);
@@ -2831,17 +2834,18 @@ function updateWallet(){
 }
 function startGame(){
   if(state.started)return;
-  // When the realm enforces identity, the device key alone is not enough — gate on SSO + wallet.
   const auth=Net.getAuthState();
-  if(auth.requireIdentity&&auth.ssoEnabled&&!auth.signedIn){ showSigninGate(window.RUNECHAIN_SIGNIN.joinErrorMessage('sso_required')); return; }
-  if(auth.requireWallet&&!walletReady){ showSigninGate(window.RUNECHAIN_SIGNIN.joinErrorMessage('wallet_required')); return; }
+  state.guestPreview=!!((auth.requireIdentity&&auth.ssoEnabled&&!auth.signedIn)||(auth.requireWallet&&!walletReady));
   player.name=(document.getElementById('name').value.trim()||'Recorded').slice(0,14);
   player.address=player.characterId||player.name;
   document.getElementById('charname').textContent=player.name;
   document.getElementById('start').style.display='none';
   document.body.classList.add('playing');
   state.started=true; state.introMercy=4; recalcStats(true);
-  Story.event('start'); Net.connect(); Net.updatePeers();
+  Story.event('start');
+  if(state.guestPreview)log('Guest preview active. Sign in and connect a wallet for multiplayer identity and realm rewards.');
+  else Net.connect();
+  Net.updatePeers();
   E.emit('player.spawned', {}, playerEventSnapshot(), positionEventSnapshot());
   emitMovementEvent(true);
   window.__rc_eventBuffer = E; // S2 entropy pipeline reads from here
@@ -2876,7 +2880,10 @@ function refreshSigninUI(){
     walletBtn.disabled=walletReady;
     walletBtn.textContent=walletReady?'Wallet connected':(a.requireWallet?'Connect Solana wallet':'Link wallet (optional)');
   }
-  if(goBtn)goBtn.disabled=!(a.signedIn&&(!a.requireWallet||walletReady));
+  if(goBtn){
+    goBtn.disabled=false;
+    goBtn.title=(a.signedIn&&(!a.requireWallet||walletReady))?'':'Guest preview starts without realm rewards.';
+  }
 }
 function showSigninGate(message){
   const startEl=document.getElementById('start');

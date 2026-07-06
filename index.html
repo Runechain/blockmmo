@@ -705,13 +705,23 @@ function targetNearest(){
   player.lock=alive[0]||null;
   if(player.lock)log('Target locked: <b>'+esc(player.lock.type.name)+'</b>');
 }
+function nearestAttackTarget(){
+  const reach=58;
+  const alive=enemies.filter(e=>!e.dead && enemyUnlocked(e) && dist(e,player)<reach);
+  alive.sort((a,b)=>dist(a,player)-dist(b,player));
+  return alive[0]||null;
+}
 function doAttack(){
   if(!state.started||player.dead||state.graceOpen||state.wardrobeOpen||state.mode!=='town')return;
   if(player.attackCd>0)return;
   if(player.sta<14){ flashBar('sta'); return; }
   player.sta-=14; player.attackCd=.32/(1+(player.atkSpeedMult||0)); player.attack={t:0,hit:false}; state.shake=2.2;
   if(player.lock&&!player.lock.dead)faceToward(player.lock.x,player.lock.y);
-  else faceToward(mouse.worldX,mouse.worldY);
+  else {
+    const softTarget=nearestAttackTarget();
+    if(softTarget)faceToward(softTarget.x,softTarget.y);
+    else faceToward(mouse.worldX,mouse.worldY);
+  }
   slashFx(player.x,player.y,player.dirX,player.dirY);
 }
 function doDash(){
@@ -2422,7 +2432,21 @@ function drawLore(){
 /* ---- Ledger puzzles / Q-N3 (issue #26): read the clue, deduce the order ----
    The engine NEVER reveals the solution order. A node only advances the puzzle if it is the
    next id in puzzle.order; a wrong stamp blanks that puzzle's progress. Solving reveals lore. */
-const PUZZLES=[...(AREA1_PUZZLES||[]),...(AREA2_PUZZLES||[])];
+function normalizePuzzle(p){
+  const nodes=(p.nodes||[]).map(n=>({
+    ...n,
+    inscription:n.inscription||n.label||n.id
+  }));
+  const order=Array.isArray(p.order)
+    ? p.order.slice()
+    : nodes.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(n=>n.id);
+  const location=p.location||nodes[0]||{x:0,y:0};
+  const clue=typeof p.clue==='string'
+    ? {id:p.id+'-clue',x:location.x,y:location.y-34,label:'CLUE',lines:[p.clue]}
+    : p.clue;
+  return {...p,nodes,order,clue};
+}
+const PUZZLES=[...(AREA1_PUZZLES||[]),...(AREA2_PUZZLES||[])].map(normalizePuzzle);
 const puzzleProgress={}; // id -> count of correct stamps so far this attempt
 function puzzleStep(p){ return puzzleProgress[p.id]||0; }
 function puzzleSolved(p){ return progress.puzzles.has(p.id); }

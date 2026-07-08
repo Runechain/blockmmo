@@ -138,4 +138,106 @@ test('render helpers complete against a minimal Canvas context', function () {
   Overworld.drawMinimap(context, 0, 0, 160, 60, { x: 0, y: 0 }, options);
 });
 
+// ─── Game-logic layer tests ──────────────────────────────────────────────────
+
+test('exports game-logic functions', function () {
+  assert.equal(typeof Overworld.enterOverworld, 'function');
+  assert.equal(typeof Overworld.exitOverworld, 'function');
+  assert.equal(typeof Overworld.updateOverworld, 'function');
+  assert.equal(typeof Overworld.drawOverworld, 'function');
+  assert.equal(typeof Overworld.setRemotePlayers, 'function');
+  assert.equal(typeof Overworld.createOverworldState, 'function');
+});
+
+test('enterOverworld spawns player at Hearthlight by default', function () {
+  var state = Overworld.enterOverworld('gracefall-parish', 'hearthlight');
+  assert.ok(Math.abs(state.x) < 50 && Math.abs(state.y) < 50, 'spawns near Hearthlight origin');
+  assert.ok(Array.isArray(state.remote), 'remote array exists');
+  assert.equal(state.pendingExit, null, 'no pending exit on entry');
+});
+
+test('enterOverworld with no args falls back to origin', function () {
+  var state = Overworld.enterOverworld();
+  assert.equal(state.x, 0);
+  assert.equal(state.y, 0);
+});
+
+test('updateOverworld moves player in the correct direction', function () {
+  var state = Overworld.enterOverworld();
+  var before = { x: state.x, y: state.y };
+  Overworld.updateOverworld(state, 0.1, { dx: 1, dy: 0 });
+  assert.ok(state.x > before.x, 'player moved right');
+  assert.equal(state.facing, 'east');
+});
+
+test('updateOverworld clips player to world bounds', function () {
+  var state = Overworld.createOverworldState({ x: Overworld.BOUNDS.maxX + 200, y: 0 });
+  Overworld.updateOverworld(state, 0.5, { dx: 1, dy: 0 });
+  assert.ok(state.x <= Overworld.BOUNDS.maxX, 'clamped to maxX');
+});
+
+test('updateOverworld: camera follows player via lerp', function () {
+  var state = Overworld.enterOverworld();
+  // Teleport player, then update — camera should move toward player.
+  state.x = 500; state.y = 0;
+  var oldCamX = state.camX;
+  Overworld.updateOverworld(state, 0.016, { dx: 0, dy: 0 });
+  assert.ok(state.camX !== oldCamX || state.camX === state.x, 'camera lerps toward player');
+});
+
+test('exitOverworld returns null when no transition pending', function () {
+  var state = Overworld.enterOverworld();
+  assert.equal(Overworld.exitOverworld(state), null);
+  assert.equal(state.pendingExit, null, 'cleared after exit call');
+});
+
+test('exitOverworld returns and clears a pending platformer exit', function () {
+  var state = Overworld.enterOverworld();
+  // Manually set a pending exit (as if player walked into a portal).
+  state.pendingExit = { type: 'platformer', target: 'undercroft' };
+  var ex = Overworld.exitOverworld(state);
+  assert.equal(ex.type, 'platformer');
+  assert.equal(ex.target, 'undercroft');
+  assert.equal(state.pendingExit, null, 'cleared after read');
+});
+
+test('setRemotePlayers stores player list in state', function () {
+  var state = Overworld.enterOverworld();
+  var remotes = [{ id: 'p1', x: 100, y: 50, name: 'Pilgrim' }];
+  Overworld.setRemotePlayers(state, remotes);
+  assert.equal(state.remote.length, 1);
+  assert.equal(state.remote[0].id, 'p1');
+});
+
+test('drawOverworld completes against minimal canvas context', function () {
+  var calls = [];
+  var ctx = {
+    save: function () { calls.push('save'); },
+    restore: function () { calls.push('restore'); },
+    beginPath: function () {},
+    moveTo: function () {}, lineTo: function () {}, stroke: function () {},
+    fillRect: function () {}, strokeRect: function () {}, fillText: function () {},
+    fill: function () {},
+    arc: function () {},
+    measureText: function (t) { return { width: String(t).length * 6 }; }
+  };
+  var state = Overworld.enterOverworld();
+  Overworld.setRemotePlayers(state, [{ id: 'r1', x: 40, y: 10, name: 'Remote' }]);
+  Overworld.drawOverworld(ctx, state, 320, 180, 1, { solidProps: false, waterIsSolid: false, questReached: function () { return true; } });
+  assert.ok(calls.length > 0, 'canvas methods were called');
+});
+
+test('all 3 transition types: platformer, interior, region', function () {
+  // State transitions are plain data checks — no DOM.
+  var state = Overworld.enterOverworld();
+  state.pendingExit = { type: 'platformer', target: 'undercroft' };
+  assert.equal(Overworld.exitOverworld(state).type, 'platformer');
+
+  state.pendingExit = { type: 'interior', target: 'hearthlight' };
+  assert.equal(Overworld.exitOverworld(state).type, 'interior');
+
+  state.pendingExit = { type: 'region', target: 'mempool-moor' };
+  assert.equal(Overworld.exitOverworld(state).type, 'region');
+});
+
 process.stdout.write('\nAll overworld tests passed.\n');

@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://runechaingame.com/schema/season.json",
+  "title": "RUNECHAIN Season Manifest",
+  "description": "Contract describing one season of the RUNECHAIN world — regions, towns, connections, and Halving effect.",
+  "type": "object",
+  "required": ["meta", "canonState", "regions", "towns", "connections"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id":           { "type": "string", "pattern": "^s[0-9]+$" },
+        "name":         { "type": "string", "minLength": 1 },
+        "halvingBlock": { "type": ["integer", "null"], "description": "Solana slot at which this season ends; null until scheduled." }
+      }
+    },
+    "canonState": {
+      "type": "object",
+      "required": ["dwindlingLevel", "coldHearths", "storyLog"],
+      "additionalProperties": false,
+      "properties": {
+        "dwindlingLevel": {
+          "type": "integer", "minimum": 0, "maximum": 10,
+          "description": "How deeply the Wound has spread (0=intact, 10=consumed)."
+        },
+        "coldHearths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "description": "IDs of hearths that have gone cold (unsafe, no leveling)."
+        },
+        "storyLog": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered chronicle entries appended by the canon spine."
+        }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "tileset", "position", "exits"],
+        "additionalProperties": false,
+        "properties": {
+          "id":       { "type": "string" },
+          "name":     { "type": "string" },
+          "tileset":  { "type": "string", "description": "Tileset key (may be a placeholder pending art issue)." },
+          "position": {
+            "type": "object",
+            "required": ["x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          },
+          "exits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["to", "direction"],
+              "additionalProperties": false,
+              "properties": {
+                "to":        { "type": "string", "description": "Region ID this exit leads to." },
+                "direction": { "type": "string", "enum": ["north", "south", "east", "west"] },
+                "gated":     { "type": "boolean", "default": false },
+                "gateFlag":  { "type": "string", "description": "progress.* flag that must be true to pass." }
+              }
+            }
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "type"],
+              "additionalProperties": true,
+              "properties": {
+                "id":     { "type": "string" },
+                "type":   { "type": "string", "enum": ["hearth", "dungeon-portal", "platformer-portal", "secret", "npc", "landmark"] },
+                "pos":    { "type": "object", "properties": { "x": {"type":"number"}, "y": {"type":"number"} } },
+                "label":  { "type": "string" },
+                "refId":  { "type": "string", "description": "ID of the interior / platformer section / NPC this entity loads." }
+              }
+            },
+            "default": []
+          },
+          "platformerSections": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "IDs of platformer sections accessible from this region.",
+            "default": []
+          }
+        }
+      }
+    },
+    "towns": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "regionId"],
+        "additionalProperties": false,
+        "properties": {
+          "id":               { "type": "string" },
+          "name":             { "type": "string" },
+          "regionId":         { "type": "string" },
+          "hearthId":         { "type": "string" },
+          "hearthBrightness": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+          "npcs":             { "type": "array", "items": { "type": "string" }, "default": [] },
+          "interiors":        { "type": "array", "items": { "type": "string" }, "default": [] }
+        }
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "pathType"],
+        "additionalProperties": false,
+        "properties": {
+          "from":     { "type": "string" },
+          "to":       { "type": "string" },
+          "pathType": { "type": "string", "enum": ["road", "trail", "submerged", "void"] },
+          "gated":    { "type": "boolean", "default": false },
+          "gateFlag": { "type": "string" }
+        }
+      }
+    },
+    "storyBeats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "trigger", "effect"],
+        "additionalProperties": false,
+        "properties": {
+          "id":      { "type": "string" },
+          "trigger": { "type": "string" },
+          "effect":  { "type": "string" }
+        }
+      },
+      "default": []
+    },
+    "newPlayerItems": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Item IDs granted to new characters entering this season.",
+      "default": []
+    },
+    "halvingEffect": {
+      "type": "object",
+      "required": ["coldHearths", "canonAppend"],
+      "additionalProperties": false,
+      "properties": {
+        "coldHearths":  { "type": "array", "items": { "type": "string" }, "description": "Hearth IDs that go cold when this season's Halving fires." },
+        "canonAppend":  { "type": "string", "description": "Sentence added to the canon spine storyLog at Halving." }
+      }
+    }
+  }
+}

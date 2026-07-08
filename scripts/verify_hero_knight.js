@@ -9,13 +9,13 @@ const heroPath = path.join(root, 'assets', 'pixel', 'hero-knight-directions.png'
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 assert(content.ASSETS.heroKnightDir, 'content should expose heroKnightDir');
-assert.strictEqual(content.ASSETS.heroKnightDir.w, 56, 'heroKnightDir frame width should match town renderer');
-assert.strictEqual(content.ASSETS.heroKnightDir.h, 56, 'heroKnightDir frame height should match town renderer');
+assert.strictEqual(content.ASSETS.heroKnightDir.w, 54, 'heroKnightDir frame width should match generated sheet cells');
+assert.strictEqual(content.ASSETS.heroKnightDir.h, 44, 'heroKnightDir frame height should match generated sheet cells');
 assert(fs.existsSync(heroPath), 'hero-knight-directions.png should exist');
 
 const img = decodePng(heroPath);
-assert.strictEqual(img.width, 56 * 8 * 4, 'hero knight direction sheet should have 8 directions with 4 walk frames each');
-assert.strictEqual(img.height, 56, 'hero knight direction sheet should use 56px frames');
+assert.strictEqual(img.width, 54 * 8 * 4, 'hero knight direction sheet should have 8 directions with 4 walk frames each');
+assert.strictEqual(img.height, 44, 'hero knight direction sheet should use 54x44px frames');
 
 let opaque = 0;
 for (let i = 3; i < img.pixels.length; i += 4) if (img.pixels[i] > 0) opaque++;

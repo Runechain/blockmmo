@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "id": 1,
+      "season_id": "s1",
+      "event_type": "season_start",
+      "event_data": {
+        "canonState": {
+          "dwindlingLevel": 0,
+          "coldHearths": [],
+          "storyLog": [
+            "Season 1 begins. Gracefall Parish holds its first hearth-light."
+          ]
+        }
+      },
+      "block_height": null,
+      "created_at": 1783546928625
+    }
+  ]
+}

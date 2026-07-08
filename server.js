@@ -27,6 +27,7 @@ const { createAnnounceFeed } = require('./game/announce.js');
 const identity = require('./game/identity.js');
 const agentClaim = require('./game/agent-claim.js');
 const { createGoogleOAuth, createStore, parseCookies, serializeCookie } = require('./game/oauth-google.js');
+const { createCanonStore } = require('./game/canon.js');
 
 const DEFAULT_PORT = process.env.PORT || 8080;
 const DEFAULT_SEASON_ID = 'preseason-1';
@@ -94,6 +95,7 @@ function createRealmServer(options = {}) {
   const accountsFile = options.accountsFile || path.join(__dirname, 'accounts.json');
   const s2ContentFile = options.s2ContentFile || path.join(__dirname, 's2_content.json');
   const halvingFile = options.halvingFile || path.join(__dirname, 'halving_schedule.json');
+  const canonFile = options.canonFile || path.join(__dirname, 'canon.json');
   const MOLT_BROKER_URL = options.moltBrokerUrl || process.env.MOLT_BROKER_URL || '';
   const MOLT_INGEST_KEY = options.moltIngestKey || process.env.MOLT_INGEST_KEY || '';
   const ADMIN_TOKEN = options.adminToken || process.env.RUNECHAIN_ADMIN_TOKEN || '';
@@ -238,6 +240,8 @@ function createRealmServer(options = {}) {
   // sign-in first (RUNECHAIN_REQUIRE_IDENTITY), add the wallet requirement once its leg is proven.
   const requireWallet = options.requireWallet != null ? !!options.requireWallet : process.env.RUNECHAIN_REQUIRE_WALLET === '1';
   const accountRegistry = options.accountRegistry || createAccountRegistry({ accountsFile, season: seasonConfig, now, requireIdentity, requireWallet });
+  const canonStore = options.canonStore || createCanonStore({ canonFile, seasonId });
+  canonStore.seedS1();
   const announceFeed = options.announceFeed || createAnnounceFeed({ seasonId });
 
   // SSO leg (Google) + browser sessions. Secrets come from env, never the client.
@@ -1723,6 +1727,7 @@ function createRealmServer(options = {}) {
     acceptBlock,
     getChain,
     getAccountRegistry: () => accountRegistry,
+    getCanonStore: () => canonStore,
     sweepPvpTurnTimeouts,
     listen,
     close,

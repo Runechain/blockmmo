@@ -1,0 +1,193 @@
+{
+  "meta": {
+    "id": "s1",
+    "name": "Season 1: The Forking",
+    "halvingBlock": null
+  },
+  "canonState": {
+    "dwindlingLevel": 3,
+    "coldHearths": [],
+    "storyLog": [
+      "The Chainwell opened. The first names were written at Hearthlight.",
+      "The Debt Mines were explored and the Ledger Warden fell.",
+      "The Auditor stood at the Wound and offered three futures."
+    ]
+  },
+  "regions": [
+    {
+      "id": "gracefall-parish",
+      "name": "Gracefall Parish",
+      "tileset": "tileset-gracefall",
+      "position": { "x": 0, "y": 0 },
+      "exits": [
+        { "to": "mempool-moor",    "direction": "north" },
+        { "to": "drowned-reach",   "direction": "south" }
+      ],
+      "entities": [
+        { "id": "hearth-hearthlight", "type": "hearth",            "pos": { "x": -72, "y": -26 }, "label": "Hearthlight",    "refId": "hearthlight" },
+        { "id": "dungeon-gracefall",  "type": "dungeon-portal",    "pos": { "x": 520,  "y": 0   }, "label": "Debt Mines",     "refId": "a2-debt-mines" },
+        { "id": "interior-chapel",    "type": "platformer-portal", "pos": { "x": -400, "y": 0   }, "label": "Chapel",         "refId": "chapel" }
+      ],
+      "platformerSections": ["a1-platformer"]
+    },
+    {
+      "id": "mempool-moor",
+      "name": "Mempool Moor",
+      "tileset": "tileset-mempool",
+      "position": { "x": -3, "y": -4 },
+      "exits": [
+        { "to": "gracefall-parish", "direction": "south" },
+        { "to": "shroud-vaults",    "direction": "east"  }
+      ],
+      "entities": [
+        { "id": "hearth-forklight",    "type": "hearth",         "pos": { "x": 1068, "y": -54 }, "label": "Forklight",    "refId": "forklight" },
+        { "id": "dungeon-debt-mines",  "type": "dungeon-portal", "pos": { "x": 1200, "y": 0   }, "label": "Vault Anteroom", "refId": "a2-vault-anteroom" }
+      ],
+      "platformerSections": ["a2-debt-mines"]
+    },
+    {
+      "id": "shroud-vaults",
+      "name": "Shroud Vaults",
+      "tileset": "tileset-shroud",
+      "position": { "x": 2, "y": 0 },
+      "exits": [
+        { "to": "mempool-moor",    "direction": "west" },
+        { "to": "seized-grounds",  "direction": "east",  "gated": true, "gateFlag": "progress.area2Complete" }
+      ],
+      "entities": [
+        { "id": "dungeon-shroud",  "type": "dungeon-portal", "pos": { "x": 1420, "y": 0 }, "label": "The Shroud Vaults", "refId": "a2-debt-mines" }
+      ],
+      "platformerSections": []
+    },
+    {
+      "id": "drowned-reach",
+      "name": "Drowned Reach",
+      "tileset": "tileset-drowned",
+      "position": { "x": -2, "y": 4 },
+      "exits": [
+        { "to": "gracefall-parish",  "direction": "north" },
+        { "to": "archive-causeway",  "direction": "east"  }
+      ],
+      "entities": [
+        { "id": "hearth-reedwick",   "type": "hearth",     "pos": { "x": 0, "y": 120 }, "label": "Reedwick Flame",  "refId": "reedwick" }
+      ],
+      "platformerSections": []
+    },
+    {
+      "id": "seized-grounds",
+      "name": "Seized Grounds",
+      "tileset": "tileset-seized",
+      "position": { "x": 4, "y": -2 },
+      "exits": [
+        { "to": "shroud-vaults",    "direction": "west" },
+        { "to": "archive-causeway", "direction": "south" }
+      ],
+      "entities": [
+        { "id": "hearth-sump-row",   "type": "hearth",         "pos": { "x": 1600, "y": -30 }, "label": "Sump Row Flame", "refId": "sump-row" },
+        { "id": "dungeon-chamber",   "type": "dungeon-portal", "pos": { "x": 1700, "y": 0   }, "label": "Chamber of Attestation", "refId": "a3-chamber-attestation" }
+      ],
+      "platformerSections": ["a3-platformer"]
+    },
+    {
+      "id": "archive-causeway",
+      "name": "Archive Causeway",
+      "tileset": "tileset-archive",
+      "position": { "x": 4, "y": 3 },
+      "exits": [
+        { "to": "drowned-reach",  "direction": "west"  },
+        { "to": "seized-grounds", "direction": "north" }
+      ],
+      "entities": [
+        { "id": "hearth-marginalia",  "type": "hearth",    "pos": { "x": 1880, "y": -20 }, "label": "Marginalia",   "refId": "marginalia" },
+        { "id": "hearth-lastlight",   "type": "hearth",    "pos": { "x": 1950, "y": 10  }, "label": "Lastlight",    "refId": "lastlight-hearth" },
+        { "id": "wound-approach",     "type": "landmark",  "pos": { "x": 2000, "y": 0   }, "label": "The Wound",    "refId": "the-wound" }
+      ],
+      "platformerSections": []
+    }
+  ],
+  "towns": [
+    {
+      "id": "hearthlight-town",
+      "name": "Hearthlight",
+      "regionId": "gracefall-parish",
+      "hearthId": "hearthlight",
+      "hearthBrightness": 1.0,
+      "npcs": ["recorder-chaplain", "scribe-archivist", "debt-confessional", "chapel-acolyte", "sexton-grave-tenders"],
+      "interiors": ["chapel", "vault-registry"]
+    },
+    {
+      "id": "forklight-town",
+      "name": "Forklight",
+      "regionId": "mempool-moor",
+      "hearthId": "forklight",
+      "hearthBrightness": 0.75,
+      "npcs": ["keeper-ancestry", "custodian-archivist", "librarian-shade", "keeper-margins"],
+      "interiors": ["vault-registry", "fissured-cistern", "archivist-reading-room", "margin-chamber"]
+    },
+    {
+      "id": "celestial-spark-town",
+      "name": "Celestial Spark",
+      "regionId": "seized-grounds",
+      "hearthId": "celestial-spark",
+      "hearthBrightness": 0.45,
+      "npcs": ["area3-archivist", "area3-prime-witness", "area3-unrecorded", "area3-echo"],
+      "interiors": []
+    },
+    {
+      "id": "reedwick-town",
+      "name": "Reedwick",
+      "regionId": "drowned-reach",
+      "hearthId": "reedwick",
+      "hearthBrightness": 0.5,
+      "npcs": [],
+      "interiors": []
+    },
+    {
+      "id": "sump-row-town",
+      "name": "Sump Row",
+      "regionId": "seized-grounds",
+      "hearthId": "sump-row",
+      "hearthBrightness": 0.35,
+      "npcs": [],
+      "interiors": []
+    },
+    {
+      "id": "marginalia-town",
+      "name": "Marginalia",
+      "regionId": "archive-causeway",
+      "hearthId": "marginalia",
+      "hearthBrightness": 0.15,
+      "npcs": [],
+      "interiors": []
+    },
+    {
+      "id": "lastlight-town",
+      "name": "Lastlight",
+      "regionId": "archive-causeway",
+      "hearthId": "lastlight",
+      "hearthBrightness": 0.1,
+      "npcs": [],
+      "interiors": []
+    }
+  ],
+  "connections": [
+    { "from": "gracefall-parish", "to": "mempool-moor",    "pathType": "road"      },
+    { "from": "gracefall-parish", "to": "drowned-reach",   "pathType": "trail"     },
+    { "from": "mempool-moor",     "to": "shroud-vaults",   "pathType": "road"      },
+    { "from": "drowned-reach",    "to": "archive-causeway","pathType": "submerged" },
+    { "from": "shroud-vaults",    "to": "seized-grounds",  "pathType": "trail",    "gated": true, "gateFlag": "progress.area2Complete" },
+    { "from": "seized-grounds",   "to": "archive-causeway","pathType": "void"      }
+  ],
+  "storyBeats": [
+    { "id": "s1-opening",  "trigger": "player.spawned",     "effect": "canonState.storyLog.push: The parish received a new name." },
+    { "id": "s1-boss1",    "trigger": "boss.defeated:ledger-warden",  "effect": "canonState.dwindlingLevel: +1" },
+    { "id": "s1-ending-a", "trigger": "ending.chosen:A",   "effect": "canonState.storyLog.push: The Auditor passed the ledger forward." },
+    { "id": "s1-ending-b", "trigger": "ending.chosen:B",   "effect": "canonState.storyLog.push: The ledger was erased. The Wound remembers." },
+    { "id": "s1-ending-c", "trigger": "ending.chosen:C",   "effect": "canonState.storyLog.push: An amendment was written in the margin." }
+  ],
+  "newPlayerItems": [],
+  "halvingEffect": {
+    "coldHearths": ["marginalia", "lastlight"],
+    "canonAppend": "The Halving fired. Two fires went cold. Season 2 begins."
+  }
+}

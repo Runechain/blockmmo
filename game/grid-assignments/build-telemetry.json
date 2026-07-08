@@ -1,0 +1,18 @@
+{
+  "type": "runechain-build-telemetry",
+  "objective_type": "code.feature",
+  "capability": "code.implementation",
+  "planner": "llm",
+  "description": "Bootstrap S1 player telemetry layer (issue #101). Instruments the game server to aggregate player event signals into a telemetry store queryable by the score-season assignment. One-time S1 bootstrap; not used in S2+ generation.",
+  "prompt_template": "You are building the S1 player telemetry layer for RUNECHAIN (issue #101).\n\nRUNECHAIN is a buildless browser MMO (no bundler — A1 constraint). The server is a plain Node.js HTTP + WebSocket server in server.js. Player events flow through the RUNECHAIN_EVENTS ring buffer (200-event ring, exposed via game/events.js) and are emitted in index.html for: player.spawned, player.died, combat.creature_defeated, quest.completed, boss.triggered, boss.defeated, economy.rune_earned, economy.rune_spent, ending.chosen, player.stat_leveled, player.relic_forged.\n\nBuild the following:\n\n1. game/telemetry.js — server-side aggregate store:\n   - Exports: recordEvent(playerId, event), getAggregate(), resetForTest()\n   - Aggregates: total_players, completions_by_ending (A/B/C), boss_kill_rates (bossId → {attempts, kills}), area_engagement (area → {entries, completions}), avg_death_per_run, rune_earn_total, rune_spend_total\n   - Persists aggregates to telemetry.json (same atomic-write pattern as ledger.json)\n\n2. server.js additions (non-destructive):\n   - POST /api/telemetry/event — accepts { playerId, event } with MOLT_INGEST_KEY bearer auth, calls recordEvent()\n   - GET /api/telemetry/summary — returns getAggregate() (admin-only: requires X-Admin-Token header)\n\n3. scripts/verify_telemetry.js — verifies:\n   - POST /api/telemetry/event records to the aggregate\n   - GET /api/telemetry/summary returns expected shape\n   - File telemetry.json is written on recordEvent\n\nConstraints:\n- No bundler. No npm packages beyond what server.js already uses.\n- Atomic file writes via fs.rename (see how ledger.json is written in server.js).\n- Data is append-aggregated, not per-player (privacy: no individual records stored).\n- getAggregate() must be the shape score-season expects as telemetry_summary input.",
+  "gold_reward": 120,
+  "output_schema": {
+    "type": "object",
+    "required": ["files_changed", "tests_pass"],
+    "properties": {
+      "files_changed": { "type": "array", "items": { "type": "string" } },
+      "tests_pass":    { "type": "boolean" },
+      "notes":         { "type": "string" }
+    }
+  }
+}

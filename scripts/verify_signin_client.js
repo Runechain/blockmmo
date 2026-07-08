@@ -83,6 +83,9 @@ function ok(label) { passed++; if (process.env.VERBOSE) console.log('  ok -', la
   assert(index.includes('Signin.buildWalletProof'), 'join attaches the wallet proof');
   assert(index.includes('RUNECHAIN_WALLET') && index.includes('createPhantomAdapter'), 'wallet manager instantiated');
   assert(index.includes('bootSignin') && index.includes('loadSession'), 'session loaded at boot');
+  assert(index.includes('state.guestPreview='), 'gated realms should fall back to playable guest preview');
+  assert(index.includes('Guest preview starts without realm rewards.'), 'start button should remain enabled with guest-preview title copy');
+  assert(index.includes('if(state.guestPreview)log('), 'guest preview should avoid opening the authoritative realm connection');
   ok('index.html wires the three-leg sign-in flow');
 
   console.log(`sign-in client verification passed (${passed} groups)`);

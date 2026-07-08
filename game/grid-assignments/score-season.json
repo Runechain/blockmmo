@@ -1,0 +1,20 @@
+{
+  "type": "runechain-score-season",
+  "objective_type": "inference",
+  "capability": "inference",
+  "planner": "llm",
+  "description": "Score a passing candidate season against S1 player telemetry signals. Returns a numeric score, a ranked comparison against prior seasons, and a recommendation (ship / iterate / reject).",
+  "prompt_template": "You are scoring a RUNECHAIN candidate season manifest against player telemetry.\n\nCandidate season JSON:\n{{candidate_json}}\n\nS1 telemetry summary (aggregate signals from completed S1 playthroughs):\n{{telemetry_summary}}\n\nPrior season scores for comparison:\n{{prior_scores_json}}\n\nScore the candidate across 5 dimensions (0–20 each, 100 total):\n\n1. NOVELTY (0–20): How different are the regions, towns, and story beats from S1? Award points for new place names, new hearth configurations, new storyBeats triggers.\n2. RETENTION_FIT (0–20): Does the pacing data match what S1 players engaged with most? High score if new regions include at least one platformer section (S1 players finished platformers at 92% rate).\n3. ECONOMY_HEALTH (0–20): Is the RUNE economy coherent? Score high if halvingEffect is non-trivial (>0 cold hearths), newPlayerItems are Gold-only, no obvious RUNE-sink gaps.\n4. LORE_CONTINUITY (0–20): Do storyBeats reference S1 events plausibly? Does the canonState feel like a credible next chapter?\n5. DIFFICULTY_CURVE (0–20): Do decay levels increase toward the Wound? Are there easy, medium, and hard regions spread across the map?\n\nReturn ONLY a JSON object:\n{\n  \"candidate_id\": \"<meta.id>\",\n  \"score\": <0–100>,\n  \"dimensions\": {\n    \"novelty\":           { \"score\": <0-20>, \"reason\": \"...\" },\n    \"retention_fit\":     { \"score\": <0-20>, \"reason\": \"...\" },\n    \"economy_health\":    { \"score\": <0-20>, \"reason\": \"...\" },\n    \"lore_continuity\":   { \"score\": <0-20>, \"reason\": \"...\" },\n    \"difficulty_curve\":  { \"score\": <0-20>, \"reason\": \"...\" }\n  },\n  \"recommendation\": \"ship|iterate|reject\",\n  \"notes\": \"<one paragraph overall assessment>\"\n}",
+  "gold_reward": 60,
+  "output_schema": {
+    "type": "object",
+    "required": ["candidate_id", "score", "dimensions", "recommendation"],
+    "properties": {
+      "candidate_id":    { "type": "string" },
+      "score":           { "type": "number" },
+      "dimensions":      { "type": "object" },
+      "recommendation":  { "type": "string", "enum": ["ship", "iterate", "reject"] },
+      "notes":           { "type": "string" }
+    }
+  }
+}

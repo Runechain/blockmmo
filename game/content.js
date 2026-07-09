@@ -260,6 +260,102 @@ const AUDITOR_ENDINGS = [
     ] }
 ];
 
+const REEDWICK_INTERIORS=[
+  { id:'reedwick-inn', name:'The Bent Reed',
+    building:{x:-748,y:786,w:132,h:82,wall:'#34443d',roof:'#465b50',door:{x:-720,y:812},sign:'BENT REED'},
+    w:400,h:270,spawn:{x:200,y:208},exit:{x:200,y:256},floor:'#202a25',wall:'#34443d',accent:'#8db9a8',
+    decor:[
+      {x:42,y:42,w:316,h:22,c:'#27352e',top:'#526b5e'},
+      {x:74,y:116,w:64,h:36,c:'#29372f',top:'#607567'},{x:258,y:116,w:64,h:36,c:'#29372f',top:'#607567'},
+      {x:62,y:34,w:12,h:16,c:'#f1c75b',t:'candle'},{x:326,y:34,w:12,h:16,c:'#f1c75b',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-reedwick-host',x:200,y:82,color:'#8db9a8',sprite:'knight',name:'Host Tern',role:'Keeper of the Bent Reed',
+        dialogue:{start:'intro',repeat:'again',nodes:{
+          intro:{text:['Dry boots by the stove. Wet stories at the counter. If you need the hearth ledger, I keep a clean copy behind the bar.','The west road brings cautious people. The causeway brings interesting ones.'],choices:[{label:'Rest and use the hearth.',service:'hearth:reedwick'},{label:'What are people saying?',goto:'rumour'},{label:'I am only looking.',goto:'bye'}]},
+          rumour:{text:['Brine says the hounds have made a den in the Sunken Records. Mara says the tide posts answered last night. I believe both; neither sleeps enough to invent things.'],goto:'again'},
+          bye:{text:['The ring will bring you back.'],end:true},
+          again:{text:['Stove is warm. Ledger is open.'],choices:[{label:'Use the hearth ledger.',service:'hearth:reedwick'},{label:'Another rumour.',goto:'rumour'},{label:'Leave.',goto:'bye'}]}
+        }}},
+      {id:'int-reedwick-cartographer',x:304,y:180,color:'#c8b89a',sprite:'sorcerer',name:'Orra Fen',role:'Road Cartographer',
+        dialogue:{start:'intro',repeat:'again',nodes:{
+          intro:{text:['I map decisions, not land. A useful map records where a traveller hesitated and what made them choose.','The Reach has two approaches, one shortcut, and six convincing dead ends. That is why it remains ours.'],choices:[{label:'Tell me about the shortcut.',goto:'shortcut'},{label:'Why six dead ends?',goto:'deadends'},{label:'Let me study the map.',goto:'bye'}]},
+          shortcut:{text:['The Sunken Records connect the roads, but the hounds own the roof for now. Clear all three or the route is not truly open.'],goto:'again'},
+          deadends:{text:['Because invaders move quickly when they think a road owes them an answer.'],goto:'again'},
+          bye:{text:['Remember the shape, not the colour.'],end:true},
+          again:{text:['The map changed when you entered. It now contains one more decision.'],choices:[{label:'The shortcut.',goto:'shortcut'},{label:'The dead ends.',goto:'deadends'},{label:'Done.',goto:'bye'}]}
+        }}}
+    ] },
+
+  { id:'reedwick-tollhouse', name:'The Reedwick Tollhouse',
+    building:{x:-552,y:766,w:126,h:78,wall:'#3d4338',roof:'#59604b',door:{x:-520,y:794},sign:'TOLLHOUSE'},
+    w:360,h:250,spawn:{x:180,y:188},exit:{x:180,y:236},floor:'#262a22',wall:'#3d4338',accent:'#caa64a',
+    decor:[
+      {x:46,y:44,w:268,h:24,c:'#303529',top:'#6b7055'},
+      {x:58,y:94,w:62,h:82,c:'#2d3128',top:'#515744'},{x:240,y:94,w:62,h:82,c:'#2d3128',top:'#515744'},
+      {x:164,y:88,w:32,h:32,c:'#242820',top:'#caa64a'}
+    ],
+    npcs:[
+      {id:'int-reedwick-clerk',x:180,y:78,color:'#caa64a',sprite:'sorcerer',name:'Clerk Sedge',role:'Wallet and Vestment Clerk',
+        dialogue:{start:'intro',repeat:'again',nodes:{
+          intro:{text:['No toll for entering. Reedwick charges only people who insist there should be one.','I can open the settlement ledger or the vestment catalogue. Gold remains appearance. RUNE remains power. The marsh has not changed the law.'],choices:[{label:'Open the vestment catalogue.',service:'wardrobe'},{label:'Show my settlement ledger.',service:'wallet'},{label:'Why call it a tollhouse?',goto:'why'}]},
+          why:{text:['Because the old sign keeps officials comfortable. They see TOLLHOUSE and assume somebody else collected the fee.'],goto:'again'},
+          again:{text:['No power for sale. No random boxes. Just records and clothing.'],choices:[{label:'Vestments.',service:'wardrobe'},{label:'Settlement ledger.',service:'wallet'},{label:'Leave.',goto:'bye'}]},
+          bye:{text:['No receipt required.'],end:true}
+        }}}
+    ] },
+
+  { id:'reedwick-boathouse', name:'The Grounded Boathouse',
+    building:{x:-574,y:958,w:138,h:76,wall:'#2e3b38',roof:'#3b4d48',door:{x:-540,y:932},sign:'FERRY'},
+    w:380,h:250,spawn:{x:190,y:188},exit:{x:190,y:236},floor:'#1d2725',wall:'#2e3b38',accent:'#6f9f94',
+    decor:[
+      {x:38,y:46,w:304,h:36,c:'#25322f',top:'#4e6660'},
+      {x:54,y:110,w:270,h:46,c:'#202b29',top:'#3f5550',label:'PASSENGER LEDGERS'},
+      {x:52,y:36,w:12,h:16,c:'#8db9a8',t:'candle'},{x:316,y:36,w:12,h:16,c:'#8db9a8',t:'candle'}
+    ],
+    npcs:[
+      {id:'int-ferry-archivist',x:190,y:92,color:'#8db9a8',sprite:'hollow',name:'Archivist Wake',role:'Keeper of Arrivals',
+        dialogue:{start:'intro',repeat:'again',nodes:{
+          intro:{text:['The ferry stopped because the river changed its mind about reaching us. I stayed because the arrival book did not.','There are names here with departure marks and no destination. The marsh is full of journeys that became places.'],choices:[{label:'Can the ferry move again?',goto:'move'},{label:'Who was the last passenger?',goto:'last'},{label:'I will read quietly.',goto:'bye'}]},
+          move:{text:['Not on water. Perhaps on memory. Solve the tide circuit and ask me again when the posts are speaking.'],goto:'again'},
+          last:{text:['The ledger leaves the line blank. If you found the coat beneath the tiller, it may have decided the answer is you.'],goto:'again'},
+          bye:{text:['Do not turn the pages with wet hands. They remember drowning.'],end:true},
+          again:{text:['No new arrivals. Except you, still.'],choices:[{label:'The ferry.',goto:'move'},{label:'The last passenger.',goto:'last'},{label:'Leave.',goto:'bye'}]}
+        }}}
+    ] }
+];
+
+function townInterior(spec){
+  const serviceChoices=spec.service?[{label:spec.serviceLabel,service:spec.service}]:[];
+  return {id:spec.id,name:spec.name,
+    building:{x:spec.x,y:spec.y,w:spec.buildingW||126,h:spec.buildingH||80,wall:spec.wall,roof:spec.roof,door:{x:spec.doorX,y:spec.doorY},sign:spec.sign},
+    w:360,h:250,spawn:{x:180,y:188},exit:{x:180,y:236},floor:spec.floor,wall:spec.wall,accent:spec.accent,
+    decor:[
+      {x:42,y:42,w:276,h:24,c:spec.counter,top:spec.accent},
+      {x:58,y:96,w:68,h:70,c:spec.floor,top:spec.wall},{x:234,y:96,w:68,h:70,c:spec.floor,top:spec.wall},
+      {x:46,y:32,w:12,h:16,c:spec.accent,t:'candle'},{x:302,y:32,w:12,h:16,c:spec.accent,t:'candle'}
+    ],
+    npcs:[{id:'int-'+spec.id,x:180,y:78,color:spec.accent,sprite:spec.sprite||'knight',name:spec.npcName,role:spec.npcRole,
+      dialogue:{start:'intro',repeat:'again',nodes:{
+        intro:{text:spec.intro,choices:[...serviceChoices,{label:spec.topicLabel,goto:'topic'},{label:'Step outside.',goto:'bye'}]},
+        topic:{text:spec.topic,goto:'again'},
+        bye:{text:[spec.bye],end:true},
+        again:{text:[spec.repeat],choices:[...serviceChoices,{label:spec.topicLabel,goto:'topic'},{label:'Leave.',goto:'bye'}]}
+      }}}
+    ]};
+}
+const S1_EXPANSION_INTERIORS=[
+  townInterior({id:'sump-row-salvage',name:'The Salvage Hall',x:1696,y:690,doorX:1722,doorY:656,sign:'SALVAGE',floor:'#242b25',wall:'#3c463b',roof:'#56604c',counter:'#30382f',accent:'#8db9a8',npcName:'Sorter Moss',npcRole:'Custodian of Reclaimed Goods',sprite:'hollow',service:'wardrobe',serviceLabel:'Inspect reclaimed vestments.',topicLabel:'What counts as salvage?',intro:['Everything here was seized from somebody who outlived the claim. We return names when we can and repurpose the rest.','The clothing rack is cosmetic only. No reclaimed coat makes its wearer stronger.'],topic:['Salvage begins when ownership ends but usefulness does not. The difficult part is knowing whether ownership truly ended.'],bye:'Mind the tags. Some still bite.',repeat:'The hall filled another shelf while you were outside.'}),
+  townInterior({id:'sump-row-toll',name:'The Uncollected Toll',x:1818,y:610,doorX:1792,doorY:646,sign:'NO TOLL',floor:'#2a2522',wall:'#493b34',roof:'#66483a',counter:'#352b26',accent:'#d17a55',npcName:'Clerk Remainder',npcRole:'Keeper of the Empty Cashbox',sprite:'sorcerer',service:'wallet',serviceLabel:'Review my settlement ledger.',topicLabel:'Why is the toll empty?',intro:['The old road charged everyone for passage. Then the road was seized. Nobody could prove who should collect, so Sump Row made the confusion free.','Your settlement ledger still works. The cashbox does not.'],topic:['An unowned toll is a philosophical problem with a lock on it. We solved it by leaving the lock open.'],bye:'Pass without payment.',repeat:'Still no toll. The experiment continues.'}),
+  townInterior({id:'sump-row-hearthhouse',name:'Sump Row Hearthhouse',x:1792,y:748,doorX:1768,doorY:714,sign:'HEARTH',floor:'#28251e',wall:'#4a4131',roof:'#69543a',counter:'#373025',accent:'#f1c75b',npcName:'Hearthwife Low',npcRole:'Keeper of the Salvaged Flame',service:'hearth:sump-row',serviceLabel:'Rest and use the hearth ledger.',topicLabel:'Where did this flame come from?',intro:['We found the flame in a repossessed lantern. It refused every owner until the town agreed nobody would own it.','Rest, forge, or raise your record. RUNE remains the only path to power.'],topic:['A common flame burns lower than a private one and lasts much longer. There is probably a lesson.'],bye:'Leave warmer than you entered.',repeat:'The flame is still nobody\'s. That is why it is yours to rest beside.'}),
+  townInterior({id:'marginalia-scriptorium',name:'The Public Scriptorium',x:1838,y:968,doorX:1864,doorY:1004,sign:'WRITE HERE',floor:'#24212a',wall:'#433b4d',roof:'#5d4f6d',counter:'#302a38',accent:'#b9a3cc',npcName:'Scribe Publica',npcRole:'Recorder of Objections',sprite:'sorcerer',service:'wallet',serviceLabel:'Review the record I carry.',topicLabel:'Can anyone write here?',intro:['Anyone may append. Nobody may erase another hand. That is the whole constitution of this room.','Show me your ledger if you want to see which entries belong to you and which merely claim they do.'],topic:['An objection does not become true because it is written. It becomes possible to answer. That is enough to begin.'],bye:'Leave the pen uncapped.',repeat:'A new correction is drying on the west desk.'}),
+  townInterior({id:'marginalia-exchange',name:'The Footnote Exchange',x:1970,y:1018,doorX:1940,doorY:1042,sign:'EXCHANGE',floor:'#25232b',wall:'#46404f',roof:'#62586e',counter:'#322e39',accent:'#caa64a',npcName:'Factor Aside',npcRole:'Cosmetic Exchange Clerk',service:'wardrobe',serviceLabel:'Browse the vestment catalogue.',topicLabel:'What is exchanged here?',intro:['Appearances, annotations, and Gold. Never advantage. Marginalia refuses to hide power inside a footnote.','The catalogue is open. Every price buys presentation only.'],topic:['People trade the right to be seen differently. It is one of the few forms of ownership here we consider healthy.'],bye:'Wear the correction proudly.',repeat:'The catalogue changed its margins, not its terms.'}),
+  townInterior({id:'marginalia-maproom',name:'The Unlocked Maproom',x:1900,y:1134,doorX:1900,doorY:1098,sign:'ALL ROADS',floor:'#211f29',wall:'#3b3747',roof:'#514961',counter:'#2b2734',accent:'#8db9a8',npcName:'Mapper Errata',npcRole:'Cartographer of Omitted Roads',sprite:'hollow',topicLabel:'Why was the causeway omitted?',intro:['The official map shows one road east. We keep the roads people actually use. They form loops, arguments, and escapes.','Reedwick is west. Lastlight is northeast. Sump Row rises north along Seizure Road.'],topic:['A loop is politically inconvenient. It lets a traveller return by a route the gatekeeper does not control.'],bye:'Take the route in your head.',repeat:'The map remains unlocked. Maps dislike doors.'}),
+  townInterior({id:'lastlight-inn',name:'The Low Lantern',x:2196,y:850,doorX:2222,doorY:818,sign:'LOW LANTERN',floor:'#26241f',wall:'#444035',roof:'#5b503c',counter:'#332f27',accent:'#f1c75b',npcName:'Innkeeper Dim',npcRole:'Host of the Undecided',service:'hearth:lastlight',serviceLabel:'Rest at Lastlight.',topicLabel:'Who stays here?',intro:['People who reached the final road and discovered they still had questions. Beds are cheaper than irreversible answers.','Rest. The hearth ledger works here, but the decision at the Verge remains yours alone.'],topic:['The compliant, the redacted, the amended, and many who became none of those because morning changed the question.'],bye:'No checkout time.',repeat:'Your room remains unjudged.'}),
+  townInterior({id:'lastlight-watchtower',name:'The Verge Watchtower',x:2330,y:752,doorX:2302,doorY:786,sign:'WATCH',floor:'#242526',wall:'#3e4142',roof:'#55595b',counter:'#303234',accent:'#b9c2cf',npcName:'Observer Slate',npcRole:'Keeper of the Sightline',sprite:'sorcerer',topicLabel:'What does the tower record?',intro:['Approaches, returns, disappearances, and the weather over the Auditor. We do not record choices until the chooser names them.','The straight road below is only the last segment of a much larger map.'],topic:['The tower exists to prove nobody arrives at the Auditor from nowhere. Every answer has geography behind it.'],bye:'I will record your direction, not your intent.',repeat:'The sightline is clear. The meaning is not.'}),
+  townInterior({id:'lastlight-witness-house',name:'The Witness House',x:2280,y:930,doorX:2256,doorY:894,sign:'TESTIMONY',floor:'#272429',wall:'#443e48',roof:'#5b5262',counter:'#332f37',accent:'#d8d2c4',npcName:'Witness Cinder',npcRole:'Custodian of Returned Accounts',sprite:'hollow',service:'wallet',serviceLabel:'Review my carried record.',topicLabel:'What testimony is kept?',intro:['Only what travellers choose to say after they return. Silence gets a line too, but not an interpretation.','You may review your own settlement record. Nobody here will tell you what it means.'],topic:['We keep contradictions side by side. A town near the Auditor must practice surviving unresolved things.'],bye:'Return if the answer changes you.',repeat:'Your earlier silence is still preserved correctly.'})
+];
+
 const ACT1_GRACEFALL = {
   id:'gracefall-parish',
   title:'Gracefall Parish',
@@ -349,6 +445,7 @@ const SKINS = [
   { id:'unrecorded', name:'Unrecorded Pilgrim', price:0, secret:true, body:'#2b2622', trim:'#b9a06a', skin:'#bfae8c' },
   // Found by discovering the Sealed Cellar interior (a hidden building off the plaza). Curiosity-only.
   { id:'cellar-warden', name:'Cellar Warden', price:0, secret:true, body:'#20262a', trim:'#6f93a8', skin:'#b9b2a0' },
+  { id:'reed-runner', name:'Reed Runner', price:0, secret:true, body:'#263a34', trim:'#8db9a8', skin:'#bea98b' },
   { id:'fork-pilgrim', name:'Fork Pilgrim', price:0, secret:true, body:'#2a3028', trim:'#9ab89a', skin:'#b9a68a' },
   { id:'auditor-robe', name:"Auditor's Robe", price:0, secret:true, body:'#c8c2b4', trim:'#3a3630', skin:'#e0d8cc' },
   { id:'void-skin', name:'Void-Skin', price:0, secret:true, body:'#0a0a10', trim:'#2a2a3a', skin:'#1a1a26' },
@@ -384,6 +481,22 @@ const AREA1_LORE=[
       'A collapsed strong-room the Chainwell never indexed. Dust here has never been counted.',
       'In a niche: a pilgrim\'s ash-grey shroud, unworn, unrecorded. You take it — the ledger does not notice.',
       'COSMETIC UNLOCKED: Unrecorded Pilgrim (wardrobe, B).'
+    ] },
+  { id:'sunken-records', title:'The Sunken Records', x:-178, y:492, kind:'vault',
+    lines:[
+      'A filing room has sunk until its roof is level with the black water. The drawers still open beneath the surface.',
+      'Every page records a route that no longer exists. One margin disagrees: "Roads survive when people keep choosing them."'
+    ] },
+  { id:'marsh-watch', title:'The Marsh Watch', x:-914, y:632, kind:'cairn',
+    lines:[
+      'The western trail climbs onto the only dry watch mound in the Reach.',
+      'From here Reedwick is visible across the water, but no straight road reaches it. The town was built to make pursuers choose.'
+    ] },
+  { id:'grounded-ferry', title:'The Grounded Ferry', x:-472, y:934, kind:'ledger', reward:'reed-runner',
+    lines:[
+      'A ferry rests permanently in the reeds. Its passenger ledger lists departures but no arrivals.',
+      'A waxed travelling coat remains beneath the tiller. You take it; Reedwick records you as the ferry\'s final passenger.',
+      'COSMETIC UNLOCKED: Reed Runner (wardrobe, B).'
     ] }
 ];
 
@@ -435,6 +548,25 @@ const AREA1_PUZZLES=[
     solvedLore:[
       'The four writs braid into a single cord and burn cold. The succession is closed.',
       'Codex: "Every debt names another. Trace far enough and you find a name that owes only the Chainwell."'
+    ] },
+  { id:'reedwick-tide-tally', title:'The Ferryman\'s Tide Tally',
+    clue:{ id:'tide-board', x:-620, y:704, label:'TIDE TALLY',
+      lines:[
+        'TIDE TALLY: "The west post dries first. The north bell follows. The ferry answers. Home closes the circuit."',
+        'Walk the ring and stamp each marker in the order the water leaves it.'
+      ] },
+    nodes:[
+      {id:'tide-west',label:'WEST',x:-820,y:858,inscription:'West post — mud cracked dry around its foot.'},
+      {id:'tide-home',label:'HOME',x:-620,y:1002,inscription:'Home post — the final knot in Reedwick\'s circuit.'},
+      {id:'tide-ferry',label:'FERRY',x:-500,y:790,inscription:'Ferry post — rope grooves point toward the grounded boat.'},
+      {id:'tide-north',label:'NORTH',x:-758,y:738,inscription:'North post — a small bell hangs above the flood mark.'}
+    ],
+    order:['tide-west','tide-north','tide-ferry','tide-home'],
+    stamp:'The post answers with a low wooden knock.',
+    wrong:'The tide marks disagree. The circuit drains and must be walked again.',
+    solvedLore:[
+      'The four posts answer across the marsh. Lamps kindle along the shorter causeway.',
+      'Codex: "Reedwick is not hidden. It is approached correctly."'
     ] }
 ];
 
@@ -492,6 +624,48 @@ const AREA2_PUZZLES=[
     solvedLore:[
       'The four names glow amber in sequence and go dark together.',
       'Codex: "Every debt chain ends at the Chainwell. Walk the inheritance to find where you stand."'] }
+];
+
+const S1_WORLD_LORE=[
+  {id:'long-causeway-stone',title:'The Long Causeway Stone',x:1050,y:1000,kind:'milestone',lines:[
+    'A marker halfway between Reedwick and Marginalia records distance in letters delivered rather than miles walked.',
+    'The current count is scratched over itself so many times that the stone has become a shallow bowl.' ]},
+  {id:'seized-auction-lore',title:'The Abandoned Auction',x:1640,y:390,kind:'ledger',lines:[
+    'Numbered stakes face an empty rostrum. The lots continue announcing themselves to the wind.',
+    'Lot 12: a family name. Lot 47: the house that once held it. Lot 8: the right to object.' ]},
+  {id:'bailiff-camp-lore',title:'The Bailiff Camp',x:1990,y:610,kind:'cairn',lines:[
+    'Bedrolls remain in perfect regulation rows, but every badge has been hammered flat.',
+    'The final duty roster assigns all officers to repossess their own authority.' ]},
+  {id:'open-air-library-lore',title:'The Open-Air Library',x:2100,y:1100,kind:'vault',lines:[
+    'Shelves stand without walls. Rain edits the weak ink; readers restore whatever they remember differently.',
+    'No edition is definitive. Marginalia calls this a feature and the Archive calls it weather damage.' ]},
+  {id:'verge-return-stone',title:'The Return Stone',x:2240,y:260,kind:'milestone',lines:[
+    'One face points toward the Auditor. The other records every town visible behind you.',
+    'Someone added: "A straight road is still connected to the world it tries to leave."' ]}
+];
+
+const S1_WORLD_PUZZLES=[
+  {id:'seized-lot-order',title:'The Auction of Unowners',
+    clue:{id:'auction-board',x:1640,y:390,label:'LOT ORDER',lines:[
+      'AUCTION RULE: "First the objection, then the name, then the dwelling, and last the badge that enforced the claim."',
+      'Stamp the abandoned lots in the order ownership was imposed.' ]},
+    nodes:[
+      {id:'lot-house',label:'HOUSE',x:1696,y:430,inscription:'Lot 47 — a dwelling seized around its occupants.'},
+      {id:'lot-objection',label:'OBJECT',x:1590,y:438,inscription:'Lot 8 — the right to object, sold before the hearing.'},
+      {id:'lot-badge',label:'BADGE',x:1690,y:350,inscription:'Lot 63 — authority repossessed from its enforcer.'},
+      {id:'lot-name',label:'NAME',x:1594,y:346,inscription:'Lot 12 — a family name detached from its speakers.'}
+    ],order:['lot-objection','lot-name','lot-house','lot-badge'],stamp:'The auction stake withdraws its claim.',wrong:'The rostrum calls the sequence invalid and reopens every lot.',
+    solvedLore:['The numbered stakes sink into the mud. Nothing bids.','Codex: "Ownership was the sequence, not the object."']},
+  {id:'last-bell-witnesses',title:'The Last Bell Witnesses',
+    clue:{id:'last-bell-board',x:2320,y:520,label:'WITNESS BELL',lines:[
+      'BELL RULE: "Ring for the one who left a mark, then the one who left none, then the one who returned with another hand."',
+      'Read the three witness stones before sounding the final bell.' ]},
+    nodes:[
+      {id:'witness-amend',label:'TWO HANDS',x:2260,y:690,inscription:'A statement written in two distinct hands that share one sentence.'},
+      {id:'witness-comply',label:'MARK',x:2240,y:570,inscription:'A clean countersign beneath the Auditor\'s original record.'},
+      {id:'witness-redact',label:'NONE',x:2340,y:650,inscription:'A blank stone whose dust refuses footprints.'}
+    ],order:['witness-comply','witness-redact','witness-amend'],stamp:'A low note travels down Archive Return.',wrong:'The bell swallows the note. The witnesses must be read again.',
+    solvedLore:['The Last Bell rings once for every ending and once for the traveller still choosing.','Codex: "Witness is sequence remembered without verdict."']}
 ];
 
 const ASSETS={
@@ -865,6 +1039,63 @@ const AREA6_ENCOUNTERS={
      end: true              // optional; closes the conversation after the last line
    }
    A node with neither choices, goto, nor end simply closes when its last line is dismissed. */
+function townResident(spec){
+  return {id:spec.id,x:spec.x,y:spec.y,color:spec.color,sprite:spec.sprite,name:spec.name,role:spec.role,
+    dialogue:{start:'intro',repeat:'again',nodes:{
+      intro:{text:spec.intro,choices:[{label:spec.topicLabel,goto:'topic'},{label:'What should I see here?',goto:'place'},{label:'I will keep moving.',goto:'bye'}]},
+      topic:{text:spec.topic,goto:'again'},
+      place:{text:spec.place,goto:'again'},
+      bye:{text:[spec.bye],end:true},
+      again:{text:[spec.repeat],choices:[{label:spec.topicLabel,goto:'topic'},{label:'About this place.',goto:'place'},{label:'Leave.',goto:'bye'}]}
+    }}};
+}
+const S1_EXPANSION_NPCS=[
+  townResident({id:'sump-row-bailiff',x:1704,y:624,color:'#d17a55',sprite:'knight',name:'Bailiff Rusk',role:'Dispossessed Bailiff',
+    intro:['Welcome to Sump Row. Everything seized eventually washes down here, including the people who did the seizing.','I kept the badge. Not the authority. The distinction improves a person.'],topicLabel:'What happened to your authority?',
+    topic:['The Auditor repossessed it for inconsistent enforcement. I had shown mercy twice. Apparently precedent is a kind of theft.'],
+    place:['Visit the Salvage Hall, then the Hearthhouse. The auction ledger is worth reading if you enjoy learning how ownership becomes haunting.'],
+    bye:'No permit needed. That is still strange to say.',repeat:'Still unlicensed? Excellent. Sump Row may be working.'}),
+  townResident({id:'sump-row-salvager',x:1794,y:602,color:'#8db9a8',sprite:'hollow',name:'Moss Vellum',role:'Salvager of Seized Things',
+    intro:['If it has a tag, I remove the tag. If it has a curse, I write the curse on the back where it cannot surprise anyone.','That is salvage: not cleansing. Honest relabelling.'],topicLabel:'What have you found?',
+    topic:['A child\'s chair billed as military equipment. Twelve spoons accused of conspiracy. A door whose house was repossessed around it.'],
+    place:['The abandoned auction sits north on Seizure Road. The lots still call out their numbers when nobody is bidding.'],
+    bye:'If a crate says OWNER UNKNOWN, knock first.',repeat:'More lots arrived overnight. Nothing delivered them.'}),
+  townResident({id:'sump-row-broker',x:1812,y:704,color:'#caa64a',sprite:'sorcerer',name:'Broker Clasp',role:'Keeper of Honest Prices',
+    intro:['I price cosmetics and records. Never strength. Sump Row has seen what happens when ownership and power share a receipt.','The Toll Office can show your settlement ledger. The Hearthhouse handles RUNE and nothing else.'],topicLabel:'Why separate the currencies?',
+    topic:['Because a rich coward should not outfight a poor veteran. Gold may change the silhouette. RUNE records the work.'],
+    place:['Take the Bailiff Cut east if you want Lastlight quickly. Take the southern road if you want to understand why Marginalia still argues.'],
+    bye:'Keep your receipts dry.',repeat:'Same prices. Same separation. The marsh has not lobbied me yet.'}),
+  townResident({id:'marginalia-editor',x:1850,y:1000,color:'#b9a3cc',sprite:'sorcerer',name:'Editor Sable',role:'Public Annotator',
+    intro:['Marginalia exists because the official record ran out of room for objections. We built a town in the margin and continued writing.','Nothing here is final. Not even the buildings; check the footnotes on the doors.'],topicLabel:'What are you editing?',
+    topic:['The claim that the southern causeway is merely a road. It is an argument connecting people the main ledger separated.'],
+    place:['Read at the open-air library. The Scriptorium keeps local testimony; the Maproom keeps every route the Auditor preferred to omit.'],
+    bye:'Leave a correction if you find one.',repeat:'The page changed while you were away. Good pages do.'}),
+  townResident({id:'marginalia-runner',x:1944,y:982,color:'#8db9a8',sprite:'knight',name:'Footnote Pell',role:'Causeway Runner',
+    intro:['Reedwick to Marginalia in one run, if the boards hold and the arguments do not stop you.','I carry letters between towns that the official road pretends are unrelated.'],topicLabel:'What is in the letters?',
+    topic:['Apologies, recipes, warnings, one proposal of marriage, and seventeen corrections to the phrase legally deceased.'],
+    place:['The long causeway returns west to Reedwick. Archive Return climbs east to Lastlight. Either direction is a real journey.'],
+    bye:'If you overtake me, take the next letter too.',repeat:'Another bag, another proof that the towns still speak.'}),
+  townResident({id:'marginalia-redactor',x:1902,y:1100,color:'#7d7188',sprite:'hollow',name:'Redactor Noone',role:'Keeper of Necessary Blanks',
+    intro:['A redaction can hide a crime or protect a life. The ink looks identical. That is why I ask before I strike.','The Auditor did not ask. Lastlight remembers the difference.'],topicLabel:'What should be redacted?',
+    topic:['Names used as weapons. Routes used for raids. Debts inherited by people who never consented to the account. Never the evidence that it happened.'],
+    place:['The Open-Air Library keeps its shelves outside so no authority can lock the room. Wind is an imperfect librarian, but an honest one.'],
+    bye:'May nobody need to erase your name.',repeat:'The blank spaces are holding. For now.'}),
+  townResident({id:'lastlight-keeper',x:2202,y:792,color:'#f1c75b',sprite:'knight',name:'Keeper Ember',role:'Keeper of the Final Common Flame',
+    intro:['This is Lastlight. Not the final light in the world—only the last one the Auditor can see from the road.','We keep it low so travellers find us and authorities underestimate us.'],topicLabel:'Why stay this close to the Auditor?',
+    topic:['Because somebody must witness who goes up the Verge and who returns changed. Distance is safer. Proximity is evidence.'],
+    place:['Rest at the Low Lantern. Ring the Last Bell only after reading its four witness stones. The bell remembers sequence better than people do.'],
+    bye:'Go lit, even if quietly.',repeat:'The flame is low. It is not weak.'}),
+  townResident({id:'lastlight-watch',x:2320,y:780,color:'#b9c2cf',sprite:'sorcerer',name:'Watchman Grey',role:'Observer of the Auditor Verge',
+    intro:['I watch the Verge. The road looks straight from here. That is its final trick.','Every traveller reaches the Auditor by a different history, even when their last hundred steps align.'],topicLabel:'What have you seen?',
+    topic:['Compliance walking down alone. Erasure leaving no footprints. Amendment returning with two shadows and one pen.'],
+    place:['The watchtower keeps the sightline. The Witness House keeps the statements. The inn keeps everyone human between the two.'],
+    bye:'I will mark that you passed.',repeat:'The Verge remains straight. The stories approaching it do not.'}),
+  townResident({id:'lastlight-witness',x:2250,y:900,color:'#d8d2c4',sprite:'hollow',name:'Witness Ash',role:'Returned Traveller',
+    intro:['I stood before the Auditor and postponed the answer. Lastlight gave me a bed without calling delay a failure.','Sometimes survival is refusing the final prompt until you understand the question.'],topicLabel:'What did the Auditor ask?',
+    topic:['Whether a record can contain a person without owning them. It phrased the question as an accounting discrepancy.'],
+    place:['Walk the Archive Return before you climb the Verge. Marginalia teaches objection. Sump Row teaches what ownership leaves behind.'],
+    bye:'Take your time before the straight road.',repeat:'Still deciding? Then the town is doing its work.'})
+];
 const NPCS=[
   {id:'recorder-chaplain', x:-72, y:-26, color:'#f1c75b', sprite:'knight', name:'Chaplain Verity', role:'Hearthlight Recorder',
     dialogue:{ start:'intro', repeat:'again', nodes:{
@@ -1104,7 +1335,35 @@ const NPCS=[
       again:{ text:['Same desk. Same terms. Gold for cosmetics only.'],
         choices:[
           {label:'Confirm the terms.', goto:'gold'},
-          {label:'Done.', goto:'farewell'} ] } }} }
+          {label:'Done.', goto:'farewell'} ] } }} },
+  {id:'reedwick-ferrymaster', x:-650, y:824, color:'#8db9a8', sprite:'knight', name:'Ferrymaster Noll', role:'Keeper of Reedwick Ring',
+    dialogue:{start:'intro',repeat:'again',nodes:{
+      intro:{text:[
+        'You made both turns and still arrived. Good. Reedwick trusts travellers who notice where the road stops pretending to be straight.',
+        'The west road is dry and watched. The eastern causeway is shorter, flooded, and full of things that mistake splashing for permission.'],
+        choices:[{label:'Why build here?',goto:'why'},{label:'What is there to do?',goto:'work'},{label:'I will look around.',goto:'bye'}]},
+      why:{text:['Because one road can be seized. Two roads can argue. A ring can keep a town alive while an army decides which entrance counts.'],goto:'again'},
+      work:{text:['Read the tide tally north of the flame. Check the grounded ferry. If the marsh hounds still circle the Sunken Records, clear them before someone follows you home.'],goto:'again'},
+      bye:{text:['Keep the flame to your left and you will eventually return to where you began. That is Reedwick\'s only law.'],end:true},
+      again:{text:['West road, causeway, ferry, flame. Reedwick is small; its approaches are not.'],choices:[{label:'Tell me about the roads.',goto:'why'},{label:'Any work?',goto:'work'},{label:'Move on.',goto:'bye'}]}
+    }}},
+  {id:'reedwick-watch', x:-820, y:884, color:'#c8b89a', sprite:'hollow', name:'Watchwoman Brine', role:'Marsh Watch',
+    dialogue:{start:'intro',repeat:'again',nodes:{
+      intro:{text:['Three red hounds took the Sunken Records. They are not guarding treasure. They are guarding the only dry shortcut when the causeway floods.','Clear the pack and the crossing belongs to travellers again. Leave one and it teaches the next litter where to wait.'],choices:[{label:'Where are they?',goto:'where'},{label:'Why protect the shortcut?',goto:'why'},{label:'I will handle it.',goto:'bye'}]},
+      where:{text:['Northeast of town, where the western trail and the sunken boards nearly touch. Look for a roof pretending to be an island.'],goto:'again'},
+      why:{text:['A road is not scenery. It is who can reach whom before the dark does.'],goto:'again'},
+      bye:{text:['Bring back quiet, not proof. I can hear the difference from here.'],end:true},
+      again:{text:['The pack is still a pack until all three are gone.'],choices:[{label:'Point me there again.',goto:'where'},{label:'I am going.',goto:'bye'}]}
+    }}},
+  {id:'reedwick-lamplighter', x:-544, y:906, color:'#f1c75b', sprite:'sorcerer', name:'Mara Wick', role:'Lamplighter and Rumour-Keeper',
+    dialogue:{start:'intro',repeat:'again',nodes:{
+      intro:{text:['Every lamp marks a place someone chose to return to. That is why I keep lighting the ferry even though it has not moved in twelve years.','If you want the town\'s real history, ask inside the Bent Reed. If you want its official history, ask no one.'],choices:[{label:'Any rumours?',goto:'rumour'},{label:'Why the ferry lamp?',goto:'ferry'},{label:'Good evening.',goto:'bye'}]},
+      rumour:{text:['The tide tally has started answering again. Four posts, one circuit. Walk it correctly and the marsh shows you the route it hid.'],goto:'again'},
+      ferry:{text:['Because one day someone may need to arrive from a direction we stopped believing in.'],goto:'again'},
+      bye:{text:['Follow lamps when the boards disappear.'],end:true},
+      again:{text:['The lamps are counted. The water is not.'],choices:[{label:'Fresh rumour?',goto:'rumour'},{label:'About the ferry.',goto:'ferry'},{label:'Leave.',goto:'bye'}]}
+    }}},
+  ...S1_EXPANSION_NPCS
 ];
 
 /* ---- Walk-in town interiors (top-down rooms) ----------------------------- */
@@ -1124,7 +1383,7 @@ const NPCS=[
      floor,wall,accent                    — palette
      decor:[{x,y,w,h,c,top?,t?,label?}]   — rects; t:'rug' draws under actors, t:'candle' flickers
      npcs:[{id,x,y,color,sprite,name,role,dialogue}] — local-coord NPCs (same format as NPCS)        */
-const INTERIORS=[
+const INTERIORS=[...REEDWICK_INTERIORS,...S1_EXPANSION_INTERIORS,
   { id:'chapel', name:'Chapel of the Hearthlight',
     building:{x:-92,y:-104,w:150,h:84,door:{x:-44,y:-40},sign:'CHAPEL',drawn:true},
     w:360, h:250, spawn:{x:180,y:188}, exit:{x:180,y:236}, floor:'#241f1b', wall:'#463a30', accent:'#8f2f2a',
@@ -1798,7 +2057,7 @@ const INTERIORS=[
 ];
 
   return {
-    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, AREA2_LORE, AREA2_PUZZLES, WORLD_PORTALS,
+    ECON, ENEMY_REWARDS, STORY, RELICS, LEVELING, SIGILS, BOSS_SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, AREA2_LORE, AREA2_PUZZLES, S1_WORLD_LORE, S1_WORLD_PUZZLES, WORLD_PORTALS,
     PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
     TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
     AREA2_TOWN, AREA3_TOWN, PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,

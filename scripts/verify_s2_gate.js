@@ -73,6 +73,13 @@ test('BOSS_ENCOUNTER_KEYS includes all three S2 bosses', function () {
   assert.ok(index.includes("'prior-season-boss'"), 'prior-season-boss in BOSS_ENCOUNTER_KEYS');
 });
 
+test('S2 overworld markers have render-safe runtime types', function () {
+  for (const key of ['grand-auditor', 'tide-keeper', 'prior-season-boss']) {
+    assert.ok(index.includes(`'${key}':{key:'${key}'`), key + ' must have a runtime type before it is spawned');
+  }
+  assert.ok(index.includes('(e.type&&e.type.color)'), 'sprite aliases need a safe pre-load fallback color');
+});
+
 test('S2 enemies spawned with requiresEnding:true', function () {
   assert.ok(/spawnEnemy\('grand-auditor'/.test(index), 'grand-auditor spawn must exist');
   assert.ok(/spawnEnemy\('tide-keeper'/.test(index), 'tide-keeper spawn must exist');

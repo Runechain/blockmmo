@@ -244,7 +244,7 @@
   <p>Top-down pixel combat in a ruined parish: safe Hearthlight, readable monsters, RUNE drops, proof-of-work blocks, relic forging, cosmetics, and same-origin MMO sync.</p>
   <div class="keys">
     <kbd>WASD</kbd> move / <kbd>Mouse</kbd> aim / <kbd>Click</kbd>, <kbd>Space</kbd>, or <kbd>L</kbd> attack / <kbd>Shift</kbd> dash /
-    <kbd>Q</kbd> target nearest / <kbd>E</kbd> interact / <kbd>G</kbd> Hearthlight / <kbd>B</kbd> wardrobe / <kbd>M</kbd> wallet
+    <kbd>Q</kbd> target nearest / <kbd>E</kbd> interact / <kbd>G</kbd> Hearthlight / <kbd>N</kbd> map / <kbd>B</kbd> wardrobe / <kbd>M</kbd> wallet
   </div>
   <input id="name" maxlength="14" placeholder="name the Recorded" aria-label="Name the Recorded" />
   <div id="signin" hidden>
@@ -280,7 +280,7 @@ if (!Content || !window.RUNECHAIN_SHA256 || !window.RUNECHAIN_CHAIN || !window.R
 if (!Overworld) throw new Error('RUNECHAIN overworld failed to load');
 const E = typeof RUNECHAIN_EVENTS !== 'undefined' ? RUNECHAIN_EVENTS : { emit: () => {} };
 const {
-  ECON, STORY, RELICS, SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, AREA2_LORE, AREA2_PUZZLES, WORLD_PORTALS,
+  ECON, STORY, RELICS, SIGILS, AUDITOR_ENDINGS, SKINS, ASSETS, NPCS, INTERIORS, ACT1_GRACEFALL, AREA1_LORE, AREA1_PUZZLES, AREA2_LORE, AREA2_PUZZLES, S1_WORLD_LORE, S1_WORLD_PUZZLES, WORLD_PORTALS,
   PLAT_LEVEL, BATTLE_LEVEL, TURN_ENCOUNTER, BOSS_SCRIPT,
   TURN_SEXTON, TURN_WARDEN, TURN_TALLOW, PLAT_TALLOW_HOUSE, BATTLE_TALLOW_ECHOES, AREA1_ENCOUNTERS,
   PLAT_DEBT_MINES, BATTLE_LEDGER_VAULTS, TURN_FOREMAN, TURN_BIFURCATED, TURN_LEDGERBOUND, AREA2_ENCOUNTERS,
@@ -447,27 +447,23 @@ const Story=(function(){
 })();
 
 /* --------------------------- Overworld layer ---------------------------- */
-/* Hybrid integration of the Gameworld overworld kit (game/overworld.js).
-   The parish/moor west of OVERWORLD_SEAM_X keeps its authored PixelLab Wang
-   terrain and decor and its original collision-free movement. East of the seam
-   (the long, previously-empty corridor out to the Auditor at x=2280) the kit
-   owns ground, props, quest gates, and collision. The seam sits on the kit's
-   Mempool Moor -> Shroud Vaults boundary (x=860), which is also where the live
-   game's authored decor ends and the north branch to the Shroud Vaults begins,
-   so the kit's q07 Shroud gate (x=842) is intentionally left to the existing
-   north-path gate and only the deep q10/q12/q13 gates are enforced here. */
-const OVERWORLD_SEAM_X = 860;
+/* The old client divided the world at one vertical seam: authored scenery on
+   the left, a generated corridor on the right. Keep the hand-authored
+   Gracefall settlement as a bounded town stamp, while the overworld owns every
+   direction outside it. This is deliberately spatial, not another recolour. */
+const AUTHORED_GRACEFALL={minX:-768,maxX:860,minY:-576,maxY:280};
 const overworldOptions = {
   solidProps: true,
   waterIsSolid: true,
   blockLockedGates: true,
   drawGates: true,
-  questReached: id => Story.questReached(id)
+  questReached: id => id==='reedwick-shortcut'?!!progress.shortcutOpen:Story.questReached(id)
 };
-/* Kit collision applies only east of the seam; the authored zone keeps the
-   game's original free movement. */
+function inAuthoredGracefall(x,y){
+  return x>=AUTHORED_GRACEFALL.minX&&x<=AUTHORED_GRACEFALL.maxX&&y>=AUTHORED_GRACEFALL.minY&&y<=AUTHORED_GRACEFALL.maxY;
+}
 function moveOverworldActor(actor, dx, dy){
-  if(actor.x < OVERWORLD_SEAM_X){ actor.x+=dx; actor.y+=dy; return {hitX:false,hitY:false}; }
+  if(inAuthoredGracefall(actor.x+dx,actor.y+dy)){ actor.x+=dx; actor.y+=dy; return {hitX:false,hitY:false}; }
   return Overworld.moveCircle(actor, dx, dy, overworldOptions);
 }
 
@@ -510,6 +506,7 @@ const Dialogue=(function(){
     // Optional side-effect hook: a synthetic dialogue (e.g. the Auditor's ending) can react to the
     // chosen option. Plain NPC dialogues omit onChoose and just branch via goto as before.
     if(active.npc&&typeof active.npc.onChoose==='function')active.npc.onChoose(picked);
+    if(picked.service){ close(); runDialogueService(picked.service); return true; }
     goTo(picked.goto);
     return true;
   }
@@ -582,7 +579,7 @@ function itemBonuses(){
 }
 
 /* ------------------------------ Canvas ---------------------------------- */
-const VIEW_W=640, VIEW_H=360, TILE=16, SAFE_RADIUS=72, WORLD_LIMIT=2400;
+const VIEW_W=640, VIEW_H=360, TILE=16, SAFE_RADIUS=72;
 const PLAYER_SPEED=112, DASH_SPEED=250;
 const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=false;
@@ -603,7 +600,9 @@ function norm(x,y){ const d=Math.hypot(x,y)||1; return {x:x/d,y:y/d}; }
 function dot(ax,ay,bx,by){ return ax*bx+ay*by; }
 function lerp(a,b,t){ return a+(b-a)*t; }
 function worldToScreen(x,y){ return {x:Math.round(x-camera.x+VIEW_W/2),y:Math.round(y-camera.y+VIEW_H/2)}; }
-function inSafeZone(obj=player){ return Math.hypot(obj.x-GRACE.x,obj.y-GRACE.y)<SAFE_RADIUS; }
+function inSafeZone(obj=player){
+  return Overworld.LANDMARKS.some(mark=>mark.kind==='hearth'&&Math.hypot(obj.x-mark.x,obj.y-mark.y)<(mark.radius||SAFE_RADIUS));
+}
 function rect(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
 function maybeShake(){
   if(state.shake<=0)return {x:0,y:0};
@@ -620,7 +619,7 @@ let player={
   skinId:'tarnished', pal:skinPal('tarnished')
 };
 const enemies=[], particles=[], projectiles=[], remotes={};
-const progress={hollows:0, forged:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set(), portals:new Set()};
+const progress={hollows:0, forged:false, shortcutOpen:false, interactions:new Set(), lore:new Set(), cosmetics:new Set(), puzzles:new Set(), portals:new Set()};
 const movementEvent={at:-999,x:null,y:null,mode:null};
 
 function playerEventSnapshot(){
@@ -636,9 +635,10 @@ function playerEventSnapshot(){
   };
 }
 function positionEventSnapshot(extra={}){
+  const region=state.mode==='town'?Overworld.regionAt(player.x,player.y):null;
   return Object.assign({
     mode:state.mode||'town',
-    areaId:state.mode==='interior'&&activeInterior?activeInterior.id:'gracefall-parish',
+    areaId:state.mode==='interior'&&activeInterior?activeInterior.id:(region?region.id:'gracefall-parish'),
     x:player.x,
     y:player.y,
     vx:player.vx,
@@ -728,13 +728,17 @@ const TYPES={
   ledgerbound:{key:'ledgerbound',asset:'ledgerbound',name:'The Ledger-Bound',short:'LEDGER-BOUND',hp:340,dmg:24,speed:14,reward:160,aggro:140,reach:30,boss:true,color:'#a8c8ff',sigilName:'The Contested Will',sigilKey:'contested-will'},
   scrivener:{key:'scrivener',asset:'scrivener',name:'The Scrivener',short:'SCRIVENER',hp:160,dmg:18,speed:16,reward:88,aggro:130,reach:90,ranged:true,color:'#1a1a2e'},
   cascade:{key:'cascade',asset:'cascade',name:'Cascade Anchor',short:'CASCADE',hp:200,dmg:14,speed:10,reward:108,aggro:118,reach:26,color:'#e8f0ff'},
-  auditor:{key:'auditor',asset:'auditor',name:'The Auditor',short:'AUDITOR',hp:400,dmg:10,speed:12,reward:300,aggro:150,reach:32,boss:true,color:'#f0f0e8',sigilName:'The Amended Record',sigilKey:'amended-record'}
+  auditor:{key:'auditor',asset:'auditor',name:'The Auditor',short:'AUDITOR',hp:400,dmg:10,speed:12,reward:300,aggro:150,reach:32,boss:true,color:'#f0f0e8',sigilName:'The Amended Record',sigilKey:'amended-record'},
+  'grand-auditor':{key:'grand-auditor',asset:'auditor',name:'The Grand Auditor',short:'GRAND AUDITOR',hp:440,dmg:20,speed:12,reward:0,aggro:145,reach:32,boss:true,color:'#c8a84a'},
+  'tide-keeper':{key:'tide-keeper',asset:'audit-wolf',name:'The Tide Keeper',short:'TIDE KEEPER',hp:420,dmg:18,speed:18,reward:0,aggro:145,reach:28,boss:true,color:'#4ab8c4'},
+  'prior-season-boss':{key:'prior-season-boss',asset:'phantom',name:'The Prior Season',short:'PRIOR SEASON',hp:480,dmg:22,speed:14,reward:0,aggro:150,reach:34,boss:true,color:'#9b74ff'}
 };
 function spawnEnemy(key,x,y,gate=0,opts={}){
   const t=TYPES[key];
   const enemy={type:t,key:t.key,x,y,homeX:x,homeY:y,vx:0,vy:0,radius:t.boss?18:key==='hound'?9:10,
     hp:t.hp,maxHp:t.hp,dead:false,aggroed:false,windup:0,atkCd:.6,castCd:1.5,hitFlash:0,hurt:0,roam:Math.random()*6.28,
-    gate,unlockQuest:opts.unlockQuest||t.unlockQuest||null,minHollows:opts.minHollows??t.minHollows??null};
+    gate,unlockQuest:opts.unlockQuest||t.unlockQuest||null,minHollows:opts.minHollows??t.minHollows??null,
+    alwaysUnlocked:!!opts.alwaysUnlocked,group:opts.group||null,requiresEnding:!!opts.requiresEnding};
   enemies.push(enemy);
   return enemy;
 }
@@ -750,6 +754,17 @@ function initWorld(){
   spawnEnemy('flying-eye',650,-24,0,{unlockQuest:'q04',minHollows:2});
   spawnEnemy('mempool',656,-10,0,{unlockQuest:'q04'});
   spawnEnemy('tallow',812,0,0,{unlockQuest:'q05'});
+  spawnEnemy('hound',-248,422,0,{alwaysUnlocked:true,group:'reedwick-hounds'});
+  spawnEnemy('hound',-214,456,0,{alwaysUnlocked:true,group:'reedwick-hounds'});
+  spawnEnemy('hound',-246,490,0,{alwaysUnlocked:true,group:'reedwick-hounds'});
+  spawnEnemy('hound',610,1060,0,{alwaysUnlocked:true});
+  spawnEnemy('hound',680,1100,0,{alwaysUnlocked:true});
+  spawnEnemy('knight',1030,980,0,{unlockQuest:'q06'});
+  spawnEnemy('sorcerer',1080,1020,0,{unlockQuest:'q06'});
+  spawnEnemy('knight',1620,370,0,{unlockQuest:'q10'});
+  spawnEnemy('hound',1670,420,0,{unlockQuest:'q10'});
+  spawnEnemy('knight',1970,590,0,{unlockQuest:'q11'});
+  spawnEnemy('sorcerer',2015,630,0,{unlockQuest:'q11'});
   spawnEnemy('hollow',960,-52,0,{unlockQuest:'q07'});
   spawnEnemy('hollow',1016,44,0,{unlockQuest:'q07'});
   spawnEnemy('foreman',1076,0,0,{unlockQuest:'q07'});
@@ -774,6 +789,7 @@ function initWorld(){
 }
 function enemyUnlocked(e){
   if(e.requiresEnding && !progress.ending)return false;
+  if(e.alwaysUnlocked)return true;
   if(e.unlockQuest && !Story.questReached(e.unlockQuest))return false;
   if(e.key==='sexton'||e.key==='mempool'||e.key==='tallow')return Story.stepMatchesMonster(e.key);
   if(typeof e.minHollows==='number')return progress.hollows>=e.minHollows;
@@ -831,6 +847,11 @@ function killEnemy(e){
   Story.event('kill',{key:e.key});
   E.emit('combat.creature_defeated', {targetId:e.key, targetType:'enemy', rewardRune:e.reward||reward||0}, {id:(progress&&progress.playerId)||'anon'}, {mode:state.mode||'town'});
   log('<b>'+esc(e.type.name)+'</b> slain. '+(localReward?'+'+reward.toFixed(2)+' RUNE pending.':'RUNE proof requested from the realm server.'));
+  if(e.group==='reedwick-hounds'&&!progress.shortcutOpen&&enemies.filter(other=>other.group===e.group).every(other=>other.dead)){
+    progress.shortcutOpen=true;
+    log('<b style="color:#8db9a8">Sunken shortcut opened:</b> the hound pack is gone and the boards between Reedwick\'s two roads are passable.');
+    lootFlash('<b>Sunken shortcut opened</b><br><span style="font-size:13px;color:#b9d8ce">The two roads now connect</span>');
+  }
   if(e.type.boss){
     const boss=act1Boss(e.key);
     if(boss&&boss.defeatLines)sayAct1(boss.defeatLines);
@@ -1290,16 +1311,25 @@ canvas.addEventListener('mousedown',e=>{ updateMouse(e); mouse.down=true; doAtta
 canvas.addEventListener('mouseup',()=>mouse.down=false);
 
 /* ----------------------------- Grace/UI --------------------------------- */
-function nearGrace(){ return dist(player,GRACE)<SAFE_RADIUS; }
-function openGrace(){
-  if(!state.started||player.dead||!nearGrace())return;
+function nearestHearth(){
+  return Overworld.LANDMARKS.filter(mark=>mark.kind==='hearth').sort((a,b)=>Math.hypot(player.x-a.x,player.y-a.y)-Math.hypot(player.x-b.x,player.y-b.y))[0]||null;
+}
+function nearGrace(){ const hearth=nearestHearth(); return !!(hearth&&Math.hypot(player.x-hearth.x,player.y-hearth.y)<(hearth.radius||SAFE_RADIUS)); }
+function openGrace(fromService=false,siteId=null){
+  if(!state.started||player.dead||(!fromService&&!nearGrace()))return;
+  const hearth=nearestHearth();
   state.graceOpen=true; player.hp=player.maxHp; player.sta=player.maxSta;
-  Story.event('visit',{site:'hearthlight'});
+  Story.event('visit',{site:siteId||(hearth?hearth.id:'hearthlight')});
   document.getElementById('levelup').style.display='flex';
   document.getElementById('lvclose').focus();
   refreshGrace();
 }
 function closeGrace(){ state.graceOpen=false; document.getElementById('levelup').style.display='none'; }
+function runDialogueService(service){
+  if(service.startsWith('hearth')){ openGrace(true,service.split(':')[1]||null); return; }
+  if(service==='wardrobe'){ openWardrobe(); return; }
+  if(service==='wallet'){ if(!state.wallet)toggleWallet(); return; }
+}
 function refreshGrace(){
   const cost=levelCost(), sp=Chain.spendable(valueAddress(),'RUNE');
   document.getElementById('lvLevel').textContent=player.level;
@@ -1820,7 +1850,8 @@ function updatePlayer(dt){
     const mw=moveOverworldActor(player, player.vx*dt, player.vy*dt);
     if(mw.hitX)player.vx=0; if(mw.hitY)player.vy=0;
   }
-  player.x=clamp(player.x,-WORLD_LIMIT,WORLD_LIMIT); player.y=clamp(player.y,-WORLD_LIMIT,WORLD_LIMIT);
+  player.x=clamp(player.x,Overworld.BOUNDS.minX+player.radius,Overworld.BOUNDS.maxX-player.radius);
+  player.y=clamp(player.y,Overworld.BOUNDS.minY+player.radius,Overworld.BOUNDS.maxY-player.radius);
   emitMovementEvent(false);
 }
 function update(dt){
@@ -1900,19 +1931,18 @@ function drawWang(cx,cy,sx,sy){
 function drawTerrain(){
   const sh=maybeShake(); ctx.save(); ctx.translate(Math.round(sh.x),Math.round(sh.y));
   ctx.fillStyle='#15311f'; ctx.fillRect(0,0,VIEW_W,VIEW_H);
-  // Hybrid ground: authored PixelLab Wang terrain west of the seam, deterministic
-  // overworld-kit regions east of it. The seam tracks with the camera (and shake,
-  // since we are inside the shake translate) so the boundary stays world-anchored.
-  const seamSX=worldToScreen(OVERWORLD_SEAM_X,0).x;
-  if(seamSX<VIEW_W){                                   // east: overworld-kit ground
-    const ex=Math.max(0,seamSX);
-    ctx.save(); ctx.beginPath(); ctx.rect(ex,0,VIEW_W-ex,VIEW_H); ctx.clip();
-    Overworld.drawGround(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
-    Overworld.drawProps(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
-    ctx.restore();
-  }
-  if(seamSX>0){                                        // west: authored Wang terrain
-    ctx.save(); ctx.beginPath(); ctx.rect(0,0,Math.min(seamSX,VIEW_W),VIEW_H); ctx.clip();
+  // The deterministic overworld is the continuous base layer in every direction.
+  Overworld.drawGround(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
+  Overworld.drawProps(ctx,camera,VIEW_W,VIEW_H,state.time,overworldOptions);
+  Overworld.drawLandmarks(ctx,camera,VIEW_W,VIEW_H,state.time,{onlyUnlocked:true,questReached:id=>Story.questReached(id)});
+
+  // Preserve the approved hand-authored Gracefall town surface as one bounded stamp.
+  // Outside this rectangle, including the entire road to Reedwick, the world layer
+  // supplies terrain, water, roads, props, and collision as a coherent whole.
+  const stampTL=worldToScreen(AUTHORED_GRACEFALL.minX,AUTHORED_GRACEFALL.minY);
+  const stampBR=worldToScreen(AUTHORED_GRACEFALL.maxX,AUTHORED_GRACEFALL.maxY);
+  if(stampBR.x>0&&stampTL.x<VIEW_W&&stampBR.y>0&&stampTL.y<VIEW_H){
+    ctx.save(); ctx.beginPath(); ctx.rect(stampTL.x,stampTL.y,stampBR.x-stampTL.x,stampBR.y-stampTL.y); ctx.clip();
     const startX=Math.floor((camera.x-VIEW_W/2)/TILE)-1, endX=Math.floor((camera.x+VIEW_W/2)/TILE)+1;
     const startY=Math.floor((camera.y-VIEW_H/2)/TILE)-1, endY=Math.floor((camera.y+VIEW_H/2)/TILE)+1;
     for(let ty=startY;ty<=endY;ty++)for(let tx=startX;tx<=endX;tx++){
@@ -1920,9 +1950,6 @@ function drawTerrain(){
     }
     ctx.restore();
   }
-  // Decor and gameplay markers stay unclipped: authored terrain decor all sits west
-  // of the seam, while NPCs, lore, puzzles, portals, and the north gate must remain
-  // visible wherever they are, drawing on top of whichever ground owns that tile.
   drawDecor();
   ctx.restore();
 }
@@ -1951,6 +1978,11 @@ function drawDecor(){
   if(Math.sin(state.time*5)>0)rect(g.x-2,g.y-43,4,7,'#fff1a8');
   drawRoadSign(116,-44,'LEDGER');
   drawRoadSign(514,44,'EAST');
+  drawRoadSign(-92,168,'WEST ROAD');
+  drawRoadSign(118,168,'CAUSEWAY');
+  drawRoadSign(1544,92,'SUMP ROW');
+  drawRoadSign(-504,978,'MARGINALIA');
+  drawRoadSign(2060,94,'ARCHIVE RETURN');
 }
 function northPathUnlocked(){
   const u=ACT1_GRACEFALL&&ACT1_GRACEFALL.northPathUnlock;
@@ -2061,7 +2093,13 @@ const RUINS=[
   {x:338,y:-104,w:52,h:30,c:'#3b3e42',arch:true},
   {x:574,y:74,w:76,h:14,c:'#46494c'},
   {x:742,y:-42,w:50,h:34,c:'#4f4a3d',arch:true},
-  {x:-600,y:-300,w:66,h:36,c:'#3a3733',arch:true} // collapsed Unrecorded Vault (hidden NW dead-end)
+  {x:-600,y:-300,w:66,h:36,c:'#3a3733',arch:true}, // collapsed Unrecorded Vault (hidden NW dead-end)
+  {x:-178,y:492,w:96,h:52,c:'#2d3a38',arch:true}, // Sunken Records roof-island
+  {x:-472,y:934,w:112,h:20,c:'#354640'}, // grounded ferry hull
+  {x:1640,y:390,w:118,h:44,c:'#4b3933',arch:true},
+  {x:1990,y:610,w:96,h:20,c:'#49342f'},
+  {x:2100,y:1100,w:132,h:34,c:'#433b4d',arch:true},
+  {x:2320,y:520,w:54,h:64,c:'#4b4b4e',arch:true}
 ];
 const TREES=[
   {x:-248,y:-126},{x:-172,y:104,dead:true},{x:-42,y:128},{x:146,y:-142},
@@ -2069,21 +2107,32 @@ const TREES=[
   // off-path thickets marking the lore dead-ends (north cairn, south marsh, west track, hidden vault) {x:212,y:-352,dead:true},{x:284,y:-300,dead:true},
   {x:556,y:352,dead:true},{x:486,y:300,dead:true},
   {x:-356,y:158,dead:true},
-  {x:-560,y:-256,dead:true},{x:-652,y:-262,dead:true},{x:-616,y:-352,dead:true},{x:-540,y:-336,dead:true}
+  {x:-560,y:-256,dead:true},{x:-652,y:-262,dead:true},{x:-616,y:-352,dead:true},{x:-540,y:-336,dead:true},
+  {x:-962,y:594,dead:true},{x:-884,y:548},{x:-858,y:972},{x:-444,y:838,dead:true},
+  {x:1500,y:930,dead:true},{x:1580,y:990},{x:1720,y:530,dead:true},{x:1860,y:740,dead:true},
+  {x:2020,y:1040},{x:2180,y:1060,dead:true},{x:2380,y:720,dead:true}
 ];
 const GRAVES=[
   {x:188,y:-118,candle:true},{x:214,y:-132},{x:240,y:-112,candle:true},{x:266,y:-138},
   {x:304,y:-118},{x:330,y:-142,candle:true},{x:354,y:-104},{x:624,y:116},{x:650,y:136,candle:true}
 ];
 const CANDLES=[
-  {x:-36,y:-48},{x:38,y:48},{x:126,y:32},{x:260,y:28},{x:420,y:-18},{x:560,y:22},{x:780,y:-24}
+  {x:-36,y:-48},{x:38,y:48},{x:126,y:32},{x:260,y:28},{x:420,y:-18},{x:560,y:22},{x:780,y:-24},
+  {x:-650,y:824},{x:-720,y:812},{x:-520,y:794},{x:-540,y:932},{x:-812,y:858},{x:-620,y:1002},
+  {x:1760,y:650},{x:1722,y:656},{x:1792,y:646},{x:1768,y:714},
+  {x:1900,y:1030},{x:1864,y:1004},{x:1940,y:1042},{x:1900,y:1098},
+  {x:2260,y:820},{x:2222,y:818},{x:2302,y:786},{x:2256,y:894}
 ];
 const BRAMBLES=[
   {x:442,y:-118,w:74,h:34,n:12},{x:500,y:94,w:82,h:42,n:14},{x:674,y:-96,w:96,h:46,n:18},{x:832,y:68,w:86,h:38,n:16},
   // bramble wall ringing the Unrecorded Vault into a concealed alcove (open only from the north) {x:-600,y:-250,w:150,h:30,n:24},{x:-678,y:-300,w:34,h:96,n:18},{x:-522,y:-300,w:34,h:96,n:18}
 ];
 const FENCES=[
-  {x:-178,y:58,len:82,dir:'h'},{x:-216,y:98,len:76,dir:'v'},{x:120,y:92,len:92,dir:'h'},{x:158,y:130,len:54,dir:'v'}
+  {x:-178,y:58,len:82,dir:'h'},{x:-216,y:98,len:76,dir:'v'},{x:120,y:92,len:92,dir:'h'},{x:158,y:130,len:54,dir:'v'},
+  {x:-850,y:850,len:84,dir:'v'},{x:-468,y:858,len:90,dir:'v'},{x:-650,y:1030,len:110,dir:'h'},
+  {x:1660,y:650,len:86,dir:'v'},{x:1860,y:650,len:86,dir:'v'},
+  {x:1800,y:1150,len:110,dir:'h'},{x:2000,y:1140,len:100,dir:'h'},
+  {x:2160,y:820,len:90,dir:'v'},{x:2360,y:820,len:90,dir:'v'}
 ];
 const INTERACTABLES=[
   {id:'hearth-registry',target:'hearth-registry',quest:'q01',x:-20,y:10,label:'REGISTRY',kind:'stone'},
@@ -2406,7 +2455,7 @@ function drawBuildings(){
   }
 }
 /* ---- Off-path lore / Codex (issue #25): rewarded curiosity, never power ---- */
-const LORE=[...(AREA1_LORE||[]),...(AREA2_LORE||[])];
+const LORE=[...(AREA1_LORE||[]),...(AREA2_LORE||[]),...(S1_WORLD_LORE||[])];
 function nearestLore(){
   let best=null, bestD=999;
   for(const node of LORE){
@@ -2456,7 +2505,7 @@ function drawLore(){
    next id in puzzle.order; a wrong stamp blanks that puzzle's progress. Solving reveals lore. */
 // Area 2 puzzles carry the sequence as per-node numeric `order` instead of a puzzle-level id
 // array; normalize to the array form the stamp/draw logic expects.
-const PUZZLES=[...(AREA1_PUZZLES||[]),...(AREA2_PUZZLES||[])].map(p=>p.order?p:Object.assign({},p,{
+const PUZZLES=[...(AREA1_PUZZLES||[]),...(AREA2_PUZZLES||[]),...(S1_WORLD_PUZZLES||[])].map(p=>p.order?p:Object.assign({},p,{
   order:(p.nodes||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(n=>n.id)
 }));
 const puzzleProgress={}; // id -> count of correct stamps so far this attempt
@@ -2604,7 +2653,7 @@ function drawEntityFallback(e,key,frame){
   if(key==='hollow'){ rect(s.x-6,s.y-18,12,15,'#3a1115'); rect(s.x-5,s.y-23,10,8,'#e24a4a'); rect(s.x-3,s.y-21,2,2,'#090b0f'); rect(s.x+2,s.y-21,2,2,'#090b0f'); }
   else if(key==='hound'){ rect(s.x-10,s.y-12,18,8,'#f26b2f'); rect(s.x+5,s.y-17,8,7,'#ffad4d'); rect(s.x-9,s.y-5,4,5,'#2a1611'); rect(s.x+5,s.y-5,4,5,'#2a1611'); }
   else if(key==='sentinel'){ rect(s.x-16,s.y-34,32,28,'#7d6221'); rect(s.x-10,s.y-48,20,16,'#f1c75b'); rect(s.x+12,s.y-40,5,32,'#e24a4a'); }
-  else { rect(s.x-7,s.y-22,14,18,TYPES[key].color); rect(s.x-5,s.y-28,10,8,'#d8dce2'); }
+  else { rect(s.x-7,s.y-22,14,18,(e.type&&e.type.color)||'#9aa0a4'); rect(s.x-5,s.y-28,10,8,'#d8dce2'); }
 }
 function drawEncounterMarker(p){
   const s=worldToScreen(p.x,p.y), pulse=.65+.35*Math.sin(state.time*5);
@@ -2802,6 +2851,7 @@ function updateHud(){
     const pz=state.mode==='town'?nearestPuzzleTarget():null;
     const portal=state.mode==='town'?nearestPortal():null;
     const npc=state.mode==='town'?nearestNpc():null;
+    const hearth=state.mode==='town'?nearestHearth():null;
     let html='';
     if(bossEnc) html='Press <kbd>F</kbd> to face <b>'+esc(bossEnc.type.name)+'</b>';
     else if(near) html='Press <kbd>E</kbd> - '+esc(near.label);
@@ -2810,7 +2860,7 @@ function updateHud(){
     else if(pz) html=pz.clue?('Press <kbd>E</kbd> to read the <b>'+esc(pz.clue.label)+'</b>'):('Press <kbd>E</kbd> to stamp <b>'+esc(pz.node.label)+'</b>');
     else if(portal) html='Press <kbd>E</kbd> to descend into <b>'+esc(portal.label)+'</b>';
     else if(npc) html='Press <kbd>E</kbd> to speak with <b>'+esc(npc.name)+'</b>';
-    else if(nearGrace()&&!state.graceOpen&&!player.dead) html='Safe Hearthlight - press <kbd>G</kbd> to rest, level, forge';
+    else if(hearth&&nearGrace()&&!state.graceOpen&&!player.dead) html='Safe '+esc(hearth.name)+' - press <kbd>G</kbd> to rest, level, forge';
     else if(player.lock&&!player.lock.dead) html='Target: <b>'+esc(player.lock.type.name)+'</b>';
     if(html){ if(prompt.innerHTML!==html)prompt.innerHTML=html; prompt.classList.add('on'); }
     else prompt.classList.remove('on');

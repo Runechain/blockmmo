@@ -12,9 +12,27 @@
 
   const VERSION = '0.1.0';
   const TILE = 16;
-  const BOUNDS = Object.freeze({ minX: -768, minY: -576, maxX: 3600, maxY: 576 });
+  // The original world was a 4,368 x 1,152 horizontal strip. Keep its eastward
+  // story spine intact, but give the first region a real southward landmass so
+  // travelling to Reedwick is navigation rather than holding D on one road.
+  const BOUNDS = Object.freeze({ minX: -1080, minY: -720, maxX: 3600, maxY: 1280 });
 
   const REGIONS = Object.freeze([
+    Object.freeze({
+      id: 'drowned-reach',
+      name: 'Drowned Reach',
+      subtitle: 'Flooded records, reed paths, and the stubborn lamps of Reedwick.',
+      minX: -1080,
+      maxX: 520,
+      minY: 280,
+      maxY: 1280,
+      palette: Object.freeze({
+        ground: '#28312d', groundAlt: '#2d3732', road: '#5a5040', roadEdge: '#37322b',
+        detail: '#526b5e', prop: '#344c42', propHi: '#668577', shadow: '#161d1a', accent: '#8db9a8'
+      }),
+      obstacleDensity: 0.07,
+      obstacle: 'reed'
+    }),
     Object.freeze({
       id: 'unrecorded-wold',
       name: 'The Unrecorded Wold',
@@ -52,7 +70,10 @@
         detail: '#52684f', prop: '#3d523c', propHi: '#708366', shadow: '#171c17', accent: '#70b0a2'
       }),
       obstacleDensity: 0.065,
-      obstacle: 'reed'
+      obstacle: 'reed',
+      areas: Object.freeze([
+        Object.freeze({ minX: 900, maxX: 1240, minY: -240, maxY: 180 })
+      ])
     }),
     Object.freeze({
       id: 'shroud-vaults',
@@ -78,7 +99,11 @@
         detail: '#686070', prop: '#484151', propHi: '#7b7188', shadow: '#19171c', accent: '#b9a3cc'
       }),
       obstacleDensity: 0.055,
-      obstacle: 'column'
+      obstacle: 'column',
+      areas: Object.freeze([
+        Object.freeze({ minX: 1500, maxX: 2150, minY: 900, maxY: 1280 }),
+        Object.freeze({ minX: 2150, maxX: 2500, minY: 280, maxY: 1280 })
+      ])
     }),
     Object.freeze({
       id: 'seized-grounds',
@@ -91,7 +116,10 @@
         detail: '#75564a', prop: '#513b37', propHi: '#8b675b', shadow: '#1e1717', accent: '#d17a55'
       }),
       obstacleDensity: 0.05,
-      obstacle: 'stake'
+      obstacle: 'stake',
+      areas: Object.freeze([
+        Object.freeze({ minX: 1500, maxX: 2150, minY: 280, maxY: 900 })
+      ])
     }),
     Object.freeze({
       id: 'auditor-verge',
@@ -223,6 +251,98 @@
         Object.freeze({ x: -140, y: 42 }), Object.freeze({ x: -188, y: 94 }),
         Object.freeze({ x: -230, y: 150 }), Object.freeze({ x: -282, y: 220 })
       ])
+    }),
+    Object.freeze({
+      id: 'drowned-west-road',
+      name: 'Drowned West Road',
+      width: 15,
+      kind: 'track',
+      points: Object.freeze([
+        Object.freeze({ x: -92, y: 84 }), Object.freeze({ x: -154, y: 228 }),
+        Object.freeze({ x: -292, y: 356 }), Object.freeze({ x: -474, y: 440 }),
+        Object.freeze({ x: -720, y: 510 }), Object.freeze({ x: -914, y: 632 }),
+        Object.freeze({ x: -936, y: 812 }), Object.freeze({ x: -820, y: 900 }),
+        Object.freeze({ x: -710, y: 940 })
+      ])
+    }),
+    Object.freeze({
+      id: 'drowned-causeway',
+      name: 'Old Reed Causeway',
+      width: 12,
+      kind: 'boardwalk',
+      points: Object.freeze([
+        Object.freeze({ x: 118, y: 92 }), Object.freeze({ x: 214, y: 238 }),
+        Object.freeze({ x: 196, y: 410 }), Object.freeze({ x: 78, y: 560 }),
+        Object.freeze({ x: -118, y: 650 }), Object.freeze({ x: -324, y: 716 }),
+        Object.freeze({ x: -504, y: 796 }), Object.freeze({ x: -620, y: 884 })
+      ])
+    }),
+    Object.freeze({
+      id: 'reedwick-ring',
+      name: 'Reedwick Ring',
+      width: 18,
+      kind: 'boardwalk',
+      points: Object.freeze([
+        Object.freeze({ x: -710, y: 940 }), Object.freeze({ x: -820, y: 858 }),
+        Object.freeze({ x: -758, y: 738 }), Object.freeze({ x: -620, y: 704 }),
+        Object.freeze({ x: -500, y: 790 }), Object.freeze({ x: -504, y: 930 }),
+        Object.freeze({ x: -620, y: 1002 }), Object.freeze({ x: -710, y: 940 })
+      ])
+    }),
+    Object.freeze({
+      id: 'sunken-shortcut',
+      name: 'Sunken Shortcut',
+      width: 9,
+      kind: 'boardwalk',
+      points: Object.freeze([
+        Object.freeze({ x: -292, y: 356 }), Object.freeze({ x: -176, y: 456 }),
+        Object.freeze({ x: -118, y: 650 })
+      ])
+    }),
+    Object.freeze({
+      id: 'southern-causeway',
+      name: 'The Long Southern Causeway',
+      width: 16,
+      kind: 'boardwalk',
+      points: Object.freeze([
+        Object.freeze({ x: -504, y: 930 }), Object.freeze({ x: -200, y: 1050 }),
+        Object.freeze({ x: 200, y: 1120 }), Object.freeze({ x: 650, y: 1080 }),
+        Object.freeze({ x: 1050, y: 1000 }), Object.freeze({ x: 1450, y: 1030 }),
+        Object.freeze({ x: 1900, y: 1030 })
+      ])
+    }),
+    Object.freeze({
+      id: 'seized-south-road',
+      name: 'Seizure Road',
+      width: 17,
+      kind: 'road',
+      points: Object.freeze([
+        Object.freeze({ x: 1544, y: 0 }), Object.freeze({ x: 1600, y: 190 }),
+        Object.freeze({ x: 1680, y: 360 }), Object.freeze({ x: 1760, y: 650 }),
+        Object.freeze({ x: 1840, y: 820 }), Object.freeze({ x: 1900, y: 1030 })
+      ])
+    }),
+    Object.freeze({
+      id: 'archive-return',
+      name: 'Archive Return',
+      width: 15,
+      kind: 'track',
+      points: Object.freeze([
+        Object.freeze({ x: 1900, y: 1030 }), Object.freeze({ x: 2100, y: 1100 }),
+        Object.freeze({ x: 2260, y: 820 }), Object.freeze({ x: 2320, y: 520 }),
+        Object.freeze({ x: 2240, y: 260 }), Object.freeze({ x: 2060, y: 0 }),
+        Object.freeze({ x: 1960, y: -80 })
+      ])
+    }),
+    Object.freeze({
+      id: 'seized-cut',
+      name: 'The Bailiff Cut',
+      width: 11,
+      kind: 'track',
+      points: Object.freeze([
+        Object.freeze({ x: 1760, y: 650 }), Object.freeze({ x: 1990, y: 610 }),
+        Object.freeze({ x: 2140, y: 690 }), Object.freeze({ x: 2260, y: 820 })
+      ])
     })
   ]);
 
@@ -235,14 +355,28 @@
     Object.freeze({ id: 'writ-of-succession', name: 'Writ of Succession', x: -230, y: 150, kind: 'puzzle', radius: 150 }),
     Object.freeze({ id: 'reconciliation-yard', name: 'The Reconciliation Yard', x: 386, y: 150, kind: 'puzzle', radius: 150 }),
     Object.freeze({ id: 'drowned-ledger', name: 'The Drowned Ledger', x: 520, y: 320, kind: 'ledger', radius: 38 }),
+    Object.freeze({ id: 'drowned-crossroads', name: 'Drowned Crossroads', x: -292, y: 356, kind: 'milestone', radius: 48, major: true }),
+    Object.freeze({ id: 'sunken-records', name: 'The Sunken Records', x: -178, y: 492, kind: 'vault', radius: 52 }),
+    Object.freeze({ id: 'marsh-watch', name: 'Marsh Watch', x: -796, y: 690, kind: 'cairn', radius: 44 }),
+    Object.freeze({ id: 'reedwick', name: 'Reedwick', x: -650, y: 850, kind: 'hearth', radius: 94, major: true }),
+    Object.freeze({ id: 'reedwick-ferry', name: 'The Grounded Ferry', x: -472, y: 934, kind: 'ledger', radius: 44 }),
     Object.freeze({ id: 'gate-sexton', name: 'Gate Sexton Marrow', x: 456, y: 0, kind: 'boss', radius: 50, unlock: 'q02', major: true }),
     Object.freeze({ id: 'mempool-yard', name: 'Mempool Yard', x: 656, y: -10, kind: 'boss', radius: 54, unlock: 'q04', major: true }),
     Object.freeze({ id: 'tallow-house', name: 'Tallow House', x: 812, y: 0, kind: 'boss', radius: 56, unlock: 'q05', major: true }),
+    Object.freeze({ id: 'forklight', name: 'Forklight', x: 1076, y: -100, kind: 'hearth', radius: 84, unlock: 'q06', major: true }),
     Object.freeze({ id: 'debt-mines', name: 'Debt Mines', x: 1076, y: 0, kind: 'boss', radius: 58, unlock: 'q07', major: true }),
     Object.freeze({ id: 'ledger-vaults', name: 'Ledger Vaults', x: 1344, y: -6, kind: 'boss', radius: 58, unlock: 'q08', major: true }),
     Object.freeze({ id: 'ledger-bound', name: 'The Ledger-Bound', x: 1544, y: 0, kind: 'boss', radius: 60, unlock: 'q09', major: true }),
     Object.freeze({ id: 'archive-ascent', name: 'Archive Ascent', x: 1828, y: 0, kind: 'boss', radius: 58, unlock: 'q11', major: true }),
+    Object.freeze({ id: 'celestial-spark', name: 'Celestial Spark', x: 1960, y: -80, kind: 'hearth', radius: 82, unlock: 'q10', major: true }),
     Object.freeze({ id: 'seized-yard', name: 'Seized Asset Yard', x: 2060, y: 0, kind: 'boss', radius: 58, unlock: 'q12', major: true }),
+    Object.freeze({ id: 'seized-auction', name: 'The Abandoned Auction', x: 1640, y: 390, kind: 'ledger', radius: 48 }),
+    Object.freeze({ id: 'sump-row', name: 'Sump Row', x: 1760, y: 650, kind: 'hearth', radius: 88, major: true }),
+    Object.freeze({ id: 'bailiff-camp', name: 'Bailiff Camp', x: 1990, y: 610, kind: 'cairn', radius: 46 }),
+    Object.freeze({ id: 'marginalia', name: 'Marginalia', x: 1900, y: 1030, kind: 'hearth', radius: 88, major: true }),
+    Object.freeze({ id: 'margin-library', name: 'The Open-Air Library', x: 2100, y: 1100, kind: 'vault', radius: 54 }),
+    Object.freeze({ id: 'lastlight', name: 'Lastlight', x: 2260, y: 820, kind: 'hearth', radius: 88, major: true }),
+    Object.freeze({ id: 'last-bell', name: 'The Last Bell', x: 2320, y: 520, kind: 'puzzle', radius: 52 }),
     Object.freeze({ id: 'auditor', name: 'The Auditor', x: 2280, y: 0, kind: 'boss', radius: 64, unlock: 'q13', major: true }),
     Object.freeze({ id: 'ossified-spark', name: 'Ossified Spark', x: 2440, y: 0, kind: 'hearth', radius: 60, major: true }),
     Object.freeze({ id: 'grand-auditor', name: 'The Grand Auditor', x: 2520, y: 0, kind: 'boss', radius: 64, major: true }),
@@ -253,6 +387,7 @@
   ]);
 
   const GATES = Object.freeze([
+    Object.freeze({ id: 'sunken-records-pack', x: -176, y: 456, halfHeight: 38, unlock: 'reedwick-shortcut', label: 'HOUNDS HOLD THE CROSSING' }),
     Object.freeze({ id: 'tallow-threshold', x: 842, y: 0, halfHeight: 54, unlock: 'q07', label: 'SHROUD WARRANT' }),
     Object.freeze({ id: 'archive-threshold', x: 1446, y: 0, halfHeight: 54, unlock: 'q10', label: 'ARCHIVE WRIT' }),
     Object.freeze({ id: 'seizure-threshold', x: 1888, y: 0, halfHeight: 54, unlock: 'q12', label: 'SEIZURE ORDER' }),
@@ -262,7 +397,11 @@
   const WATER = Object.freeze([
     Object.freeze({ x: 520, y: 336, rx: 178, ry: 118 }),
     Object.freeze({ x: 664, y: 286, rx: 116, ry: 82 }),
-    Object.freeze({ x: 592, y: -286, rx: 108, ry: 74 })
+    Object.freeze({ x: 592, y: -286, rx: 108, ry: 74 }),
+    Object.freeze({ x: 12, y: 470, rx: 272, ry: 176 }),
+    Object.freeze({ x: -420, y: 620, rx: 238, ry: 128 }),
+    Object.freeze({ x: -672, y: 774, rx: 214, ry: 120 }),
+    Object.freeze({ x: -362, y: 930, rx: 148, ry: 112 })
   ]);
 
   const CLEARINGS = LANDMARKS.map(function toClearing(mark) {
@@ -301,11 +440,29 @@
     return (h >>> 0) / 4294967296;
   }
 
-  function regionAt(x) {
+  function regionAt(x, y) {
+    // A region with vertical bounds is a real 2D territory and wins over the
+    // legacy x-band regions. This lets the existing eastward campaign coexist
+    // with the new southern exploration slice without breaking old coordinates.
+    if (Number.isFinite(y)) {
+      for (let i = 0; i < REGIONS.length; i += 1) {
+        const region = REGIONS[i];
+        for (const area of region.areas || []) {
+          if (x >= area.minX && x < area.maxX && y >= area.minY && y < area.maxY) return region;
+        }
+      }
+      for (let i = 0; i < REGIONS.length; i += 1) {
+        const region = REGIONS[i];
+        if (!Number.isFinite(region.minY) || !Number.isFinite(region.maxY)) continue;
+        if (x >= region.minX && x < region.maxX && y >= region.minY && y < region.maxY) return region;
+      }
+    }
     for (let i = 0; i < REGIONS.length; i += 1) {
+      if (Number.isFinite(REGIONS[i].minY)) continue;
       if (x >= REGIONS[i].minX && x < REGIONS[i].maxX) return REGIONS[i];
     }
-    return x < REGIONS[0].minX ? REGIONS[0] : REGIONS[REGIONS.length - 1];
+    const bands = REGIONS.filter(function (region) { return !Number.isFinite(region.minY); });
+    return x < bands[0].minX ? bands[0] : bands[bands.length - 1];
   }
 
   function pointSegmentDistanceSq(px, py, ax, ay, bx, by) {
@@ -411,7 +568,7 @@
 
   function tileAt(x, y, options) {
     const outside = x < BOUNDS.minX || x > BOUNDS.maxX || y < BOUNDS.minY || y > BOUNDS.maxY;
-    const region = regionAt(x);
+    const region = regionAt(x, y);
     const tx = Math.floor(x / TILE);
     const ty = Math.floor(y / TILE);
     if (outside) {
@@ -518,7 +675,7 @@
   function locationAt(x, y) {
     const near = nearestLandmark(x, y, 74);
     if (near) return { id: near.landmark.id, name: near.landmark.name, kind: near.landmark.kind };
-    const region = regionAt(x);
+    const region = regionAt(x, y);
     return { id: region.id, name: region.name, kind: 'region' };
   }
 
@@ -853,12 +1010,26 @@
     ctx.strokeStyle = 'rgba(241,199,91,0.55)';
     ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
 
-    for (let i = 0; i < REGIONS.length; i += 1) {
-      const region = REGIONS[i];
+    // Paint legacy x-band regions first, then overlay true 2D territories.
+    // Otherwise a later full-height band would hide Drowned Reach on the map.
+    const mapRegions = REGIONS.slice().sort(function regionsByShape(a, b) {
+      return (Number.isFinite(a.minY) ? 1 : 0) - (Number.isFinite(b.minY) ? 1 : 0);
+    });
+    for (let i = 0; i < mapRegions.length; i += 1) {
+      const region = mapRegions[i];
       const x0 = worldToMapX(region.minX, x, w);
       const x1 = worldToMapX(region.maxX, x, w);
       ctx.fillStyle = region.palette.groundAlt;
-      ctx.fillRect(Math.floor(x0), y + 2, Math.ceil(x1 - x0), h - 4);
+      const y0 = Number.isFinite(region.minY) ? worldToMapY(region.minY, y, h) : y + 2;
+      const y1 = Number.isFinite(region.maxY) ? worldToMapY(region.maxY, y, h) : y + h - 2;
+      ctx.fillRect(Math.floor(x0), Math.floor(y0), Math.ceil(x1 - x0), Math.ceil(y1 - y0));
+      if (region.areas && region.areas.length) {
+        for (const area of region.areas) {
+          const ax0 = worldToMapX(area.minX, x, w), ax1 = worldToMapX(area.maxX, x, w);
+          const ay0 = worldToMapY(area.minY, y, h), ay1 = worldToMapY(area.maxY, y, h);
+          ctx.fillRect(Math.floor(ax0), Math.floor(ay0), Math.ceil(ax1 - ax0), Math.ceil(ay1 - ay0));
+        }
+      }
     }
 
     ctx.lineCap = 'round';

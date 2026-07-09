@@ -69,7 +69,9 @@
         { "to": "archive-causeway",  "direction": "east"  }
       ],
       "entities": [
-        { "id": "hearth-reedwick",   "type": "hearth",     "pos": { "x": 0, "y": 120 }, "label": "Reedwick Flame",  "refId": "reedwick" }
+        { "id": "hearth-reedwick",   "type": "hearth",     "pos": { "x": -650, "y": 850 }, "label": "Reedwick Flame",  "refId": "reedwick" },
+        { "id": "landmark-sunken-records", "type": "landmark", "pos": { "x": -178, "y": 492 }, "label": "Sunken Records", "refId": "sunken-records" },
+        { "id": "landmark-grounded-ferry", "type": "landmark", "pos": { "x": -472, "y": 934 }, "label": "Grounded Ferry", "refId": "grounded-ferry" }
       ],
       "platformerSections": []
     },
@@ -83,8 +85,9 @@
         { "to": "archive-causeway", "direction": "south" }
       ],
       "entities": [
-        { "id": "hearth-sump-row",   "type": "hearth",         "pos": { "x": 1600, "y": -30 }, "label": "Sump Row Flame", "refId": "sump-row" },
-        { "id": "dungeon-chamber",   "type": "dungeon-portal", "pos": { "x": 1700, "y": 0   }, "label": "Chamber of Attestation", "refId": "a3-chamber-attestation" }
+        { "id": "hearth-celestial-spark", "type": "hearth", "pos": { "x": 1960, "y": -80 }, "label": "Celestial Spark", "refId": "celestial-spark" },
+        { "id": "hearth-sump-row",   "type": "hearth",         "pos": { "x": 1760, "y": 650 }, "label": "Sump Row Flame", "refId": "sump-row" },
+        { "id": "dungeon-chamber",   "type": "dungeon-portal", "pos": { "x": 1900, "y": -108 }, "label": "Chamber of Attestation", "refId": "a3-chamber-attestation" }
       ],
       "platformerSections": ["a3-platformer"]
     },
@@ -98,9 +101,9 @@
         { "to": "seized-grounds", "direction": "north" }
       ],
       "entities": [
-        { "id": "hearth-marginalia",  "type": "hearth",    "pos": { "x": 1880, "y": -20 }, "label": "Marginalia",   "refId": "marginalia" },
-        { "id": "hearth-lastlight",   "type": "hearth",    "pos": { "x": 1950, "y": 10  }, "label": "Lastlight",    "refId": "lastlight-hearth" },
-        { "id": "wound-approach",     "type": "landmark",  "pos": { "x": 2000, "y": 0   }, "label": "The Wound",    "refId": "the-wound" }
+        { "id": "hearth-marginalia",  "type": "hearth",    "pos": { "x": 1900, "y": 1030 }, "label": "Marginalia",   "refId": "marginalia" },
+        { "id": "hearth-lastlight",   "type": "hearth",    "pos": { "x": 2260, "y": 820  }, "label": "Lastlight",    "refId": "lastlight" },
+        { "id": "wound-approach",     "type": "landmark",  "pos": { "x": 2280, "y": 0   }, "label": "The Wound",    "refId": "the-wound" }
       ],
       "platformerSections": []
     }
@@ -112,8 +115,8 @@
       "regionId": "gracefall-parish",
       "hearthId": "hearthlight",
       "hearthBrightness": 1.0,
-      "npcs": ["recorder-chaplain", "scribe-archivist", "debt-confessional", "chapel-acolyte", "sexton-grave-tenders"],
-      "interiors": ["chapel", "vault-registry"]
+      "npcs": ["recorder-chaplain", "scribe-archivist", "debt-confessional", "chapel-acolyte", "sexton-marrow-elder", "sexton-junior"],
+      "interiors": ["chapel", "tavern", "vestry", "assayer", "cellar"]
     },
     {
       "id": "forklight-town",
@@ -121,7 +124,7 @@
       "regionId": "mempool-moor",
       "hearthId": "forklight",
       "hearthBrightness": 0.75,
-      "npcs": ["keeper-ancestry", "custodian-archivist", "librarian-shade", "keeper-margins"],
+      "npcs": ["keeper-ancestry", "custodian-archivist", "librarian-shade", "keeper-margins", "vault-custodians"],
       "interiors": ["vault-registry", "fissured-cistern", "archivist-reading-room", "margin-chamber"]
     },
     {
@@ -130,8 +133,8 @@
       "regionId": "seized-grounds",
       "hearthId": "celestial-spark",
       "hearthBrightness": 0.45,
-      "npcs": ["area3-archivist", "area3-prime-witness", "area3-unrecorded", "area3-echo"],
-      "interiors": []
+      "npcs": ["int-hostile-archivist", "int-prime-witness", "int-unrecorded-wanderer", "int-amendment-echo"],
+      "interiors": ["chamber-of-attestation", "hostile-archivist-chamber", "wanderers-hollow", "echo-hall"]
     },
     {
       "id": "reedwick-town",
@@ -139,8 +142,8 @@
       "regionId": "drowned-reach",
       "hearthId": "reedwick",
       "hearthBrightness": 0.5,
-      "npcs": [],
-      "interiors": []
+      "npcs": ["reedwick-ferrymaster", "reedwick-watch", "reedwick-lamplighter"],
+      "interiors": ["reedwick-inn", "reedwick-tollhouse", "reedwick-boathouse"]
     },
     {
       "id": "sump-row-town",
@@ -148,8 +151,8 @@
       "regionId": "seized-grounds",
       "hearthId": "sump-row",
       "hearthBrightness": 0.35,
-      "npcs": [],
-      "interiors": []
+      "npcs": ["sump-row-bailiff", "sump-row-salvager", "sump-row-broker"],
+      "interiors": ["sump-row-salvage", "sump-row-toll", "sump-row-hearthhouse"]
     },
     {
       "id": "marginalia-town",
@@ -157,8 +160,8 @@
       "regionId": "archive-causeway",
       "hearthId": "marginalia",
       "hearthBrightness": 0.15,
-      "npcs": [],
-      "interiors": []
+      "npcs": ["marginalia-editor", "marginalia-runner", "marginalia-redactor"],
+      "interiors": ["marginalia-scriptorium", "marginalia-exchange", "marginalia-maproom"]
     },
     {
       "id": "lastlight-town",
@@ -166,8 +169,8 @@
       "regionId": "archive-causeway",
       "hearthId": "lastlight",
       "hearthBrightness": 0.1,
-      "npcs": [],
-      "interiors": []
+      "npcs": ["lastlight-keeper", "lastlight-watch", "lastlight-witness"],
+      "interiors": ["lastlight-inn", "lastlight-watchtower", "lastlight-witness-house"]
     }
   ],
   "connections": [

@@ -2545,10 +2545,13 @@ function drawNpcs(){
     const s=worldToScreen(n.x,n.y), col=n.color||'#cfa982';
     const bob=Math.round(Math.sin(state.time*2+n.x)*1);
     ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fillRect(s.x-8,s.y+1,16,4);
-    rect(s.x-7,s.y-18+bob,14,18,'#2a2620');           // robe / body
-    rect(s.x-6,s.y-17+bob,12,6,col);                  // collar accent
-    rect(s.x-4,s.y-27+bob,8,9,'#cfa982');             // head
-    rect(s.x-4,s.y-30+bob,8,4,col);                   // hood / hat
+    const drewSprite=n.sprite&&drawSheet(n.sprite,n.x,n.y+bob,0,ENTITY_SCALE*.88);
+    if(!drewSprite){
+      rect(s.x-7,s.y-18+bob,14,18,'#2a2620');           // robe / body
+      rect(s.x-6,s.y-17+bob,12,6,col);                  // collar accent
+      rect(s.x-4,s.y-27+bob,8,9,'#cfa982');             // head
+      rect(s.x-4,s.y-30+bob,8,4,col);                   // hood / hat
+    }
     ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#d8cbae';
     ctx.fillText(n.name,s.x,s.y-34+bob);
     if(near===n){
